@@ -1,0 +1,29 @@
+Bottom: 790cf2029b6cb22a9281e666f447f29a11a4a459
+Top:    8f450e6bb0de31455a885b91615f47b75782b51e
+Author: Jon Smirl (none) <jonsmirl@smirl2>
+Date:   2012-03-17 21:57:12 -0400
+
+Remove overlapping IO defs
+
+
+---
+
+diff --git a/arch/arm/mach-lpc31xx/generic.c b/arch/arm/mach-lpc31xx/generic.c
+index 6729930..8ed8230 100644
+--- a/arch/arm/mach-lpc31xx/generic.c
++++ b/arch/arm/mach-lpc31xx/generic.c
+@@ -146,12 +146,14 @@ static struct map_desc lpc313x_io_desc[] __initdata = {
+ 		.length		= IO_APB4_SIZE,
+ 		.type		= MT_DEVICE
+ 	},
++#if 0
+ 	{
+ 		.virtual	= io_p2v(IO_DMA_REG_PHYS),
+ 		.pfn		= __phys_to_pfn(IO_DMA_REG_PHYS),
+ 		.length		= IO_DMA_REG_SIZE,
+ 		.type		= MT_DEVICE
+ 	},
++#endif
+ 	{
+ 		.virtual	= io_p2v(IO_MPMC_CFG_PHYS),
+ 		.pfn		= __phys_to_pfn(IO_MPMC_CFG_PHYS),

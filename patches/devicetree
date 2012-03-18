@@ -1,0 +1,139 @@
+Bottom: 2208e4580fa8e59a37ddffac366586b18fb07b6d
+Top:    790cf2029b6cb22a9281e666f447f29a11a4a459
+Author: Jon Smirl (none) <jonsmirl@smirl2>
+Date:   2012-03-17 21:57:12 -0400
+
+device trees
+
+
+---
+
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+new file mode 100644
+index 0000000..16d5941
+--- /dev/null
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -0,0 +1,34 @@
++/*
++ * ea3131.dts - Device Tree file for EA3131 board
++ *
++ *  Copyright (C) 2012 Jon Smirl <jonsmirl@gmail.com>
++ *
++ * Licensed under GPLv2.
++ */
++/dts-v1/;
++/include/ "lpc3131.dtsi"
++
++/ {
++	model = "Electronic Arts EA3131";
++	compatible = "ea,ea3131", "nxp,lpc3131";
++
++	chosen {
++		bootargs = "console=ttyS0,115200 init=/etc/init rw";
++	};
++
++	memory@70000000 {
++		reg = <0x70000000 0x4000000>;
++	};
++
++	ahb {
++		apb {
++			dbgu: serial@fffff200 {
++				status = "okay";
++			};
++
++			usart1: serial@fffb4000 {
++				status = "okay";
++			};
++		};
++	};
++};
+diff --git a/arch/arm/boot/dts/lpc3131.dtsi b/arch/arm/boot/dts/lpc3131.dtsi
+new file mode 100644
+index 0000000..662c811
+--- /dev/null
++++ b/arch/arm/boot/dts/lpc3131.dtsi
+@@ -0,0 +1,83 @@
++/*
++ * at91sam9g20.dtsi - Device Tree Include file for AT91SAM9G20 family SoC
++ *
++ *  Copyright (C) 2011 Atmel,
++ *                2011 Nicolas Ferre <nicolas.ferre@atmel.com>,
++ *                2011 Jean-Christophe PLAGNIOL-VILLARD <plagnioj@jcrosoft.com>
++ *
++ * Licensed under GPLv2 or later.
++ */
++
++/include/ "skeleton.dtsi"
++
++/ {
++	model = "NXP LPC3131 SoC";
++	compatible = "nxp,lpc3131";
++	interrupt-parent = <&aic>;
++
++	aliases {
++		serial0 = &dbgu;
++		serial1 = &usart0;
++		serial2 = &usart1;
++
++	};
++	cpus {
++		cpu@0 {
++			compatible = "arm,arm926ejs";
++		};
++	};
++
++	memory@20000000 {
++		reg = <0x20000000 0x08000000>;
++	};
++
++	ahb {
++		compatible = "simple-bus";
++		#address-cells = <1>;
++		#size-cells = <1>;
++		ranges;
++
++		apb {
++			compatible = "simple-bus";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges;
++
++			aic: interrupt-controller@fffff000 {
++				#interrupt-cells = <1>;
++				compatible = "nxp,lpc3131-aic";
++				interrupt-controller;
++				interrupt-parent;
++				reg = <0xfffff000 0x200>;
++			};
++
++			dbgu: serial@fffff200 {
++				compatible = "nxp,lpc3131-usart";
++				reg = <0xfffff200 0x200>;
++				interrupts = <1>;
++				status = "disabled";
++			};
++
++			usart0: serial@fffb0000 {
++				compatible = "nxp,lpc3131-usart";
++				reg = <0xfffb0000 0x200>;
++				interrupts = <6>;
++				atmel,use-dma-rx;
++				atmel,use-dma-tx;
++				status = "disabled";
++			};
++
++			usart1: serial@fffb4000 {
++				compatible = "nxp,lpc3131-usart";
++				reg = <0xfffb4000 0x200>;
++				interrupts = <7>;
++				atmel,use-dma-rx;
++				atmel,use-dma-tx;
++				status = "disabled";
++			};
++
++
++
++		};
++	};
++};
