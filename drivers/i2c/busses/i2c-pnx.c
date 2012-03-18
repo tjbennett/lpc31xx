@@ -175,7 +175,8 @@ static int i2c_pnx_master_xmit(struct i2c_pnx_algo_data *alg_data)
 		/* We still have something to talk about... */
 		val = *alg_data->mif.buf++;
 
-		if (alg_data->mif.len == 1)
+		/* last byte of a message */
+		if ((alg_data->mif.len == 1) && alg_data->last)
 			val |= stop_bit;
 
 		alg_data->mif.len--;
