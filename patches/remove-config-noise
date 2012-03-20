@@ -1,0 +1,11 @@
+Bottom: 4a8dba50801ff679b37e3fc8f0692f9b9c8a4adf
+Top:    4a8dba50801ff679b37e3fc8f0692f9b9c8a4adf
+Author: Jon Smirl <jonsmirl@terra>
+Date:   2012-03-19 22:14:18 -0400
+
+Remove some of the debugging noise from the .config file
+
+
+---
+
+
