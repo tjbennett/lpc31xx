@@ -24,6 +24,8 @@
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/timer.h>
+#include <linux/of_irq.h>
+#include <linux/irqdomain.h>
 
 #include <mach/hardware.h>
 #include <asm/irq.h>
@@ -79,6 +81,12 @@ static struct irq_chip lpc313x_internal_chip = {
 	.irq_mask = intc_mask_irq,
 	.irq_unmask = intc_unmask_irq,
 	.irq_set_wake = intc_set_wake,
+};
+
+static struct irq_domain lpc313x_domain = {
+	.irq_base = 1,
+	.nr_irq = NR_IRQ_CPU,
+	.ops = &irq_domain_simple_ops,
 };
 
 static void evt_mask_irq(struct irq_data *data)
@@ -199,12 +207,18 @@ ROUTER_HDLR(2)
 ROUTER_HDLR(3)
 #endif /* IRQ_EVTR3_END */
 
+static const struct of_device_id intc_of_match[] __initconst = {
+	{ .compatible = "nxp,lpc31xx-intc", },
+	{},
+};
 
 void __init lpc313x_init_irq(void)
 {
 	unsigned int irq;
 	int i, j;
 	u32 bank, bit_pos;
+
+	irq_domain_generate_simple(intc_of_match, 0x60000000, 0);
 
 	/* enable clock to interrupt controller */
 	cgu_clk_en_dis(CGU_SB_AHB2INTC_CLK_ID, 1);
@@ -341,6 +355,8 @@ void __init lpc313x_init_irq(void)
 	/* on the basis of priority level, for both targets (IRQ/FIQ)    */
 	INTC_IRQ_PRI_MASK = 0;
 	INTC_FIQ_PRI_MASK = 0;
+
+	irq_domain_add(&lpc313x_domain);
 }
 
 
