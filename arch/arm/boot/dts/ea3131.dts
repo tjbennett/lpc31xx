@@ -1,0 +1,37 @@
+/*
+ * ea3131.dts - Device Tree file for EA3131 board
+ *
+ *  Copyright (C) 2012 Jon Smirl <jonsmirl@gmail.com>
+ *
+ * Licensed under GPLv2.
+ */
+/dts-v1/;
+/include/ "lpc3131.dtsi"
+
+/ {
+	model = "Electronic Arts EA3131";
+	compatible = "ea,ea3131", "nxp,lpc3131";
+
+	chosen {
+		bootargs = "console=ttyS0,115200n8 root=/dev/mmcblk0p3 init=/etc/preinit rw rootwait loglevel=7";
+	};
+
+	ssd1289@20000000 {
+		compatible = "ssd,ssd1289";
+		reg = <0x20000000 0x10000 0x20010000 0x10000>;
+	};
+	dm9000@20000000 {
+		compatible = "davicom,dm9000";
+		reg = <0x20020000 0x100 0x20030000 0x100>;
+		interrupts = <37>;
+	};
+	memory@30000000 {
+		reg = <0x30000000 0x4000000>;
+	};
+	ahb {
+		sdmmc@18000000 {
+			cd-gpio = <&gpio 0x87 0>;
+			power-gpio = <&gpio 0x45 0>;
+		};
+	};
+};

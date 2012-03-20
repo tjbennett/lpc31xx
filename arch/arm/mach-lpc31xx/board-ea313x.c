@@ -32,6 +32,8 @@
 #include <linux/spi/spi.h>
 #include <linux/leds-pca9532.h>
 #include <linux/gpio.h>
+#include <linux/of_platform.h>
+
 
 #include <asm/system.h>
 #include <mach/hardware.h>
@@ -47,123 +49,20 @@
 #include <mach/gpio.h>
 #include <mach/i2c.h>
 #include <mach/board.h>
+#include <mach/dt.h>
 
-static struct lpc313x_mci_irq_data irq_data = {
-	.irq = IRQ_SDMMC_CD,
-};
-
-static int mci_get_cd(u32 slot_id)
-{
-	return gpio_get_value(GPIO_MI2STX_BCK0);
-}
-
-static irqreturn_t ea313x_mci_detect_interrupt(int irq, void *data)
-{
-	struct lpc313x_mci_irq_data	*pdata = data;
-
-	/* select the opposite level senstivity */
-	int level = mci_get_cd(0) ? IRQ_TYPE_LEVEL_LOW : IRQ_TYPE_LEVEL_HIGH;
-
-	irq_set_irq_type(pdata->irq, level);
-
-	/* change the polarity of irq trigger */
-	return pdata->irq_hdlr(irq, pdata->data);
-}
-
-static int mci_init(u32 slot_id, irq_handler_t irqhdlr, void *data)
-{
-	int ret;
-	int level;
-
-	/* enable power to the slot */
-	gpio_request(GPIO_MI2STX_DATA0, "mmc power");
-	gpio_set_value(GPIO_MI2STX_DATA0, 0);
-	/* set cd pins as GPIO pins */
-	gpio_request(GPIO_MI2STX_BCK0, "mmc card detect");
-	gpio_direction_input(GPIO_MI2STX_BCK0);
-
-	/* select the opposite level senstivity */
-	level = mci_get_cd(0) ? IRQ_TYPE_LEVEL_LOW : IRQ_TYPE_LEVEL_HIGH;
-	/* set card detect irq info */
-	irq_data.data = data;
-	irq_data.irq_hdlr = irqhdlr;
-	irq_set_irq_type(irq_data.irq, level);
-	ret = request_irq(irq_data.irq,
-			ea313x_mci_detect_interrupt,
-			level,
-			"mmc-cd", 
-			&irq_data);
-	/****temporary for PM testing */
-	enable_irq_wake(irq_data.irq);
-
-	return irq_data.irq;
-}
-
-static int mci_get_ro(u32 slot_id)
-{
-	return 0;
-}
-
-static int mci_get_ocr(u32 slot_id)
-{
-	return MMC_VDD_32_33 | MMC_VDD_33_34;
-}
-
-static void mci_setpower(u32 slot_id, u32 volt)
-{
-	/* on current version of EA board the card detect
-	 * pull-up in on switched power side. So can't do
-	 * power management so use the always enable power 
-	 * jumper.
-	 */
-}
-static int mci_get_bus_wd(u32 slot_id)
-{
-	return 4;
-}
-
-static void mci_exit(u32 slot_id)
-{
-	free_irq(irq_data.irq, &irq_data);
-}
-
-static struct resource lpc313x_mci_resources[] = {
-	[0] = {
-		.start  = IO_SDMMC_PHYS,
-		.end	= IO_SDMMC_PHYS + IO_SDMMC_SIZE,
-		.flags	= IORESOURCE_MEM,
-	},
-	[1] = {
-		.start	= IRQ_MCI,
-		.end	= IRQ_MCI,
-		.flags	= IORESOURCE_IRQ,
-	},
-};
-static struct lpc313x_mci_board ea313x_mci_platform_data = {
-	.num_slots		= 1,
-	.detect_delay_ms	= 250,
-	.init 			= mci_init,
-	.get_ro			= mci_get_ro,
-	.get_cd 		= mci_get_cd,
-	.get_ocr		= mci_get_ocr,
-	.get_bus_wd		= mci_get_bus_wd,
-	.setpower 		= mci_setpower,
-	.exit			= mci_exit,
-};
 
 static u64 mci_dmamask = 0xffffffffUL;
 static struct platform_device	lpc313x_mci_device = {
 	.name		= "lpc313x_mmc",
-	.num_resources	= ARRAY_SIZE(lpc313x_mci_resources),
 	.dev		= {
 		.dma_mask		= &mci_dmamask,
 		.coherent_dma_mask	= 0xffffffff,
-		.platform_data		= &ea313x_mci_platform_data,
 	},
-	.resource	= lpc313x_mci_resources,
 };
 
 #if defined (CONFIG_FB_SSD1289)
+#ifndef CONFIG_OF
 static struct resource ssd1289_resource[] = {
 	[0] = {
 		.start = EXT_SRAM0_PHYS + 0x00000 + 0x0000,
@@ -183,6 +82,7 @@ static struct platform_device ssd1289_device = {
 	.num_resources = ARRAY_SIZE(ssd1289_resource),
 	.resource      = ssd1289_resource,
 };
+#endif
 
 static void __init ea_add_device_ssd1289(void)
 {
@@ -194,7 +94,9 @@ static void __init ea_add_device_ssd1289(void)
 	MPMC_STWTWR0   = 3;
 	MPMC_STWTTURN0 = 0;
 
+#ifndef CONFIG_OF
 	platform_device_register(&ssd1289_device);
+#endif
 }
 #else
 static void __init ea_add_device_ssd1289(void) {}
@@ -204,6 +106,7 @@ static void __init ea_add_device_ssd1289(void) {}
  * DM9000 ethernet device
  */
 #if defined(CONFIG_DM9000)
+#ifndef CONFIG_OF
 static struct resource dm9000_resource[] = {
 	[0] = {
 		.start	= EXT_SRAM1_PHYS,
@@ -221,6 +124,7 @@ static struct resource dm9000_resource[] = {
 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL,
 	}
 };
+#endif
 /* ARM MPMC contoller as part of low power design doesn't de-assert nCS and nOE for consecutive 
 reads but just changes address. But DM9000 requires nCS and nOE change between address. So access
 other chip select area (nCS0) to force de-assertion of nCS1 and nOE1. Or else wait for long time 
@@ -263,6 +167,7 @@ static struct dm9000_plat_data dm9000_platdata = {
 	.inblk = dm9000_inblk,
 };
 
+#ifndef CONFIG_OF
 static struct platform_device dm9000_device = {
 	.name		= "dm9000",
 	.id		= 0,
@@ -272,6 +177,8 @@ static struct platform_device dm9000_device = {
 		.platform_data	= &dm9000_platdata,
 	}
 };
+#endif
+
 static void __init ea_add_device_dm9000(void)
 {
 	/*
@@ -289,6 +196,7 @@ static void __init ea_add_device_dm9000(void)
 	/* enable oe toggle between consec reads */
 	SYS_MPMC_WTD_DEL1 = _BIT(5) | 4;
 
+#ifndef CONFIG_OF
 	/* Configure Interrupt pin as input, no pull-up */
 	if (gpio_request(GPIO_MNAND_RYBN3, "dm9000 interrupt"))
 		return;
@@ -296,6 +204,7 @@ static void __init ea_add_device_dm9000(void)
 	gpio_direction_input(GPIO_MNAND_RYBN3);
 
 	platform_device_register(&dm9000_device);
+#endif
 }
 #else
 static void __init ea_add_device_dm9000(void) {}
@@ -677,6 +586,19 @@ void lpc313x_vbus_power(int enable)
 	gpio_set_value(VBUS_PWR_EN, enable);
 }
 
+#ifdef CONFIG_OF
+struct of_dev_auxdata ea3131_auxdata_lookup[] __initdata = {
+	OF_DEV_AUXDATA("davicom,dm9000", EXT_SRAM1_PHYS, "dm9000", &dm9000_platdata),
+	{}
+};
+
+static void __init ea3131_dt_init(void)
+{
+	lpc31xx_dt_init_common(ea3131_auxdata_lookup);
+	ea_add_device_ssd1289();
+	ea_add_device_dm9000();
+}
+#else
 static void __init ea313x_init(void)
 {
 	lpc313x_init();
@@ -699,14 +621,16 @@ static void __init ea313x_init(void)
 		ARRAY_SIZE(ea3152_i2c1_devices));
 #endif
 }
+#endif
 
 #if defined(CONFIG_USB_EHCI_HCD)
-static void __init ea_usb_power(void)
+static int __init ea_usb_power(void)
 {
 	int ret; 
 
 	ret = gpio_request(VBUS_PWR_EN, "vbus power");
 	ret = gpio_direction_output(VBUS_PWR_EN, 1);
+	return ret;
 }
 late_initcall(ea_usb_power);
 #endif
@@ -729,6 +653,7 @@ MACHINE_END
 #endif
 
 #if defined(CONFIG_MACH_EA313X)
+#ifndef CONFIG_OF
 MACHINE_START(EA313X, "NXP EA313X")
 	/* Maintainer: Durgesh Pattamatta, NXP */
 	.map_io		= ea313x_map_io,
@@ -736,6 +661,21 @@ MACHINE_START(EA313X, "NXP EA313X")
 	.timer		= &lpc313x_timer,
 	.init_machine	= ea313x_init,
 MACHINE_END
+#else
+static const char *ea3131_dt_match[] __initconst = {
+	"ea,ea3131",
+	NULL,
+};
+DT_MACHINE_START(EA313X, "NXP EA3131 (Device Tree Support)")
+	.map_io		= lpc313x_map_io,
+	.init_early	= lpc31xx_init_early,
+	.init_irq	= lpc313x_init_irq,
+	.timer		= &lpc313x_timer,
+	.init_machine	= ea3131_dt_init,
+	.dt_compat	= ea3131_dt_match,
+	.restart	= lpc31xx_restart,
+MACHINE_END
+#endif
 #endif
 
 
