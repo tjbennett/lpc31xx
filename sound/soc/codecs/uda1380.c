@@ -320,6 +320,7 @@ static const struct snd_kcontrol_new uda1380_snd_controls[] = {
 	SOC_SINGLE("DAC Polarity inverting Switch", UDA1380_MIXER, 15, 1, 0),	/* DA_POL_INV */
 	SOC_ENUM("Noise Shaper", uda1380_sel_ns_enum),				/* SEL_NS */
 	SOC_ENUM("Digital Mixer Signal Control", uda1380_mix_enum),		/* MIX_POS, MIX */
+	SOC_SINGLE("Silence Switch", UDA1380_MIXER, 7, 1, 0),			/* SILENCE, force DAC output to silence */
 	SOC_SINGLE("Silence Detector Switch", UDA1380_MIXER, 6, 1, 0),		/* SDET_ON */
 	SOC_ENUM("Silence Detector Setting", uda1380_sdet_enum),		/* SD_VALUE */
 	SOC_ENUM("Oversampling Input", uda1380_os_enum),			/* OS */
@@ -584,6 +585,24 @@ static void uda1380_pcm_shutdown(struct snd_pcm_substream *substream,
 	uda1380_write(codec, UDA1380_CLK, clk);
 }
 
+static int uda1380_mute(struct snd_soc_dai *codec_dai, int mute)
+{
+	struct snd_soc_codec *codec = codec_dai->codec;
+	u16 mute_reg = uda1380_read_reg_cache(codec, UDA1380_DEEMP) & ~R13_MTM;
+
+	/* FIXME: mute(codec,0) is called when the magician clock is already
+	 * set to WSPLL, but for some unknown reason writing to interpolator
+	 * registers works only when clocked by SYSCLK */
+	u16 clk = uda1380_read_reg_cache(codec, UDA1380_CLK);
+	uda1380_write(codec, UDA1380_CLK, ~R00_DAC_CLK & clk);
+	if (mute)
+		uda1380_write(codec, UDA1380_DEEMP, mute_reg | R13_MTM);
+	else
+		uda1380_write(codec, UDA1380_DEEMP, mute_reg);
+	uda1380_write(codec, UDA1380_CLK, clk);
+	return 0;
+}
+
 static int uda1380_set_bias_level(struct snd_soc_codec *codec,
 	enum snd_soc_bias_level level)
 {
@@ -636,6 +655,7 @@ static const struct snd_soc_dai_ops uda1380_dai_ops = {
 	.hw_params	= uda1380_pcm_hw_params,
 	.shutdown	= uda1380_pcm_shutdown,
 	.trigger	= uda1380_trigger,
+	.digital_mute = uda1380_mute,
 	.set_fmt	= uda1380_set_dai_fmt_both,
 };
 
@@ -643,6 +663,7 @@ static const struct snd_soc_dai_ops uda1380_dai_ops_playback = {
 	.hw_params	= uda1380_pcm_hw_params,
 	.shutdown	= uda1380_pcm_shutdown,
 	.trigger	= uda1380_trigger,
+	.digital_mute = uda1380_mute,
 	.set_fmt	= uda1380_set_dai_fmt_playback,
 };
 
@@ -650,6 +671,7 @@ static const struct snd_soc_dai_ops uda1380_dai_ops_capture = {
 	.hw_params	= uda1380_pcm_hw_params,
 	.shutdown	= uda1380_pcm_shutdown,
 	.trigger	= uda1380_trigger,
+	.digital_mute = uda1380_mute,
 	.set_fmt	= uda1380_set_dai_fmt_capture,
 };
 

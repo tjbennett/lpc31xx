@@ -49,6 +49,7 @@ config SND_SOC_ALL_CODECS
 	select SND_SOC_SSM2602 if SND_SOC_I2C_AND_SPI
 	select SND_SOC_STA32X if I2C
 	select SND_SOC_STAC9766 if SND_SOC_AC97_BUS
+	select SND_SOC_LPC315X_CODEC if I2C
 	select SND_SOC_TLV320AIC23 if I2C
 	select SND_SOC_TLV320AIC26 if SPI_MASTER
 	select SND_SOC_TLV320AIC32X4 if I2C
@@ -278,6 +279,9 @@ config SND_SOC_TWL6040
 	tristate
 
 config SND_SOC_UDA134X
+       tristate
+
+config SND_SOC_LPC315X_CODEC
        tristate
 
 config SND_SOC_UDA1380
