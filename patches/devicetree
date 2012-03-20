@@ -1,5 +1,5 @@
 Bottom: 04bed845babf41ff9c2b756231a302af6bd4ce1d
-Top:    f61fdadbcf0e077989945be1bb999417ebd77741
+Top:    852b103b3fbb9e3defe3de32ae51342e265db6f2
 Author: Jon Smirl (none) <jonsmirl@smirl2>
 Date:   2012-03-19 23:01:40 -0400
 
@@ -10,7 +10,7 @@ device trees
 
 diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
 new file mode 100644
-index 0000000..16d5941
+index 0000000..2f29f8a
 --- /dev/null
 +++ b/arch/arm/boot/dts/ea3131.dts
 @@ -0,0 +1,34 @@
@@ -29,11 +29,11 @@ index 0000000..16d5941
 +	compatible = "ea,ea3131", "nxp,lpc3131";
 +
 +	chosen {
-+		bootargs = "console=ttyS0,115200 init=/etc/init rw";
++		bootargs = "console=ttyS0,115200n8 root=/dev/mmcblk0p3 init=/etc/preinit rw ip=182.168.1.180 loglevel=7";
 +	};
 +
-+	memory@70000000 {
-+		reg = <0x70000000 0x4000000>;
++	memory@30000000 {
++		reg = <0x30000000 0x4000000>;
 +	};
 +
 +	ahb {
@@ -50,10 +50,10 @@ index 0000000..16d5941
 +};
 diff --git a/arch/arm/boot/dts/lpc3131.dtsi b/arch/arm/boot/dts/lpc3131.dtsi
 new file mode 100644
-index 0000000..662c811
+index 0000000..8091962
 --- /dev/null
 +++ b/arch/arm/boot/dts/lpc3131.dtsi
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,202 @@
 +/*
 + * at91sam9g20.dtsi - Device Tree Include file for AT91SAM9G20 family SoC
 + *
@@ -69,22 +69,12 @@ index 0000000..662c811
 +/ {
 +	model = "NXP LPC3131 SoC";
 +	compatible = "nxp,lpc3131";
-+	interrupt-parent = <&aic>;
++	interrupt-parent = <&intc>;
 +
-+	aliases {
-+		serial0 = &dbgu;
-+		serial1 = &usart0;
-+		serial2 = &usart1;
-+
-+	};
 +	cpus {
 +		cpu@0 {
 +			compatible = "arm,arm926ejs";
 +		};
-+	};
-+
-+	memory@20000000 {
-+		reg = <0x20000000 0x08000000>;
 +	};
 +
 +	ahb {
@@ -93,47 +83,176 @@ index 0000000..662c811
 +		#size-cells = <1>;
 +		ranges;
 +
-+		apb {
++		isram0: memory@11028000 {
++			reg = <0x11028000 0x18000>;
++		};
++		isram1: memory@11040000 {
++			reg = <0x11040000 0x18000>;
++		};
++
++		apb0: apb@13000000 {
 +			compatible = "simple-bus";
 +			#address-cells = <1>;
 +			#size-cells = <1>;
-+			ranges;
++			ranges = <0x13000000 0x13000000 0x8000>;
 +
-+			aic: interrupt-controller@fffff000 {
-+				#interrupt-cells = <1>;
-+				compatible = "nxp,lpc3131-aic";
-+				interrupt-controller;
-+				interrupt-parent;
-+				reg = <0xfffff000 0x200>;
++			evtr@13000000 {
++				compatible = "nxp,lpc31xx-evtr";
++				reg = <0x13000000 0x800>;
 +			};
-+
-+			dbgu: serial@fffff200 {
-+				compatible = "nxp,lpc3131-usart";
-+				reg = <0xfffff200 0x200>;
++			adc@13002000 {
++				compatible = "nxp,lpc31xx-adc";
++				reg = <0x13002000 0x400>;
 +				interrupts = <1>;
-+				status = "disabled";
 +			};
-+
-+			usart0: serial@fffb0000 {
-+				compatible = "nxp,lpc3131-usart";
-+				reg = <0xfffb0000 0x200>;
-+				interrupts = <6>;
-+				atmel,use-dma-rx;
-+				atmel,use-dma-tx;
-+				status = "disabled";
++			wdt@13002400 {
++				compatible = "nxp,lpc31xx-wdt";
++				reg = <0x13002400 0x400>;
++				interrupts = <1>;
 +			};
-+
-+			usart1: serial@fffb4000 {
-+				compatible = "nxp,lpc3131-usart";
-+				reg = <0xfffb4000 0x200>;
-+				interrupts = <7>;
-+				atmel,use-dma-rx;
-+				atmel,use-dma-tx;
-+				status = "disabled";
++			sys@13002800 {
++				compatible = "nxp,lpc31xx-sys";
++				reg = <0x13002800 0x400>;
++				interrupts = <1>;
 +			};
++			gpio@13003000 {
++				compatible = "nxp,lpc31xx-gpio";
++				reg = <0x13003000 0x1000>;
++				interrupts = <1>;
++			};
++			cgu@13004000 {
++				compatible = "nxp,lpc31xx-cgu";
++				reg = <0x13004000 0x1000>;
++				interrupts = <1>;
++			};
++			rng@13006000 {
++				compatible = "nxp,lpc31xx-rng";
++				reg = <0x13006000 0x200>;
++				interrupts = <1>;
++			};
++		};
++		apb1: apb@13008000 {
++			compatible = "simple-bus";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0x13008000 0x13008000 0x4000>;
 +
++			timer0: timer@13008000 {
++				compatible = "nxp,lpc31xx-timer";
++				reg = <0x13008000 0x400>;
++				interrupts = <1>;
++			};
++			timer1: timer@13008400 {
++				compatible = "nxp,lpc31xx-timer";
++				reg = <0x13008400 0x400>;
++				interrupts = <1>;
++			};
++			timer2: timer@13008800 {
++				compatible = "nxp,lpc31xx-timer";
++				reg = <0x13008800 0x400>;
++				interrupts = <1>;
++			};
++			timer3: timer@13008c00 {
++				compatible = "nxp,lpc31xx-timer";
++				reg = <0x13008c00 0x400>;
++				interrupts = <1>;
++			};
++			pwm@13009000 {
++				compatible = "nxp,lpc31xx-pwm";
++				reg = <0x13009000 0x200>;
++				interrupts = <1>;
++			};
++			i2c0: i2c@1300a000 {
++				compatible = "nxp,lpc31xx-i2c";
++				reg = <0x1300a000 0x400>;
++				interrupts = <1>;
++			};
++			i2c1: i2c@1300a400 {
++				compatible = "nxp,lpc31xx-i2c";
++				reg = <0x1300a400 0x400>;
++				interrupts = <1>;
++			};
++		};
++		apb2: apb@15000000 {
++			compatible = "simple-bus";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0x15000000 0x15000000 0x3000>;
 +
++			pcm@15000000 {
++				compatible = "nxp,lpc31xx-pcm";
++				reg = <0x15000000 0x400>;
++				interrupts = <1>;
++			};
++			lcd@15000400 {
++				compatible = "nxp,lpc31xx-lcd";
++				reg = <0x15000400 0x400>;
++				interrupts = <1>;
++			};
++			uart@15001000 {
++				compatible = "nxp,lpc31xx-uart";
++				reg = <0x15001000 0x1000>;
++				interrupts = <1>;
++			};
++			spi@15002000 {
++				compatible = "nxp,lpc31xx-spi";
++				reg = <0x15002000 0x1000>;
++				interrupts = <1>;
++			};
++		};
++		apb3: apb@16000000 {
++			compatible = "simple-bus";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0x16000000 0x16000000 0x1000>;
 +
++			i2s@16000000 {
++				compatible = "nxp,lpc31xx-i2s";
++				reg = <0x16000000 0x1000>;
++				interrupts = <1>;
++			};
++		};
++		apb4: apb@17000000 {
++			compatible = "simple-bus";
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0x17000000 0x17000000 0x1000>;
++
++			dma@17000000 {
++				compatible = "nxp,lpc31xx-dma";
++				reg = <0x17000000 0x800>;
++				interrupts = <1>;
++			};
++			nand@17000800 {
++				compatible = "nxp,lpc31xx-nand";
++				reg = <0x17000800 0x800>;
++				interrupts = <1>;
++			};
++		};
++		mpmc@17008000 {
++			compatible = "nxp,lpc31xx-mpmc";
++			reg = <0x17008000 0x1000>;
++			interrupts = <1>;
++		};
++		sdmmc@18000000 {
++			compatible = "nxp,lpc31xx-sdmmc";
++			reg = <0x18000000 0x1000>;
++			interrupts = <1>;
++		};
++		usb@19000000 {
++			compatible = "nxp,lpc31xx-usb";
++			reg = <0x19000000 0x1000>;
++			interrupts = <1>;
++		};
++		intc: intc@60000000 {
++			compatible = "nxp,lpc31xx-intc";
++			reg = <0x60000000 0x1000>;
++			interrupts = <1>;
++		};
++		nand-buffer@70000000 {
++			compatible = "nxp,lpc31xx-nand-buffer";
++			reg = <0x70000000 0x1000>;
++			interrupts = <1>;
 +		};
 +	};
 +};
