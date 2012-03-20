@@ -95,6 +95,7 @@
 #define OTGSC_INT_STAT_MASK (0x007F0000)
 
 /*-------------------------------------------------------------------------*/
+#if defined(CONFIG_USB_GADGET_FSL_USB2) || defined(CONFIG_USB_OTG)
 static struct resource lpc313x_usb_resource[] = {
 	[0] = {
 		.start = (u32) (USBOTG_PHYS),
@@ -107,6 +108,7 @@ static struct resource lpc313x_usb_resource[] = {
 		.flags = IORESOURCE_IRQ,
 	}
 };
+#endif
 
 struct lpc313x_usb_board_t {
 	/* timer for VBUS enable */
@@ -118,18 +120,13 @@ struct lpc313x_usb_board_t {
 static struct lpc313x_usb_board_t lpc313x_usb_brd;
 
 static u64 usb_dmamask = 0xffffffffUL;;
-static void	lpc313x_usb_release(struct device *dev);
+/*-------------------------------------------------------------------------*/
 
-struct fsl_usb2_platform_data lpc313x_fsl_config = {
-#if defined(CONFIG_USB_OTG) || (defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_GADGET_FSL_USB2))
-	.operating_mode = FSL_USB2_DR_OTG,
-#elif defined(CONFIG_USB_GADGET_FSL_USB2) && !defined(CONFIG_USB_EHCI_HCD)
-	.operating_mode = FSL_USB2_DR_DEVICE,
-#elif !defined(CONFIG_USB_GADGET_FSL_USB2) && defined(CONFIG_USB_EHCI_HCD)
-	.operating_mode = FSL_USB2_DR_HOST,
-#endif
-	.phy_mode = FSL_USB2_PHY_UTMI,
-};
+static void	lpc313x_usb_release(struct device *dev)
+{
+	// do nothing
+}
+
 
 #if defined(CONFIG_USB_GADGET_FSL_USB2) || defined(CONFIG_USB_OTG)
 
@@ -139,7 +136,6 @@ static struct platform_device lpc313x_udc_device = {
 		.dma_mask          = &usb_dmamask,
 		.coherent_dma_mask = 0xffffffff,
 		.release           = lpc313x_usb_release,
-		.platform_data     = &lpc313x_fsl_config,
 	},
 	.num_resources = ARRAY_SIZE(lpc313x_usb_resource),
 	.resource      = lpc313x_usb_resource,
@@ -148,25 +144,20 @@ static struct platform_device lpc313x_udc_device = {
 
 #if defined(CONFIG_USB_EHCI_HCD) || defined(CONFIG_USB_OTG)
 
+#ifndef CONFIG_OF
 static struct platform_device lpc313x_ehci_device = {
 	.name		= "lpc-ehci",
 	.dev = {
 		.dma_mask          = &usb_dmamask,
 		.coherent_dma_mask = 0xffffffff,
 		.release           = lpc313x_usb_release,
-		.platform_data     = &lpc313x_fsl_config,
 	},
 	.num_resources = ARRAY_SIZE(lpc313x_usb_resource),
 	.resource      = lpc313x_usb_resource,
 };
 #endif
+#endif
 
-
-/*-------------------------------------------------------------------------*/
-static void	lpc313x_usb_release(struct device *dev)
-{
-	// do nothing
-}
 
 static irqreturn_t lpc313x_vbus_ovrc_irq(int irq, void *data)
 {
@@ -242,11 +233,12 @@ int __init usbotg_init(void)
 	} else {
 #if defined(CONFIG_USB_EHCI_HCD)
 		/* register host */
+#ifndef CONFIG_OF
 		printk(KERN_INFO "Registering USB host 0x%08x 0x%08x (%d)\n", USB_DEV_OTGSC, EVRT_RSR(bank), bank);
 		retval = platform_device_register(&lpc313x_ehci_device);
 		if ( 0 != retval )
 			printk(KERN_INFO "Can't register lpc313x_ehci_device device\n");
-
+#endif
 		/* Create VBUS enable timer */
 		setup_timer(&lpc313x_usb_brd.vbus_timer, lpc313x_vbusen_timer,
 				(unsigned long)&lpc313x_usb_brd);
