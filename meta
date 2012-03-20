@@ -1,6 +1,6 @@
 Version: 1
-Previous: 2e19e1a6d2aa471304c13d452ef8c68d6f3ac1b9
-Head: 554be34887d2d1c5fc09fb85ac1c9a62e3c76329
+Previous: 9a8c7ec37e5dc85774ae977c3d94e3c934f4ecce
+Head: f833214c8b59cdd8e999349f2eed7596508639aa
 Applied:
   i2c-fix: 1f2971ace9c48442c8d16ffd6ae97feb72b7b96a
   base: 0556b6395047de1b385a36f96e8165d7d6153e47
@@ -18,5 +18,6 @@ Applied:
   phys: 2462bb0b196dd449a8347b3e16eced122a92ac05
   mmc-stop-fix: 617875275745393a4aee82a87aa44ed4f3d623c3
   remove-config-noise: 554be34887d2d1c5fc09fb85ac1c9a62e3c76329
+  refresh-temp: f833214c8b59cdd8e999349f2eed7596508639aa
 Unapplied:
 Hidden:
