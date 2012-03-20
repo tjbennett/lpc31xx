@@ -1,0 +1,11 @@
+Bottom: 8f450e6bb0de31455a885b91615f47b75782b51e
+Top:    8f450e6bb0de31455a885b91615f47b75782b51e
+Author: Jon Smirl <jonsmirl@terra>
+Date:   2012-03-19 22:12:55 -0400
+
+Make sure mmc stop command is fully initialized before issuing the parent command
+
+
+---
+
+
