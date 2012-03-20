@@ -161,6 +161,12 @@ struct ehci_hcd {			/* one per controller */
 	unsigned		has_ppcd:1; /* support per-port change bits */
 	u8			sbrn;		/* packed release number */
 
+	/*
+	 * OTG controllers and transceivers need software interaction;
+	 * other external transceivers should be software-transparent 
+	 */
+	struct otg_transceiver   *transceiver;
+
 	/* irq statistics */
 #ifdef EHCI_STATS
 	struct ehci_stats	stats;
@@ -173,10 +179,6 @@ struct ehci_hcd {			/* one per controller */
 #ifdef DEBUG
 	struct dentry		*debug_dir;
 #endif
-	/*
-	 * OTG controllers and transceivers need software interaction
-	 */
-	struct otg_transceiver	*transceiver;
 };
 
 /* convert between an HCD pointer and the corresponding EHCI_HCD */
