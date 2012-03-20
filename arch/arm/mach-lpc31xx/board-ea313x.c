@@ -374,7 +374,7 @@ static struct platform_device	lpc313x_nand_device = {
 	.dev		= {
 		.dma_mask		= &nand_dmamask,
 		.coherent_dma_mask	= 0xffffffff,
-				.platform_data	= &ea313x_plat_nand,
+		.platform_data	= &ea313x_plat_nand,
 	},
 	.num_resources	= ARRAY_SIZE(lpc313x_nand_resources),
 	.resource	= lpc313x_nand_resources,
@@ -528,6 +528,38 @@ arch_initcall(lpc313x_spimtd_register);
 #endif
 #endif
 
+#if defined(CONFIG_SND_USE_EA3131)
+
+static u64 audio_dmamask = 0xffffffffUL;
+static struct platform_device lpc313x_uda1380_device = {
+	.name		= "lpc313x-uda1380",
+	.id		= 0,
+	.dev		= {
+		.dma_mask = &audio_dmamask,
+		.coherent_dma_mask = 0xffffffffUL,
+	},
+};
+
+static struct platform_device lpc313x_i2s_device = {
+	.name		= "lpc313x-i2s",
+	.id		= 0,
+	.dev		= {
+		.dma_mask = &audio_dmamask,
+		.coherent_dma_mask = 0xffffffffUL,
+	},
+};
+
+static struct platform_device lpc313x_audio_device = {
+	.name		= "lpc313x-audio",
+	.id		= 0,
+	.dev		= {
+		.dma_mask = &audio_dmamask,
+		.coherent_dma_mask = 0xffffffffUL,
+	},
+};
+
+#endif
+
 static struct platform_device *devices[] __initdata = {
 	&lpc313x_mci_device,
 #if defined (CONFIG_MTD_NAND_LPC313X)
@@ -535,6 +567,11 @@ static struct platform_device *devices[] __initdata = {
 #endif
 #if defined(CONFIG_SPI_LPC313X)
 	&lpc313x_spi_device,
+#endif
+#if defined(CONFIG_SND_USE_EA3131)
+	&lpc313x_uda1380_device,
+	&lpc313x_i2s_device,
+	&lpc313x_audio_device,
 #endif
 };
 
