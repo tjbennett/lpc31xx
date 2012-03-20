@@ -1,5 +1,5 @@
 Version: 1
-Previous: 873026694cec302294ab019a22ac44dc0487032d
+Previous: aa831faa7aa89b43074a5454d6db3d43b184bf0a
 Head: 20dbcedf1f9b9980aeab60966642fdf73418f813
 Applied:
   i2c-fix: 1f2971ace9c48442c8d16ffd6ae97feb72b7b96a
@@ -20,6 +20,6 @@ Applied:
   remove-config-noise: d84df7c72611d3a64a83b35b6ea7e8e462e35e26
   NXP-DMA-fixes: d64190540c73298f6b44202bf2adf2d589827ec8
   NXP-uart-dma: be79ad65c8033adc562f536ee3d1e7853d5efca4
-  5.diff: 20dbcedf1f9b9980aeab60966642fdf73418f813
+  nxp-nand-dma: 20dbcedf1f9b9980aeab60966642fdf73418f813
 Unapplied:
 Hidden:
