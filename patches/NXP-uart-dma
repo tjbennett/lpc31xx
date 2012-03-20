@@ -1,0 +1,17 @@
+Bottom: 264d56249f62a0aacfe0b520358de80969feac02
+Top:    264d56249f62a0aacfe0b520358de80969feac02
+Author: Jon Smirl <jonsmirl@terra>
+Date:   2012-03-19 22:52:39 -0400
+
+arm:lpc313x: UART DMA support fixes
+
+The DMA buffer allocation/deallocation fixed. The receive
+function SW timer handling is fixed. The clock divider calculation
+fixed when console support disabled
+
+Signed-off-by: Bangaragiri G <bangaragiri.g@nxp.com>
+
+
+---
+
+
