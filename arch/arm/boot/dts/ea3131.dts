@@ -13,11 +13,11 @@
 	compatible = "ea,ea3131", "nxp,lpc3131";
 
 	chosen {
-		bootargs = "console=ttyS0,115200 init=/etc/init rw";
+		bootargs = "console=ttyS0,115200n8 root=/dev/mmcblk0p3 init=/etc/preinit rw ip=182.168.1.180 loglevel=7";
 	};
 
-	memory@70000000 {
-		reg = <0x70000000 0x4000000>;
+	memory@30000000 {
+		reg = <0x30000000 0x4000000>;
 	};
 
 	ahb {
