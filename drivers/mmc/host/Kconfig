@@ -4,6 +4,12 @@
 
 comment "MMC/SD/SDIO Host Controller Drivers"
 
+config MMC_LPC31XX
+	tristate "NXP LPC31xx SD/MMC Card Interface support"
+	default M
+	help
+	  set default module sd/mmc installed for lpc31xx
+	  
 config MMC_ARMMMCI
 	tristate "ARM AMBA Multimedia Card Interface support"
 	depends on ARM_AMBA
