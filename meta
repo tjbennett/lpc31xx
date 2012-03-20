@@ -1,6 +1,6 @@
 Version: 1
-Previous: c6d6754f21ce44f294087976a079eab44d7da4a5
-Head: d84df7c72611d3a64a83b35b6ea7e8e462e35e26
+Previous: 3d9d6207b6255462a0f6499f6dc172c0077df801
+Head: bea1d9b7591a1cb59ab780ffcd3331eb1f50b7fb
 Applied:
   i2c-fix: 1f2971ace9c48442c8d16ffd6ae97feb72b7b96a
   base: 0556b6395047de1b385a36f96e8165d7d6153e47
@@ -18,5 +18,6 @@ Applied:
   phys: 2462bb0b196dd449a8347b3e16eced122a92ac05
   mmc-stop-fix: 617875275745393a4aee82a87aa44ed4f3d623c3
   remove-config-noise: d84df7c72611d3a64a83b35b6ea7e8e462e35e26
+  NXP-DMA-fixes: bea1d9b7591a1cb59ab780ffcd3331eb1f50b7fb
 Unapplied:
 Hidden:

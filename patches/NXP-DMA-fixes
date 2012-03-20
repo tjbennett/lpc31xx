@@ -1,0 +1,18 @@
+Bottom: b7a84e4b93ef14365d4f686c48a398b8de2cc3d7
+Top:    b7a84e4b93ef14365d4f686c48a398b8de2cc3d7
+Author: Jon Smirl <jonsmirl@terra>
+Date:   2012-03-19 22:42:55 -0400
+
+rm:lpc313x:NAND Flash & SD/MMC DMA fixes
+
+Both NAND Flash & SD/MMC drivers were using SOFTIRQ.
+This patch fixes the issues. The DMA SG channel request
+function in DMA driver is updated to have callbacks
+functions for both the channels
+
+Signed-off-by: Bangaragiri G <bangaragiri.g@nxp.com>
+
+
+---
+
+
