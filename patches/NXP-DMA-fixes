@@ -1,7 +1,7 @@
-Bottom: b7a84e4b93ef14365d4f686c48a398b8de2cc3d7
-Top:    264d56249f62a0aacfe0b520358de80969feac02
+Bottom: ef5ad6e6b4e6b93fcca432e97adef6dd7b1b24ec
+Top:    a4240b98ad4d7c76c3b92e4980011beaf302d5d7
 Author: Jon Smirl <jonsmirl@terra>
-Date:   2012-03-19 22:42:55 -0400
+Date:   2012-03-19 23:01:41 -0400
 
 rm:lpc313x:NAND Flash & SD/MMC DMA fixes
 

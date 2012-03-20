@@ -1,7 +1,7 @@
-Bottom: 008dff62c6befcaf0e3a392defd6927e1e7c8bb6
-Top:    af58d4b1bdfb58cb8309612a8f48bb73acfb320a
+Bottom: af145c316db2610013e3df63fea86f6566f784e6
+Top:    f924c815d3590fd424194c3178f8534ce908f8c1
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-03-17 21:57:10 -0400
+Date:   2012-03-19 23:01:40 -0400
 
 USB Gadget support for lpc31xx
 
