@@ -851,6 +851,50 @@ static struct clk clk_i2c1 = {
 	.id		= CGU_SB_I2C1_PCLK_ID,
 };
 
+static struct clk clk_nand_s0 = {
+	.parent		= &sys_base,
+	.enable		= local_onoff_enable,
+	.enable_reg	= &CGU_SB->clk_pcr[CGU_SB_NANDFLASH_S0_CLK_ID],
+	.enable_mask	= CGU_SB_PCR_RUN,
+	.get_rate	= get_rate,
+	.id		= CGU_SB_NANDFLASH_S0_CLK_ID,
+};
+
+static struct clk clk_nand_ecc = {
+	.parent		= &sys_base,
+	.enable		= local_onoff_enable,
+	.enable_reg	= &CGU_SB->clk_pcr[CGU_SB_NANDFLASH_ECC_CLK_ID],
+	.enable_mask	= CGU_SB_PCR_RUN,
+	.get_rate	= get_rate,
+	.id		= CGU_SB_NANDFLASH_ECC_CLK_ID,
+};
+
+static struct clk clk_nand_clk = {
+	.parent		= &sys_base,
+	.enable		= local_onoff_enable,
+	.enable_reg	= &CGU_SB->clk_pcr[CGU_SB_NANDFLASH_NAND_CLK_ID],
+	.enable_mask	= CGU_SB_PCR_RUN,
+	.get_rate	= get_rate,
+	.id		= CGU_SB_NANDFLASH_NAND_CLK_ID,
+};
+
+static struct clk clk_nand_pclk = {
+	.parent		= &sys_base,
+	.enable		= local_onoff_enable,
+	.enable_reg	= &CGU_SB->clk_pcr[CGU_SB_NANDFLASH_PCLK_ID],
+	.enable_mask	= CGU_SB_PCR_RUN,
+	.get_rate	= get_rate,
+	.id		= CGU_SB_NANDFLASH_PCLK_ID,
+};
+
+static struct clk clk_nand_aes = {
+	.parent		= &sys_base,
+	.enable		= local_onoff_enable,
+	.enable_reg	= &CGU_SB->clk_pcr[CGU_SB_NANDFLASH_AES_CLK_ID],
+	.enable_mask	= CGU_SB_PCR_RUN,
+	.get_rate	= get_rate,
+	.id		= CGU_SB_NANDFLASH_AES_CLK_ID,
+};
 
 static DEFINE_MUTEX(clkm_lock);
 
@@ -955,6 +999,11 @@ EXPORT_SYMBOL(clk_get_rate);
 static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK("pnx-i2c.0", NULL, clk_i2c0)
 	_REGISTER_CLOCK("pnx-i2c.1", NULL, clk_i2c1)
+	_REGISTER_CLOCK(NULL, "nand_s0", clk_nand_s0)
+	_REGISTER_CLOCK(NULL, "nand_ecc", clk_nand_ecc)
+	_REGISTER_CLOCK(NULL, "nand_clk", clk_nand_clk)
+	_REGISTER_CLOCK(NULL, "nand_pclk", clk_nand_pclk)
+	_REGISTER_CLOCK(NULL, "nand_aes", clk_nand_aes)
 };
 
 static int __init clk_init(void)
