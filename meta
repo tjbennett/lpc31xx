@@ -1,6 +1,6 @@
 Version: 1
-Previous: e302fb2096459bedb7d753409e7a8a0df8fca2e3
-Head: a2940057cb65854e7ac719885cc789dd06005872
+Previous: 953dcf1cc178347da3e51d0e2c20f7cdf6854305
+Head: 194ddaf19af259fcfd102dd18e333d7dc2f4936c
 Applied:
   i2c-fix: 464d99faefcdcf9f203ba4c8b482d387c8c29467
   base: b391bc787a534e6037fc0ec714215d0635982fcc
@@ -18,9 +18,9 @@ Applied:
   phys: 4bdea2956801bb727fc07ba61ff79cf46a00da99
   mmc-stop-fix: 186af3bb0a510ef3f5dd0b46afca15ac0e12eb3d
   remove-config-noise: 5b88926b02eb2dd507b33d42bfd82c133e21c049
-  NXP-DMA-fixes: 3904b5679021cf0b91399b3b6d9991d3b525e869
-  NXP-uart-dma: 97f4ddb1f440510d81ea5116ae22745b9122a3bf
-  nxp-nand-dma: 5331d58021b972d9164a21f9dbc164dfb0c4f066
-  nxp-audio-analog: a2940057cb65854e7ac719885cc789dd06005872
+  NXP-DMA-fixes: 098d8869d5ac930baceca8ddcb5ed0704b3f39c3
+  NXP-uart-dma: b7a1b9d7f01f650a57ed2e03386f1e9ba25369ac
+  nxp-nand-dma: 41bc868b0d48752dabd29e2d20aa0152290d54d5
+  nxp-audio-analog: 194ddaf19af259fcfd102dd18e333d7dc2f4936c
 Unapplied:
 Hidden:
