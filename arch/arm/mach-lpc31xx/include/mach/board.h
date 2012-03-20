@@ -32,7 +32,7 @@
 
 extern void __init lpc313x_map_io(void);
 extern void __init lpc313x_init_irq(void);
-extern int __init lpc313x_init(void);
+extern void __init lpc313x_init(void);
 extern int __init lpc313x_register_i2c_devices(void);
 extern void lpc313x_vbus_power(int enable);
 extern int lpc313x_entering_suspend_mem(void);
