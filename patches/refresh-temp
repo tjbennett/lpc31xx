@@ -1,0 +1,25 @@
+Bottom: 8f450e6bb0de31455a885b91615f47b75782b51e
+Top:    4a8dba50801ff679b37e3fc8f0692f9b9c8a4adf
+Author: Jon Smirl <jonsmirl@terra>
+Date:   2012-03-19 22:12:59 -0400
+
+Refresh of mmc-stop-fix
+
+---
+
+diff --git a/drivers/mmc/host/lpc31xx_mmc.c b/drivers/mmc/host/lpc31xx_mmc.c
+index f04d4c7..31b8f78 100644
+--- a/drivers/mmc/host/lpc31xx_mmc.c
++++ b/drivers/mmc/host/lpc31xx_mmc.c
+@@ -611,11 +611,10 @@ static void lpc313x_mci_start_request(struct lpc313x_mci *host,
+ 	if (data) //we may need to move this code to mci_start_command
+ 		lpc313x_mci_submit_data(host, data);
+ 
+-	lpc313x_mci_start_command(host, cmd, cmdflags);
+-
+ 	if (mrq->stop) 
+ 		host->stop_cmdr = lpc313x_mci_prepare_command(slot->mmc, mrq->stop);
+-	
++
++	lpc313x_mci_start_command(host, cmd, cmdflags);
+ }
