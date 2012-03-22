@@ -37,6 +37,8 @@
 #include <linux/delay.h>
 #include <linux/irq.h>
 #include <linux/slab.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
 
 #include "lpc31xx_mmc.h"
 #include <mach/irqs.h>
@@ -1401,6 +1403,13 @@ static void lpc313x_mci_cleanup_slot(struct lpc313x_mci_slot *slot,
 	mmc_free_host(slot->mmc);
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id lpc313x_mci_of_match[] = {
+	{ .compatible = "nxp,lpc31xx-sdmmc" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, lpc313x_mci_of_match);
+#endif
 
 static int lpc313x_mci_probe(struct platform_device *pdev)
 {
@@ -1412,19 +1421,23 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 	int				ret = 0;
 	int i;
 
+printk("JDS - lpc313x_mci_probe\n");
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!regs)
 		return -ENXIO;
 
 
+printk("JDS - lpc313x_mci_probe 1\n");
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
 		return irq;
 
+printk("JDS - lpc313x_mci_probe 2\n");
 	host = kzalloc(sizeof(struct lpc313x_mci), GFP_KERNEL);
 	if (!host)
 		return -ENOMEM;
 
+printk("JDS - lpc313x_mci_probe 3\n");
 	host->pdev = pdev;
 	host->pdata = pdata = pdev->dev.platform_data;
 	if (!pdata) {
@@ -1652,7 +1665,9 @@ static struct platform_driver lpc313x_mci_driver = {
 	.resume     = lpc313x_mci_resume,
 	.remove		= __exit_p(lpc313x_mci_remove),
 	.driver		= {
-		.name		= "lpc313x_mmc",
+		.name	= "lpc313x_mmc",
+		.owner	= THIS_MODULE,
+		.of_match_table = lpc313x_mci_of_match,
 	},
 };
 

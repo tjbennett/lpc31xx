@@ -21,14 +21,9 @@
 	};
 
 	ahb {
-		apb {
-			dbgu: serial@fffff200 {
-				status = "okay";
-			};
-
-			usart1: serial@fffb4000 {
-				status = "okay";
-			};
+		sdmmc@18000000 {
+			cd-gpio = <&gpio 0x87 0>;
+			power-gpio = <&gpio 0x45 0>;
 		};
 	};
 };
