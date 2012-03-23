@@ -1,5 +1,5 @@
 Bottom: 04bed845babf41ff9c2b756231a302af6bd4ce1d
-Top:    e82caff3771ecdc051fa6c1163f0e0a12088ce10
+Top:    ef6707d46db9d7dfb9da68df3c0dc99a78289c59
 Author: Jon Smirl (none) <jonsmirl@smirl2>
 Date:   2012-03-19 23:01:40 -0400
 
@@ -10,10 +10,10 @@ device trees
 
 diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
 new file mode 100644
-index 0000000..eee902e
+index 0000000..5aaf2e7
 --- /dev/null
 +++ b/arch/arm/boot/dts/ea3131.dts
-@@ -0,0 +1,34 @@
+@@ -0,0 +1,37 @@
 +/*
 + * ea3131.dts - Device Tree file for EA3131 board
 + *
@@ -36,11 +36,14 @@ index 0000000..eee902e
 +		compatible = "ssd,ssd1289";
 +		reg = <0x20000000 0x10000 0x20010000 0x10000>;
 +	};
-+
++	dm9000@20000000 {
++		compatible = "davicom,dm9000";
++		reg = <0x20020000 0x100 0x20030000 0x100>;
++		interrupts = <37>;
++	};
 +	memory@30000000 {
 +		reg = <0x30000000 0x4000000>;
 +	};
-+
 +	ahb {
 +		sdmmc@18000000 {
 +			cd-gpio = <&gpio 0x87 0>;
@@ -267,7 +270,7 @@ index 5298fdf..a8ab311 100644
  
  # Specific board support
 diff --git a/arch/arm/mach-lpc31xx/board-ea313x.c b/arch/arm/mach-lpc31xx/board-ea313x.c
-index b7864a4..7a24b9f 100644
+index b7864a4..19bfaae 100644
 --- a/arch/arm/mach-lpc31xx/board-ea313x.c
 +++ b/arch/arm/mach-lpc31xx/board-ea313x.c
 @@ -32,6 +32,8 @@
@@ -423,21 +426,76 @@ index b7864a4..7a24b9f 100644
  }
  #else
  static void __init ea_add_device_ssd1289(void) {}
-@@ -677,6 +579,13 @@ void lpc313x_vbus_power(int enable)
+@@ -204,6 +106,7 @@ static void __init ea_add_device_ssd1289(void) {}
+  * DM9000 ethernet device
+  */
+ #if defined(CONFIG_DM9000)
++#ifndef CONFIG_OF
+ static struct resource dm9000_resource[] = {
+ 	[0] = {
+ 		.start	= EXT_SRAM1_PHYS,
+@@ -221,6 +124,7 @@ static struct resource dm9000_resource[] = {
+ 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL,
+ 	}
+ };
++#endif
+ /* ARM MPMC contoller as part of low power design doesn't de-assert nCS and nOE for consecutive 
+ reads but just changes address. But DM9000 requires nCS and nOE change between address. So access
+ other chip select area (nCS0) to force de-assertion of nCS1 and nOE1. Or else wait for long time 
+@@ -263,6 +167,7 @@ static struct dm9000_plat_data dm9000_platdata = {
+ 	.inblk = dm9000_inblk,
+ };
+ 
++#ifndef CONFIG_OF
+ static struct platform_device dm9000_device = {
+ 	.name		= "dm9000",
+ 	.id		= 0,
+@@ -272,6 +177,8 @@ static struct platform_device dm9000_device = {
+ 		.platform_data	= &dm9000_platdata,
+ 	}
+ };
++#endif
++
+ static void __init ea_add_device_dm9000(void)
+ {
+ 	/*
+@@ -289,6 +196,7 @@ static void __init ea_add_device_dm9000(void)
+ 	/* enable oe toggle between consec reads */
+ 	SYS_MPMC_WTD_DEL1 = _BIT(5) | 4;
+ 
++#ifndef CONFIG_OF
+ 	/* Configure Interrupt pin as input, no pull-up */
+ 	if (gpio_request(GPIO_MNAND_RYBN3, "dm9000 interrupt"))
+ 		return;
+@@ -296,6 +204,7 @@ static void __init ea_add_device_dm9000(void)
+ 	gpio_direction_input(GPIO_MNAND_RYBN3);
+ 
+ 	platform_device_register(&dm9000_device);
++#endif
+ }
+ #else
+ static void __init ea_add_device_dm9000(void) {}
+@@ -677,6 +586,19 @@ void lpc313x_vbus_power(int enable)
  	gpio_set_value(VBUS_PWR_EN, enable);
  }
  
 +#ifdef CONFIG_OF
++struct of_dev_auxdata ea3131_auxdata_lookup[] __initdata = {
++	OF_DEV_AUXDATA("davicom,dm9000", EXT_SRAM1_PHYS, "dm9000", &dm9000_platdata),
++	{}
++};
++
 +static void __init ea3131_dt_init(void)
 +{
-+	lpc31xx_dt_init();
++	lpc31xx_dt_init_common(ea3131_auxdata_lookup);
 +	ea_add_device_ssd1289();
++	ea_add_device_dm9000();
 +}
 +#else
  static void __init ea313x_init(void)
  {
  	lpc313x_init();
-@@ -699,14 +608,16 @@ static void __init ea313x_init(void)
+@@ -699,14 +621,16 @@ static void __init ea313x_init(void)
  		ARRAY_SIZE(ea3152_i2c1_devices));
  #endif
  }
@@ -455,7 +513,7 @@ index b7864a4..7a24b9f 100644
  }
  late_initcall(ea_usb_power);
  #endif
-@@ -729,6 +640,7 @@ MACHINE_END
+@@ -729,6 +653,7 @@ MACHINE_END
  #endif
  
  #if defined(CONFIG_MACH_EA313X)
@@ -463,7 +521,7 @@ index b7864a4..7a24b9f 100644
  MACHINE_START(EA313X, "NXP EA313X")
  	/* Maintainer: Durgesh Pattamatta, NXP */
  	.map_io		= ea313x_map_io,
-@@ -736,6 +648,21 @@ MACHINE_START(EA313X, "NXP EA313X")
+@@ -736,6 +661,21 @@ MACHINE_START(EA313X, "NXP EA313X")
  	.timer		= &lpc313x_timer,
  	.init_machine	= ea313x_init,
  MACHINE_END
@@ -506,10 +564,10 @@ index 69ab97a..281a3f5 100644
  
 diff --git a/arch/arm/mach-lpc31xx/dt.c b/arch/arm/mach-lpc31xx/dt.c
 new file mode 100644
-index 0000000..774d6ba
+index 0000000..7c3d7cb
 --- /dev/null
 +++ b/arch/arm/mach-lpc31xx/dt.c
-@@ -0,0 +1,66 @@
+@@ -0,0 +1,72 @@
 +/*
 + * NXP LPC3131 board support using the device tree
 + *
@@ -541,12 +599,18 @@ index 0000000..774d6ba
 +#include <mach/hardware.h>
 +#include <mach/board.h>
 +#include <mach/clock.h>
++#include <mach/dt.h>
 +
-+void __init lpc31xx_dt_init(void)
++static void __init lpc31xx_dt_init(void)
++{
++	lpc31xx_dt_init_common(NULL);
++}
++
++void __init lpc31xx_dt_init_common(struct of_dev_auxdata* auxdata)
 +{
 +	lpc313x_init();
 +	of_platform_populate(NULL, of_default_bus_match_table,
-+			     NULL, NULL);
++			     auxdata, NULL);
 +}
 +
 +void __init lpc31xx_init_early(void)
@@ -656,14 +720,14 @@ index d7058b6..eb038b3 100644
  #endif
 diff --git a/arch/arm/mach-lpc31xx/include/mach/dt.h b/arch/arm/mach-lpc31xx/include/mach/dt.h
 new file mode 100644
-index 0000000..198ee69
+index 0000000..f4eb877
 --- /dev/null
 +++ b/arch/arm/mach-lpc31xx/include/mach/dt.h
 @@ -0,0 +1,9 @@
 +#ifndef LPC31XX_DT
 +#define LPC31XX_DT
 +
-+void lpc31xx_dt_init(void);
++void lpc31xx_dt_init_common(struct of_dev_auxdata* auxdata);
 +void lpc31xx_init_early(void);
 +void lpc31xx_restart(char mode, const char *cmd);
 +
@@ -875,27 +939,38 @@ index 73d67e7..c86b1904 100644
  	},
  };
  
+diff --git a/drivers/net/ethernet/davicom/dm9000.c b/drivers/net/ethernet/davicom/dm9000.c
+index f7ca4cc..f8fd607 100644
+--- a/drivers/net/ethernet/davicom/dm9000.c
++++ b/drivers/net/ethernet/davicom/dm9000.c
+@@ -1679,11 +1679,22 @@ dm9000_drv_remove(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
++#if defined(CONFIG_OF)
++static const struct of_device_id dm9000_of_match[] = {
++	{ .compatible = "davicom,dm9000" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, dm9000_of_match);
++#endif
++
+ static struct platform_driver dm9000_driver = {
+ 	.driver	= {
+ 		.name    = "dm9000",
+ 		.owner	 = THIS_MODULE,
+ 		.pm	 = &dm9000_drv_pm_ops,
++#ifdef CONFIG_OF
++		.of_match_table = dm9000_of_match,
++#endif
+ 	},
+ 	.probe   = dm9000_probe,
+ 	.remove  = __devexit_p(dm9000_drv_remove),
 diff --git a/drivers/video/ssd1289.c b/drivers/video/ssd1289.c
-index 21537ce..928ec27 100644
+index 21537ce..327cfb1 100644
 --- a/drivers/video/ssd1289.c
 +++ b/drivers/video/ssd1289.c
-@@ -376,6 +376,7 @@ static int __init ssd1289_probe(struct platform_device *dev)
- 	dev_set_drvdata(&dev->dev, item);
- 
- 	ctrl_res = platform_get_resource(dev, IORESOURCE_MEM, 0);
-+printk("JDS ctrl %p %p\n", ctrl_res->end, ctrl_res->start);
- 	if (!ctrl_res) {
- 		dev_err(&dev->dev,
- 			"%s: unable to platform_get_resource for ctrl_res\n",
-@@ -402,6 +403,7 @@ static int __init ssd1289_probe(struct platform_device *dev)
- 	}
- 
- 	data_res = platform_get_resource(dev, IORESOURCE_MEM, 1);
-+printk("JDS data %p %p\n", data_res->end, data_res->start);
- 	if (!data_res) {
- 		dev_err(&dev->dev,
- 			"%s: unable to platform_get_resource for data_res\n",
-@@ -496,11 +498,23 @@ out:
+@@ -496,11 +496,23 @@ out:
  	return ret;
  }
  
