@@ -34,18 +34,16 @@
 #include <linux/gpio.h>
 #include <linux/of_platform.h>
 
-
 #include <asm/system.h>
-#include <mach/hardware.h>
 #include <asm/irq.h>
 #include <asm/pgtable.h>
 #include <asm/page.h>
 #include <asm/sizes.h>
-
 #include <asm/mach/map.h>
 #include <asm/mach-types.h>
-
 #include <asm/mach/arch.h>
+
+#include <mach/hardware.h>
 #include <mach/gpio.h>
 #include <mach/i2c.h>
 #include <mach/board.h>

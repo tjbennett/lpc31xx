@@ -21,10 +21,11 @@
 #include <linux/init.h>
 #include <linux/of_irq.h>
 #include <linux/of_platform.h>
-#include <asm/hardware/vic.h>
+
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/time.h>
+#include <asm/pgtable.h>
 
 #include <mach/hardware.h>
 #include <mach/board.h>
