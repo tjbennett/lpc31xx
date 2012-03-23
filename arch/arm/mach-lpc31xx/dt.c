@@ -29,12 +29,18 @@
 #include <mach/hardware.h>
 #include <mach/board.h>
 #include <mach/clock.h>
+#include <mach/dt.h>
 
-void __init lpc31xx_dt_init(void)
+static void __init lpc31xx_dt_init(void)
+{
+	lpc31xx_dt_init_common(NULL);
+}
+
+void __init lpc31xx_dt_init_common(struct of_dev_auxdata* auxdata)
 {
 	lpc313x_init();
 	of_platform_populate(NULL, of_default_bus_match_table,
-			     NULL, NULL);
+			     auxdata, NULL);
 }
 
 void __init lpc31xx_init_early(void)

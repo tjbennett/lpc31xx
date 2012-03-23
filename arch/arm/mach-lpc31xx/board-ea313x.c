@@ -106,6 +106,7 @@ static void __init ea_add_device_ssd1289(void) {}
  * DM9000 ethernet device
  */
 #if defined(CONFIG_DM9000)
+#ifndef CONFIG_OF
 static struct resource dm9000_resource[] = {
 	[0] = {
 		.start	= EXT_SRAM1_PHYS,
@@ -123,6 +124,7 @@ static struct resource dm9000_resource[] = {
 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL,
 	}
 };
+#endif
 /* ARM MPMC contoller as part of low power design doesn't de-assert nCS and nOE for consecutive 
 reads but just changes address. But DM9000 requires nCS and nOE change between address. So access
 other chip select area (nCS0) to force de-assertion of nCS1 and nOE1. Or else wait for long time 
@@ -165,6 +167,7 @@ static struct dm9000_plat_data dm9000_platdata = {
 	.inblk = dm9000_inblk,
 };
 
+#ifndef CONFIG_OF
 static struct platform_device dm9000_device = {
 	.name		= "dm9000",
 	.id		= 0,
@@ -174,6 +177,8 @@ static struct platform_device dm9000_device = {
 		.platform_data	= &dm9000_platdata,
 	}
 };
+#endif
+
 static void __init ea_add_device_dm9000(void)
 {
 	/*
@@ -191,6 +196,7 @@ static void __init ea_add_device_dm9000(void)
 	/* enable oe toggle between consec reads */
 	SYS_MPMC_WTD_DEL1 = _BIT(5) | 4;
 
+#ifndef CONFIG_OF
 	/* Configure Interrupt pin as input, no pull-up */
 	if (gpio_request(GPIO_MNAND_RYBN3, "dm9000 interrupt"))
 		return;
@@ -198,6 +204,7 @@ static void __init ea_add_device_dm9000(void)
 	gpio_direction_input(GPIO_MNAND_RYBN3);
 
 	platform_device_register(&dm9000_device);
+#endif
 }
 #else
 static void __init ea_add_device_dm9000(void) {}
@@ -580,10 +587,16 @@ void lpc313x_vbus_power(int enable)
 }
 
 #ifdef CONFIG_OF
+struct of_dev_auxdata ea3131_auxdata_lookup[] __initdata = {
+	OF_DEV_AUXDATA("davicom,dm9000", EXT_SRAM1_PHYS, "dm9000", &dm9000_platdata),
+	{}
+};
+
 static void __init ea3131_dt_init(void)
 {
-	lpc31xx_dt_init();
+	lpc31xx_dt_init_common(ea3131_auxdata_lookup);
 	ea_add_device_ssd1289();
+	ea_add_device_dm9000();
 }
 #else
 static void __init ea313x_init(void)

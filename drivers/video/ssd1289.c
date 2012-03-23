@@ -376,7 +376,6 @@ static int __init ssd1289_probe(struct platform_device *dev)
 	dev_set_drvdata(&dev->dev, item);
 
 	ctrl_res = platform_get_resource(dev, IORESOURCE_MEM, 0);
-printk("JDS ctrl %p %p\n", ctrl_res->end, ctrl_res->start);
 	if (!ctrl_res) {
 		dev_err(&dev->dev,
 			"%s: unable to platform_get_resource for ctrl_res\n",
@@ -403,7 +402,6 @@ printk("JDS ctrl %p %p\n", ctrl_res->end, ctrl_res->start);
 	}
 
 	data_res = platform_get_resource(dev, IORESOURCE_MEM, 1);
-printk("JDS data %p %p\n", data_res->end, data_res->start);
 	if (!data_res) {
 		dev_err(&dev->dev,
 			"%s: unable to platform_get_resource for data_res\n",
