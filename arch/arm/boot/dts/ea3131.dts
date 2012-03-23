@@ -13,7 +13,12 @@
 	compatible = "ea,ea3131", "nxp,lpc3131";
 
 	chosen {
-		bootargs = "console=ttyS0,115200n8 root=/dev/mmcblk0p3 init=/etc/preinit rw ip=182.168.1.180 loglevel=7";
+		bootargs = "console=ttyS0,115200n8 root=/dev/mmcblk0p3 init=/etc/preinit rw rootwait loglevel=7";
+	};
+
+	ssd1289@20000000 {
+		compatible = "ssd,ssd1289";
+		reg = <0x20000000 0x10000 0x20010000 0x10000>;
 	};
 
 	memory@30000000 {

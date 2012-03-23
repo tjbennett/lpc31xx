@@ -39,6 +39,7 @@
 #include <linux/slab.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/gpio.h>
 
 #include "lpc31xx_mmc.h"
 #include <mach/irqs.h>
@@ -1403,6 +1404,112 @@ static void lpc313x_mci_cleanup_slot(struct lpc313x_mci_slot *slot,
 	mmc_free_host(slot->mmc);
 }
 
+static struct lpc313x_mci_irq_data irq_data = {
+	.irq = IRQ_SDMMC_CD,
+};
+
+static int mci_get_cd(u32 slot_id)
+{
+	return gpio_get_value(GPIO_MI2STX_BCK0);
+}
+
+static irqreturn_t ea313x_mci_detect_interrupt(int irq, void *data)
+{
+	struct lpc313x_mci_irq_data	*pdata = data;
+
+	/* select the opposite level senstivity */
+	int level = mci_get_cd(0) ? IRQ_TYPE_LEVEL_LOW : IRQ_TYPE_LEVEL_HIGH;
+
+	irq_set_irq_type(pdata->irq, level);
+
+	/* change the polarity of irq trigger */
+	return pdata->irq_hdlr(irq, pdata->data);
+}
+
+static int mci_init(u32 slot_id, irq_handler_t irqhdlr, void *data)
+{
+	int ret;
+	int level;
+
+	/* enable power to the slot */
+	gpio_request(GPIO_MI2STX_DATA0, "mmc power");
+	gpio_set_value(GPIO_MI2STX_DATA0, 0);
+	/* set cd pins as GPIO pins */
+	gpio_request(GPIO_MI2STX_BCK0, "mmc card detect");
+	gpio_direction_input(GPIO_MI2STX_BCK0);
+
+	/* select the opposite level senstivity */
+	level = mci_get_cd(0) ? IRQ_TYPE_LEVEL_LOW : IRQ_TYPE_LEVEL_HIGH;
+	/* set card detect irq info */
+	irq_data.data = data;
+	irq_data.irq_hdlr = irqhdlr;
+	irq_set_irq_type(irq_data.irq, level);
+	ret = request_irq(irq_data.irq,
+			ea313x_mci_detect_interrupt,
+			level,
+			"mmc-cd", 
+			&irq_data);
+	/****temporary for PM testing */
+	enable_irq_wake(irq_data.irq);
+
+	return irq_data.irq;
+}
+
+static int mci_get_ro(u32 slot_id)
+{
+	return 0;
+}
+
+static int mci_get_ocr(u32 slot_id)
+{
+	return MMC_VDD_32_33 | MMC_VDD_33_34;
+}
+
+static void mci_setpower(u32 slot_id, u32 volt)
+{
+	/* on current version of EA board the card detect
+	 * pull-up in on switched power side. So can't do
+	 * power management so use the always enable power 
+	 * jumper.
+	 */
+}
+static int mci_get_bus_wd(u32 slot_id)
+{
+	return 4;
+}
+
+static void mci_exit(u32 slot_id)
+{
+	free_irq(irq_data.irq, &irq_data);
+}
+
+#ifndef CONFIG_OF
+static struct resource lpc313x_mci_resources[] = {
+	[0] = {
+		.start  = IO_SDMMC_PHYS,
+		.end	= IO_SDMMC_PHYS + IO_SDMMC_SIZE,
+		.flags	= IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= IRQ_MCI,
+		.end	= IRQ_MCI,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+#endif
+
+static struct lpc313x_mci_board ea313x_mci_platform_data = {
+	.num_slots		= 1,
+	.detect_delay_ms	= 250,
+	.init 			= mci_init,
+	.get_ro			= mci_get_ro,
+	.get_cd 		= mci_get_cd,
+	.get_ocr		= mci_get_ocr,
+	.get_bus_wd		= mci_get_bus_wd,
+	.setpower 		= mci_setpower,
+	.exit			= mci_exit,
+};
+
 #if defined(CONFIG_OF)
 static const struct of_device_id lpc313x_mci_of_match[] = {
 	{ .compatible = "nxp,lpc31xx-sdmmc" },
@@ -1421,23 +1528,24 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 	int				ret = 0;
 	int i;
 
-printk("JDS - lpc313x_mci_probe\n");
+#ifndef CONFIG_OF
+pdev->num_resources = ARRAY_SIZE(lpc313x_mci_resources);
+pdev->resource = lpc313x_mci_resources;
+#endif
+pdev->dev.platform_data = &ea313x_mci_platform_data;
+
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!regs)
 		return -ENXIO;
 
-
-printk("JDS - lpc313x_mci_probe 1\n");
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
 		return irq;
 
-printk("JDS - lpc313x_mci_probe 2\n");
 	host = kzalloc(sizeof(struct lpc313x_mci), GFP_KERNEL);
 	if (!host)
 		return -ENOMEM;
 
-printk("JDS - lpc313x_mci_probe 3\n");
 	host->pdev = pdev;
 	host->pdata = pdata = pdev->dev.platform_data;
 	if (!pdata) {
@@ -1496,6 +1604,7 @@ printk("JDS - lpc313x_mci_probe 3\n");
 		goto err_freemap;
 	}
 #endif
+
 	clk = clk_get(NULL, "mmc_cclk_in");
 	host->bus_hz = clk_get_rate(clk); //40000000;
 	clk_put(clk);
@@ -1667,7 +1776,9 @@ static struct platform_driver lpc313x_mci_driver = {
 	.driver		= {
 		.name	= "lpc313x_mmc",
 		.owner	= THIS_MODULE,
+#ifdef CONFIG_OF
 		.of_match_table = lpc313x_mci_of_match,
+#endif
 	},
 };
 

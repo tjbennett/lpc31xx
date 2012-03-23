@@ -83,12 +83,6 @@ static struct irq_chip lpc313x_internal_chip = {
 	.irq_set_wake = intc_set_wake,
 };
 
-static struct irq_domain lpc313x_domain = {
-	.irq_base = 1,
-	.nr_irq = NR_IRQ_CPU,
-	.ops = &irq_domain_simple_ops,
-};
-
 static void evt_mask_irq(struct irq_data *data)
 {
 	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
@@ -355,8 +349,6 @@ void __init lpc313x_init_irq(void)
 	/* on the basis of priority level, for both targets (IRQ/FIQ)    */
 	INTC_IRQ_PRI_MASK = 0;
 	INTC_FIQ_PRI_MASK = 0;
-
-	irq_domain_add(&lpc313x_domain);
 }
 
 

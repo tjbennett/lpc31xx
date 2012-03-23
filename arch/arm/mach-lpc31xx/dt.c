@@ -26,10 +26,13 @@
 #include <asm/mach/arch.h>
 #include <asm/mach/time.h>
 
+#include <mach/hardware.h>
 #include <mach/board.h>
+#include <mach/clock.h>
 
-static void __init lpc31xx_dt_init(void)
+void __init lpc31xx_dt_init(void)
 {
+	lpc313x_init();
 	of_platform_populate(NULL, of_default_bus_match_table,
 			     NULL, NULL);
 }
