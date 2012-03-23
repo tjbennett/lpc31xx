@@ -1,6 +1,6 @@
 Version: 1
-Previous: 1ece66c0a5f9eefc1cae06ed25ee03485f350ae9
-Head: 7b0eebe0a02441c987edd187e871dadb85e29840
+Previous: 782a63ddd3fa2d8d453ed97c8215a18d6fd08ea6
+Head: e9b59ed17b4ca46ca5ee4491e690816e63bda19d
 Applied:
   i2c-fix: 464d99faefcdcf9f203ba4c8b482d387c8c29467
   base: b391bc787a534e6037fc0ec714215d0635982fcc
@@ -21,8 +21,7 @@ Applied:
   NXP-uart-dma: ce933457a4ca2c96f8ce134dfc5ba440578f4245
   nxp-nand-dma: c64ae16149355eda04f6b84f59acdbdc14fedfa6
   nxp-audio-analog: ea1914f55b9d769cafcb274354a1aa4a4163e37e
-  reset: 1e7251947b93cca91a6a5c2421f9c67605cc5bec
-  refresh-temp: 7b0eebe0a02441c987edd187e871dadb85e29840
+  reset: e9b59ed17b4ca46ca5ee4491e690816e63bda19d
 Unapplied:
   devicetree: e96f2318e221a062996a72e7d449429061271fff
 Hidden:
