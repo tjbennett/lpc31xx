@@ -30,6 +30,7 @@
 #include <mach/board.h>
 #include <mach/clock.h>
 #include <mach/dt.h>
+#include <mach/system.h>
 
 static void __init lpc31xx_dt_init(void)
 {
@@ -48,11 +49,6 @@ void __init lpc31xx_init_early(void)
 printk("JDS - lpc31xx_init_early\n");
 }
 
-void lpc31xx_restart(char mode, const char *cmd)
-{
-printk("JDS - lpc31xx_restart\n");
-}
-
 static const char *lpc31xx_dt_match[] __initconst = {
 	"ncp,lpc3130",
 	"nxp,lpc3131",
@@ -68,5 +64,5 @@ DT_MACHINE_START(EA313X, "NXP LPC31xx (Device Tree Support)")
 	.timer		= &lpc313x_timer,
 	.init_machine	= lpc31xx_dt_init,
 	.dt_compat	= lpc31xx_dt_match,
-	.restart	= lpc31xx_restart,
+	.restart	= arch_reset,
 MACHINE_END

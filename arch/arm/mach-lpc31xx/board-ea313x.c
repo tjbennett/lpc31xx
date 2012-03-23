@@ -49,11 +49,8 @@
 #include <mach/gpio.h>
 #include <mach/i2c.h>
 #include <mach/board.h>
-<<<<<<< current
 #include <mach/system.h>
-=======
 #include <mach/dt.h>
->>>>>>> patched
 
 
 static u64 mci_dmamask = 0xffffffffUL;
@@ -678,7 +675,7 @@ DT_MACHINE_START(EA313X, "NXP EA3131 (Device Tree Support)")
 	.timer		= &lpc313x_timer,
 	.init_machine	= ea3131_dt_init,
 	.dt_compat	= ea3131_dt_match,
-	.restart	= lpc31xx_restart,
+	.restart	= arch_reset,
 MACHINE_END
 #endif
 #endif
