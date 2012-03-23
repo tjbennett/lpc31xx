@@ -1,5 +1,5 @@
 Bottom: 6f59c907c8ddc703a12a9928cd807d47745cb9e3
-Top:    38d1d32c021b95d5bc1e773286407b25df62d4b1
+Top:    1461c6c13218e99d39868fc8b883c58a8fcaf53f
 Author: Jon Smirl (none) <jonsmirl@smirl2>
 Date:   2012-03-19 23:01:40 -0400
 
@@ -270,7 +270,7 @@ index 5298fdf..a8ab311 100644
  
  # Specific board support
 diff --git a/arch/arm/mach-lpc31xx/board-ea313x.c b/arch/arm/mach-lpc31xx/board-ea313x.c
-index 0e537ec..70c9bc4 100644
+index 0e537ec..dc0c53d 100644
 --- a/arch/arm/mach-lpc31xx/board-ea313x.c
 +++ b/arch/arm/mach-lpc31xx/board-ea313x.c
 @@ -32,6 +32,8 @@
@@ -282,15 +282,11 @@ index 0e537ec..70c9bc4 100644
  
  #include <asm/system.h>
  #include <mach/hardware.h>
-@@ -47,124 +49,24 @@
- #include <mach/gpio.h>
+@@ -48,123 +50,20 @@
  #include <mach/i2c.h>
  #include <mach/board.h>
-+<<<<<<< current
  #include <mach/system.h>
-+=======
 +#include <mach/dt.h>
-+>>>>>>> patched
  
 -static struct lpc313x_mci_irq_data irq_data = {
 -	.irq = IRQ_SDMMC_CD,
@@ -412,7 +408,7 @@ index 0e537ec..70c9bc4 100644
  static struct resource ssd1289_resource[] = {
  	[0] = {
  		.start = EXT_SRAM0_PHYS + 0x00000 + 0x0000,
-@@ -184,6 +86,7 @@ static struct platform_device ssd1289_device = {
+@@ -184,6 +83,7 @@ static struct platform_device ssd1289_device = {
  	.num_resources = ARRAY_SIZE(ssd1289_resource),
  	.resource      = ssd1289_resource,
  };
@@ -420,7 +416,7 @@ index 0e537ec..70c9bc4 100644
  
  static void __init ea_add_device_ssd1289(void)
  {
-@@ -195,7 +98,9 @@ static void __init ea_add_device_ssd1289(void)
+@@ -195,7 +95,9 @@ static void __init ea_add_device_ssd1289(void)
  	MPMC_STWTWR0   = 3;
  	MPMC_STWTTURN0 = 0;
  
@@ -430,7 +426,7 @@ index 0e537ec..70c9bc4 100644
  }
  #else
  static void __init ea_add_device_ssd1289(void) {}
-@@ -205,6 +110,7 @@ static void __init ea_add_device_ssd1289(void) {}
+@@ -205,6 +107,7 @@ static void __init ea_add_device_ssd1289(void) {}
   * DM9000 ethernet device
   */
  #if defined(CONFIG_DM9000)
@@ -438,7 +434,7 @@ index 0e537ec..70c9bc4 100644
  static struct resource dm9000_resource[] = {
  	[0] = {
  		.start	= EXT_SRAM1_PHYS,
-@@ -222,6 +128,7 @@ static struct resource dm9000_resource[] = {
+@@ -222,6 +125,7 @@ static struct resource dm9000_resource[] = {
  		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL,
  	}
  };
@@ -446,7 +442,7 @@ index 0e537ec..70c9bc4 100644
  /* ARM MPMC contoller as part of low power design doesn't de-assert nCS and nOE for consecutive 
  reads but just changes address. But DM9000 requires nCS and nOE change between address. So access
  other chip select area (nCS0) to force de-assertion of nCS1 and nOE1. Or else wait for long time 
-@@ -264,6 +171,7 @@ static struct dm9000_plat_data dm9000_platdata = {
+@@ -264,6 +168,7 @@ static struct dm9000_plat_data dm9000_platdata = {
  	.inblk = dm9000_inblk,
  };
  
@@ -454,7 +450,7 @@ index 0e537ec..70c9bc4 100644
  static struct platform_device dm9000_device = {
  	.name		= "dm9000",
  	.id		= 0,
-@@ -273,6 +181,8 @@ static struct platform_device dm9000_device = {
+@@ -273,6 +178,8 @@ static struct platform_device dm9000_device = {
  		.platform_data	= &dm9000_platdata,
  	}
  };
@@ -463,7 +459,7 @@ index 0e537ec..70c9bc4 100644
  static void __init ea_add_device_dm9000(void)
  {
  	/*
-@@ -290,6 +200,7 @@ static void __init ea_add_device_dm9000(void)
+@@ -290,6 +197,7 @@ static void __init ea_add_device_dm9000(void)
  	/* enable oe toggle between consec reads */
  	SYS_MPMC_WTD_DEL1 = _BIT(5) | 4;
  
@@ -471,7 +467,7 @@ index 0e537ec..70c9bc4 100644
  	/* Configure Interrupt pin as input, no pull-up */
  	if (gpio_request(GPIO_MNAND_RYBN3, "dm9000 interrupt"))
  		return;
-@@ -297,6 +208,7 @@ static void __init ea_add_device_dm9000(void)
+@@ -297,6 +205,7 @@ static void __init ea_add_device_dm9000(void)
  	gpio_direction_input(GPIO_MNAND_RYBN3);
  
  	platform_device_register(&dm9000_device);
@@ -479,7 +475,7 @@ index 0e537ec..70c9bc4 100644
  }
  #else
  static void __init ea_add_device_dm9000(void) {}
-@@ -678,6 +590,19 @@ void lpc313x_vbus_power(int enable)
+@@ -678,6 +587,19 @@ void lpc313x_vbus_power(int enable)
  	gpio_set_value(VBUS_PWR_EN, enable);
  }
  
@@ -499,7 +495,7 @@ index 0e537ec..70c9bc4 100644
  static void __init ea313x_init(void)
  {
  	lpc313x_init();
-@@ -700,14 +625,16 @@ static void __init ea313x_init(void)
+@@ -700,14 +622,16 @@ static void __init ea313x_init(void)
  		ARRAY_SIZE(ea3152_i2c1_devices));
  #endif
  }
@@ -517,7 +513,7 @@ index 0e537ec..70c9bc4 100644
  }
  late_initcall(ea_usb_power);
  #endif
-@@ -730,6 +657,7 @@ MACHINE_END
+@@ -730,6 +654,7 @@ MACHINE_END
  #endif
  
  #if defined(CONFIG_MACH_EA313X)
@@ -525,7 +521,7 @@ index 0e537ec..70c9bc4 100644
  MACHINE_START(EA313X, "NXP EA313X")
  	/* Maintainer: Durgesh Pattamatta, NXP */
  	.map_io		= ea313x_map_io,
-@@ -738,6 +666,21 @@ MACHINE_START(EA313X, "NXP EA313X")
+@@ -738,6 +663,21 @@ MACHINE_START(EA313X, "NXP EA313X")
  	.init_machine	= ea313x_init,
  	.restart	= arch_reset,
  MACHINE_END
@@ -541,7 +537,7 @@ index 0e537ec..70c9bc4 100644
 +	.timer		= &lpc313x_timer,
 +	.init_machine	= ea3131_dt_init,
 +	.dt_compat	= ea3131_dt_match,
-+	.restart	= lpc31xx_restart,
++	.restart	= arch_reset,
 +MACHINE_END
 +#endif
  #endif
@@ -568,10 +564,10 @@ index 69ab97a..281a3f5 100644
  
 diff --git a/arch/arm/mach-lpc31xx/dt.c b/arch/arm/mach-lpc31xx/dt.c
 new file mode 100644
-index 0000000..7c3d7cb
+index 0000000..f4606bc
 --- /dev/null
 +++ b/arch/arm/mach-lpc31xx/dt.c
-@@ -0,0 +1,72 @@
+@@ -0,0 +1,68 @@
 +/*
 + * NXP LPC3131 board support using the device tree
 + *
@@ -604,6 +600,7 @@ index 0000000..7c3d7cb
 +#include <mach/board.h>
 +#include <mach/clock.h>
 +#include <mach/dt.h>
++#include <mach/system.h>
 +
 +static void __init lpc31xx_dt_init(void)
 +{
@@ -622,11 +619,6 @@ index 0000000..7c3d7cb
 +printk("JDS - lpc31xx_init_early\n");
 +}
 +
-+void lpc31xx_restart(char mode, const char *cmd)
-+{
-+printk("JDS - lpc31xx_restart\n");
-+}
-+
 +static const char *lpc31xx_dt_match[] __initconst = {
 +	"ncp,lpc3130",
 +	"nxp,lpc3131",
@@ -642,7 +634,7 @@ index 0000000..7c3d7cb
 +	.timer		= &lpc313x_timer,
 +	.init_machine	= lpc31xx_dt_init,
 +	.dt_compat	= lpc31xx_dt_match,
-+	.restart	= lpc31xx_restart,
++	.restart	= arch_reset,
 +MACHINE_END
 diff --git a/arch/arm/mach-lpc31xx/generic.c b/arch/arm/mach-lpc31xx/generic.c
 index 4980a58..1c50945 100644
