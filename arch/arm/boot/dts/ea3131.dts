@@ -9,42 +9,109 @@
 /include/ "lpc3131.dtsi"
 
 / {
-	model = "Electronic Arts EA3131";
+	model = "Embedded Artists EA3131";
 	compatible = "ea,ea3131", "nxp,lpc3131";
 
 	chosen {
 		bootargs = "console=ttyS0,115200n8 root=/dev/mmcblk0p3 init=/etc/preinit rw rootwait loglevel=7";
 	};
 
-	ssd1289@20000000 {
-		compatible = "ssd,ssd1289";
-		reg = <0x20000000 0x10000 0x20010000 0x10000>;
+	apb@13008000 {
+		i2c@1300a000 {
+			slave-address = <0x6E>;
+			pca9532: leds@60 {
+				#gpio-cells = <2>;
+				compatible = "nxp,pca9532";
+				reg = <0x60>;
+				gpio-controller;
+			};
+			uda1380: codec@18 {
+				compatible = "nxp,uda1380";
+				reg = <0x18>;
+			};
+		};
 	};
-	dm9000@20000000 {
-		compatible = "davicom,dm9000";
-		reg = <0x20020000 0x100 0x20030000 0x100>;
-		interrupts = <37>;
+	apb@15000000 {
+		spi@15002000 {
+			s25sl032a@0 {
+				compatible = "code,s25sl032a";
+				spi-max-frequency = <1000000>;
+				reg = <0>;
+			};
+			ads7846@1 {
+				compatible = "ti,ads7846";
+				spi-max-frequency = <1200000>;
+				reg = <1>;
+				interrupts = <20>;
+				vref_delay_usecs = <100>;
+				x_plate_ohms = <419>;
+				y_plate_ohms = <486>;
+				pen_irq = <37>;
+				gpio_pendown = <&gpio_gpio 4 0>;
+				gpio_cs = <&gpio_ebi_i2stx_0 3 0>; 
+			};
+		};
+	};
+	sound {
+		compatible = "ea,ea3131-uda1380";
+		is2-handle = <&i2s>;
+		codec-handle = <&uda1380>;
+		channel = <1>;
+	};
+	pcm {
+		compatible = "nxp,lpc313x-audio";
+	};
+
+	apb@17000000 {
+		nand@17000800 {
+			bank-width = <2>;
+			device-width = <1>;				
+		};
+	};
+	sdmmc@18000000 {
+		slot@0 {
+			width = <4>;
+			detect-delays = <250>;
+			gpio-cd = <&gpio_cgu 7 0>;
+			gpio-power = <&gpio_ebi_i2stx_0 5 0>;
+			/* gpio-power = <&gpio_ebi_i2stx_0 5 0>; broken in hardware */
+			/* gpio-wp = <>; not implemented in hardware */
+			/* gpio-select = <>; not implemented in hardware */
+			voltage-ranges = <3200 3400>;
+		};
+	};
+	usb@19000000 {
+		vbus-over =  <&gpio_i2srx_0 2 0>;
+		vbus-interrupts = <36>;
+	};
+	sram@20000000 {
+		mpmc-config = <0x81 0 0 31 0 3 0>;
+		ssd1289@20000000 {
+			compatible = "ssd,ssd1289";
+			reg = <0x20000000 0x10000 0x20010000 0x10000>;
+		};
+	};
+	sram@20020000 {
+		/* enable oe toggle between consec reads */
+		mpmc-config = <0x81 1 1 4 1 1 2 0x24>;
+		dm9000@20020000 {
+			compatible = "davicom,dm9000";
+			reg = <0x20020000 0x100 0x20030000 0x100>;
+			interrupts = <34>;
+		};			
 	};
 	memory@30000000 {
 		reg = <0x30000000 0x4000000>;
 	};
-	ahb {
-		apb@13008000 {
-			i2c@1300a000 {
-				rtc@51 {
-					compatible = "nxp,pcf8563";
-					reg = <0x51>;
-				};
-				eeprom@52 {
-					compatible = "catalyst,24c32";
-					reg = <0x52>;
-					pagesize = <32>;
-				};
-			};
+	gpio-leds {
+		compatible = "gpio-leds";
+		green {
+			label = "Green";
+			gpios = <&pca9532 0 1>;
 		};
-		sdmmc@18000000 {
-			cd-gpio = <&gpio 0x87 0>;
-			power-gpio = <&gpio 0x45 0>;
+		yellow {
+			label = "Yellow";
+			gpios = <&pca9532 1 1>;
 		};
 	};
 };
