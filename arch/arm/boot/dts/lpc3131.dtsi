@@ -181,7 +181,7 @@
 			interrupts = <26>;
 		};
 		usb@19000000 {
-			compatible = "nxp,lpc31xx-usb, usb-ehci";
+			compatible = "nxp,lpc31xx-usb", "usb-ehci";
 			reg = <0x19000000 0x1000>;
 			interrupts = <27>;
 		};
