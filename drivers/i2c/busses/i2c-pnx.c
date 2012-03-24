@@ -662,7 +662,6 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 			0, pdev->name, alg_data);
 	if (ret)
 		goto out_clock;
-	printk("JDS11\n");
 
 	/* Register this adapter with the I2C subsystem */
 	ret = i2c_add_numbered_adapter(&alg_data->adapter);
@@ -670,12 +669,10 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "I2C: Failed to add bus\n");
 		goto out_irq;
 	}
-	printk("JDS12\n");
 
 	dev_dbg(&pdev->dev, "%s: Master at %#8x, irq %d.\n",
 	       alg_data->adapter.name, res->start, alg_data->irq);
 
-	printk("JDS13\n");
 	return 0;
 
 out_irq:
