@@ -29,6 +29,19 @@
 		reg = <0x30000000 0x4000000>;
 	};
 	ahb {
+		apb@13008000 {
+			i2c@1300a000 {
+				rtc@51 {
+					compatible = "nxp,pcf8563";
+					reg = <0x51>;
+				};
+				eeprom@52 {
+					compatible = "catalyst,24c32";
+					reg = <0x52>;
+					pagesize = <32>;
+				};
+			};
+		};
 		sdmmc@18000000 {
 			cd-gpio = <&gpio 0x87 0>;
 			power-gpio = <&gpio 0x45 0>;

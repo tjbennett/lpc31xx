@@ -572,14 +572,8 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 	int ret = 0;
 	struct i2c_pnx_algo_data *alg_data;
 	unsigned long freq;
-	struct i2c_pnx_data *i2c_pnx = pdev->dev.platform_data;
-
-	if (!i2c_pnx || !i2c_pnx->name) {
-		dev_err(&pdev->dev, "%s: no platform data supplied\n",
-		       __func__);
-		ret = -EINVAL;
-		goto out;
-	}
+	struct resource *res;
+	static char *name ="i2c-pnx";
 
 	alg_data = kzalloc(sizeof(*alg_data), GFP_KERNEL);
 	if (!alg_data) {
@@ -589,13 +583,14 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, alg_data);
 
-	strlcpy(alg_data->adapter.name, i2c_pnx->name,
-		sizeof(alg_data->adapter.name));
 	alg_data->adapter.dev.parent = &pdev->dev;
 	alg_data->adapter.algo = &pnx_algorithm;
 	alg_data->adapter.algo_data = alg_data;
 	alg_data->adapter.nr = pdev->id;
-	alg_data->i2c_pnx = i2c_pnx;
+	alg_data->adapter.dev.parent = &pdev->dev;
+#ifdef CONFIG_OF
+	alg_data->adapter.dev.of_node = of_node_get(pdev->dev.of_node);
+#endif
 
 	alg_data->clk = clk_get(&pdev->dev, NULL);
 	if (IS_ERR(alg_data->clk)) {
@@ -608,16 +603,24 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 	alg_data->mif.timer.data = (unsigned long)alg_data;
 
 	/* Register I/O resource */
-	if (!request_mem_region(i2c_pnx->base, I2C_PNX_REGION_SIZE,
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (res == NULL) {
+		dev_err(&pdev->dev, "Unable to get resources.\n");
+		return -ENXIO;
+	}
+	sprintf(alg_data->adapter.name, "%08x.i2c", res->start);
+
+	if (!request_mem_region(res->start, I2C_PNX_REGION_SIZE,
 				pdev->name)) {
 		dev_err(&pdev->dev,
 		       "I/O region 0x%08x for I2C already in use.\n",
-		       i2c_pnx->base);
+		       res->start);
 		ret = -ENODEV;
 		goto out_clkget;
 	}
 
-	alg_data->ioaddr = ioremap(i2c_pnx->base, I2C_PNX_REGION_SIZE);
+	alg_data->base = res->start;
+	alg_data->ioaddr = ioremap(res->start, I2C_PNX_REGION_SIZE);
 	if (!alg_data->ioaddr) {
 		dev_err(&pdev->dev, "Couldn't ioremap I2C I/O region\n");
 		ret = -ENOMEM;
@@ -654,10 +657,12 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 	}
 	init_completion(&alg_data->mif.complete);
 
-	ret = request_irq(i2c_pnx->irq, i2c_pnx_interrupt,
+	alg_data->irq = platform_get_irq(pdev, 0);
+	ret = request_irq(alg_data->irq, i2c_pnx_interrupt,
 			0, pdev->name, alg_data);
 	if (ret)
 		goto out_clock;
+	printk("JDS11\n");
 
 	/* Register this adapter with the I2C subsystem */
 	ret = i2c_add_numbered_adapter(&alg_data->adapter);
@@ -665,20 +670,22 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "I2C: Failed to add bus\n");
 		goto out_irq;
 	}
+	printk("JDS12\n");
 
 	dev_dbg(&pdev->dev, "%s: Master at %#8x, irq %d.\n",
-	       alg_data->adapter.name, i2c_pnx->base, i2c_pnx->irq);
+	       alg_data->adapter.name, res->start, alg_data->irq);
 
+	printk("JDS13\n");
 	return 0;
 
 out_irq:
-	free_irq(i2c_pnx->irq, alg_data);
+	free_irq(alg_data->irq, alg_data);
 out_clock:
 	clk_disable(alg_data->clk);
 out_unmap:
 	iounmap(alg_data->ioaddr);
 out_release:
-	release_mem_region(i2c_pnx->base, I2C_PNX_REGION_SIZE);
+	release_mem_region(res->start, I2C_PNX_REGION_SIZE);
 out_clkget:
 	clk_put(alg_data->clk);
 out_drvdata:
@@ -692,13 +699,12 @@ out:
 static int __devexit i2c_pnx_remove(struct platform_device *pdev)
 {
 	struct i2c_pnx_algo_data *alg_data = platform_get_drvdata(pdev);
-	struct i2c_pnx_data *i2c_pnx = alg_data->i2c_pnx;
 
-	free_irq(i2c_pnx->irq, alg_data);
+	free_irq(alg_data->irq, alg_data);
 	i2c_del_adapter(&alg_data->adapter);
 	clk_disable(alg_data->clk);
 	iounmap(alg_data->ioaddr);
-	release_mem_region(i2c_pnx->base, I2C_PNX_REGION_SIZE);
+	release_mem_region(alg_data->base, I2C_PNX_REGION_SIZE);
 	clk_put(alg_data->clk);
 	kfree(alg_data);
 	platform_set_drvdata(pdev, NULL);
@@ -706,10 +712,21 @@ static int __devexit i2c_pnx_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id i2c_pnx_of_match[] = {
+	{ .compatible = "nxp,pnx-i2c" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, i2c_pnx_of_match);
+#endif
+
 static struct platform_driver i2c_pnx_driver = {
 	.driver = {
 		.name = "pnx-i2c",
 		.owner = THIS_MODULE,
+#ifdef CONFIG_OF
+			.of_match_table = i2c_pnx_of_match,
+#endif
 	},
 	.probe = i2c_pnx_probe,
 	.remove = __devexit_p(i2c_pnx_remove),
