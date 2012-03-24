@@ -47,7 +47,6 @@ void __init lpc31xx_dt_init_common(struct of_dev_auxdata* auxdata)
 
 void __init lpc31xx_init_early(void)
 {
-printk("JDS - lpc31xx_init_early\n");
 }
 
 static const char *lpc31xx_dt_match[] __initconst = {
