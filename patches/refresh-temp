@@ -1,0 +1,34 @@
+Bottom: 22f9a82e812daacc38e16d14d6a98321d24f5146
+Top:    dd0047e7bb1a861ecf832b0748df7fc63c0b1e09
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-03-24 15:43:21 -0400
+
+Refresh of i2c-resource
+
+---
+
+diff --git a/drivers/i2c/busses/i2c-pnx.c b/drivers/i2c/busses/i2c-pnx.c
+index 69409ca..c0bf133 100644
+--- a/drivers/i2c/busses/i2c-pnx.c
++++ b/drivers/i2c/busses/i2c-pnx.c
+@@ -662,7 +662,6 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
+ 			0, pdev->name, alg_data);
+ 	if (ret)
+ 		goto out_clock;
+-	printk("JDS11\n");
+ 
+ 	/* Register this adapter with the I2C subsystem */
+ 	ret = i2c_add_numbered_adapter(&alg_data->adapter);
+@@ -670,12 +669,10 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
+ 		dev_err(&pdev->dev, "I2C: Failed to add bus\n");
+ 		goto out_irq;
+ 	}
+-	printk("JDS12\n");
+ 
+ 	dev_dbg(&pdev->dev, "%s: Master at %#8x, irq %d.\n",
+ 	       alg_data->adapter.name, res->start, alg_data->irq);
+ 
+-	printk("JDS13\n");
+ 	return 0;
+ 
+ out_irq:
