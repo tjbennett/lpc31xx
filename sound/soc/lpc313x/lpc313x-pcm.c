@@ -543,10 +543,21 @@ static int __devexit lpc313x_asoc_platform_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id lpc313x_dma_of_match[] = {
+	{ .compatible = "nxp,lpc313x-audio" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, lpc313x_dma_of_match);
+#endif
+
 static struct platform_driver lpc313x_dma_driver = {
 	.driver = {
 		.name = SND_NAME,
 		.owner = THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table = lpc313x_dma_of_match,
+#endif
 	},
 
 	.probe = lpc313x_asoc_platform_probe,
