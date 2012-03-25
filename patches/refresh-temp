@@ -1,0 +1,452 @@
+Bottom: 65cde5aa753d2168aeec2f327beba66393d62988
+Top:    d3934cdbe34b58aa8ab19f5779a618d2a570bea4
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-03-25 16:22:28 -0400
+
+Refresh of i2c-resource
+
+---
+
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+index 2201282..82dffcd 100644
+--- a/arch/arm/boot/dts/ea3131.dts
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -40,19 +40,20 @@
+ 			ads7846@1 {
+ 				compatible = "ti,ads7846";
+ 				reg = <1>;
++				interrupt = <37>;
+ 			};
+ 		};
+ 	};
+-	apb@16000000 {
+-		i2s@16000000 {
+-			codec-handle = <&uda1380>;
+-		};
++	sound {
++		compatible = "ea,ea3131-uda1380";
++		is2-handle = <&i2s>;
++		codec-handle = <&uda1380>;
++		channel = <1>;
+ 	};
+-	apb@16000000 {
+-		i2s@16000000 {
+-			codec-handle = <&uda1380>;
+-		};
++	pcm {
++		compatible = "nxp,lpc313x-audio";
+ 	};
++
+ 	apb@17000000 {
+ 		nand@17000800 {
+ 			bank-width = <2>;
+diff --git a/arch/arm/boot/dts/lpc3131.dtsi b/arch/arm/boot/dts/lpc3131.dtsi
+index 35a3a22..dd1860d 100644
+--- a/arch/arm/boot/dts/lpc3131.dtsi
++++ b/arch/arm/boot/dts/lpc3131.dtsi
+@@ -31,7 +31,7 @@
+ 		interrupts = <29>;
+ 	};
+ 	apb@13000000 {
+-		compatible = "nxp,lpc31xx-apb";
++		compatible = "nxp,lpc31xx-apb", "simple-bus";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+ 		ranges = <0x13000000 0x13000000 0x8000>;
+@@ -71,7 +71,7 @@
+ 		};
+ 	};
+ 	apb@13008000 {
+-		compatible = "nxp,lpc31xx-apb";
++		compatible = "nxp,lpc31xx-apb", "simple-bus";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+ 		ranges = <0x13008000 0x13008000 0x4000>;
+@@ -122,7 +122,7 @@
+ 		};
+ 	};
+ 	apb@15000000 {
+-		compatible = "nxp,lpc31xx-apb";
++		compatible = "nxp,lpc31xx-apb", "simple-bus";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+ 		ranges = <0x15000000 0x15000000 0x3000>;
+@@ -152,19 +152,19 @@
+ 		};
+ 	};
+ 	apb@16000000 {
+-		compatible = "nxp,lpc31xx-apb";
++		compatible = "nxp,lpc31xx-apb", "simple-bus";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+ 		ranges = <0x16000000 0x16000000 0x1000>;
+ 
+-		i2s@16000000 {
++		i2s: i2s@16000000 {
+ 			compatible = "nxp,lpc31xx-i2s";
+ 			reg = <0x16000000 0x1000>;
+ 			interrupts = <13 14 15 16>;
+ 		};
+ 	};
+ 	apb@17000000 {
+-		compatible = "nxp,lpc31xx-apb";
++		compatible = "nxp,lpc31xx-apb", "simple-bus";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+ 		ranges = <0x17000000 0x17000000 0x1000>;
+@@ -196,13 +196,13 @@
+ 		interrupts = <27>;
+ 	};
+ 	sram@20000000 {
+-		compatible = "nxp,lpc31xx-sram";
++		compatible = "nxp,lpc31xx-sram", "simple-bus";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+ 		ranges = <0x20000000 0x20000000 0x20000>;
+ 	};
+ 	sram@20020000 {
+-		compatible = "nxp,lpc31xx-sram";
++		compatible = "nxp,lpc31xx-sram", "simple-bus";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+ 		ranges = <0x20020000 0x20020000 0x20000>;
+diff --git a/arch/arm/mach-lpc31xx/dt.c b/arch/arm/mach-lpc31xx/dt.c
+index add35ad..5f1c703 100644
+--- a/arch/arm/mach-lpc31xx/dt.c
++++ b/arch/arm/mach-lpc31xx/dt.c
+@@ -47,7 +47,6 @@ void __init lpc31xx_dt_init_common(struct of_dev_auxdata* auxdata)
+ 
+ void __init lpc31xx_init_early(void)
+ {
+-printk("JDS - lpc31xx_init_early\n");
+ }
+ 
+ static const char *lpc31xx_dt_match[] __initconst = {
+diff --git a/arch/arm/mach-lpc31xx/generic.c b/arch/arm/mach-lpc31xx/generic.c
+index 8fe3326..024ec0b 100644
+--- a/arch/arm/mach-lpc31xx/generic.c
++++ b/arch/arm/mach-lpc31xx/generic.c
+@@ -196,7 +196,6 @@ static struct map_desc lpc313x_io_desc[] __initdata = {
+ 
+ void __init lpc313x_map_io(void)
+ {
+-printk("JDS - lpc313x_map_io\n");
+ 	iotable_init(lpc313x_io_desc, ARRAY_SIZE(lpc313x_io_desc));
+ }
+ extern int __init cgu_init(char *str);
+diff --git a/drivers/i2c/busses/i2c-pnx.c b/drivers/i2c/busses/i2c-pnx.c
+index c0bf133..ba355bd 100644
+--- a/drivers/i2c/busses/i2c-pnx.c
++++ b/drivers/i2c/busses/i2c-pnx.c
+@@ -23,6 +23,7 @@
+ #include <linux/err.h>
+ #include <linux/clk.h>
+ #include <linux/slab.h>
++#include <linux/of_i2c.h>
+ 
+ #include <mach/hardware.h>
+ #include <mach/i2c.h>
+@@ -573,7 +574,6 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
+ 	struct i2c_pnx_algo_data *alg_data;
+ 	unsigned long freq;
+ 	struct resource *res;
+-	static char *name ="i2c-pnx";
+ 
+ 	alg_data = kzalloc(sizeof(*alg_data), GFP_KERNEL);
+ 	if (!alg_data) {
+@@ -670,9 +670,11 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
+ 		goto out_irq;
+ 	}
+ 
+-	dev_dbg(&pdev->dev, "%s: Master at %#8x, irq %d.\n",
++	dev_info(&pdev->dev, "%s: Master at %#8x, irq %d.\n",
+ 	       alg_data->adapter.name, res->start, alg_data->irq);
+ 
++	of_i2c_register_devices(&alg_data->adapter);
++
+ 	return 0;
+ 
+ out_irq:
+@@ -689,7 +691,6 @@ out_drvdata:
+ 	kfree(alg_data);
+ err_kzalloc:
+ 	platform_set_drvdata(pdev, NULL);
+-out:
+ 	return ret;
+ }
+ 
+diff --git a/drivers/of/of_i2c.c b/drivers/of/of_i2c.c
+index f37fbeb..e1d99c0 100644
+--- a/drivers/of/of_i2c.c
++++ b/drivers/of/of_i2c.c
+@@ -18,6 +18,7 @@
+ #include <linux/of_irq.h>
+ #include <linux/module.h>
+ 
++
+ void of_i2c_register_devices(struct i2c_adapter *adap)
+ {
+ 	void *result;
+diff --git a/dt_config b/dt_config
+index 5713293..d4f683b 100644
+--- a/dt_config
++++ b/dt_config
+@@ -1195,24 +1195,19 @@ CONFIG_FB_SSD1289=y
+ # CONFIG_BACKLIGHT_LCD_SUPPORT is not set
+ # CONFIG_LOGO is not set
+ CONFIG_SOUND=y
+-CONFIG_SOUND_OSS_CORE=y
+-CONFIG_SOUND_OSS_CORE_PRECLAIM=y
++# CONFIG_SOUND_OSS_CORE is not set
+ CONFIG_SND=y
+ CONFIG_SND_TIMER=y
+ CONFIG_SND_PCM=y
+ CONFIG_SND_JACK=y
+ # CONFIG_SND_SEQUENCER is not set
+-CONFIG_SND_OSSEMUL=y
+-CONFIG_SND_MIXER_OSS=y
+-CONFIG_SND_PCM_OSS=y
+-CONFIG_SND_PCM_OSS_PLUGINS=y
++# CONFIG_SND_MIXER_OSS is not set
++# CONFIG_SND_PCM_OSS is not set
+ # CONFIG_SND_DYNAMIC_MINORS is not set
+-CONFIG_SND_SUPPORT_OLD_API=y
++# CONFIG_SND_SUPPORT_OLD_API is not set
+ CONFIG_SND_VERBOSE_PROCFS=y
+-CONFIG_SND_VERBOSE_PRINTK=y
+-CONFIG_SND_DEBUG=y
+-CONFIG_SND_DEBUG_VERBOSE=y
+-CONFIG_SND_PCM_XRUN_DEBUG=y
++# CONFIG_SND_VERBOSE_PRINTK is not set
++# CONFIG_SND_DEBUG is not set
+ # CONFIG_SND_RAWMIDI_SEQ is not set
+ # CONFIG_SND_OPL3_LIB_SEQ is not set
+ # CONFIG_SND_OPL4_LIB_SEQ is not set
+@@ -1225,7 +1220,7 @@ CONFIG_SND_PCM_XRUN_DEBUG=y
+ CONFIG_SND_SOC=y
+ CONFIG_SND_LPC313X_SOC=y
+ CONFIG_SND_LPC313X_SOC_I2S=y
+-CONFIG_SND_LPC313X_SOC_I2S_UDA1380=y
++CONFIG_SND_EA3131_SOC_I2S_UDA1380=y
+ CONFIG_SND_USE_EA3131=y
+ CONFIG_SND_I2C1_CHANNEL_UDA1380=y
+ CONFIG_SND_I2S_RX0_MASTER=y
+diff --git a/include/linux/i2c-pnx.h b/include/linux/i2c-pnx.h
+index e857166..b97ce00 100644
+--- a/include/linux/i2c-pnx.h
++++ b/include/linux/i2c-pnx.h
+@@ -30,7 +30,7 @@ struct i2c_pnx_algo_data {
+ 	int			last;
+ 	struct clk		*clk;
+ 	struct i2c_adapter	adapter;
+-	void __iomem *base;
++	int base;
+ 	int irq;
+ };
+ 
+diff --git a/sound/soc/codecs/uda1380.c b/sound/soc/codecs/uda1380.c
+index 773e76f..562a393 100644
+--- a/sound/soc/codecs/uda1380.c
++++ b/sound/soc/codecs/uda1380.c
+@@ -850,10 +850,17 @@ static const struct i2c_device_id uda1380_i2c_id[] = {
+ };
+ MODULE_DEVICE_TABLE(i2c, uda1380_i2c_id);
+ 
++static const struct of_device_id uda1380_of_match[] = {
++	{ .compatible = "nxp,uda1380", },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, uda1380_of_match);
++
+ static struct i2c_driver uda1380_i2c_driver = {
+ 	.driver = {
+ 		.name =  "uda1380-codec",
+ 		.owner = THIS_MODULE,
++		.of_match_table = uda1380_of_match,
+ 	},
+ 	.probe =    uda1380_i2c_probe,
+ 	.remove =   __devexit_p(uda1380_i2c_remove),
+diff --git a/sound/soc/lpc313x/Kconfig b/sound/soc/lpc313x/Kconfig
+index 552dadb..321517a 100644
+--- a/sound/soc/lpc313x/Kconfig
++++ b/sound/soc/lpc313x/Kconfig
+@@ -17,17 +17,16 @@ config SND_LPC315X_SOC
+ config SND_LPC313X_SOC_I2S
+         bool
+ 
+-config SND_LPC313X_SOC_I2S_UDA1380
+-        bool "SoC Audio for the UDA1380 CODEC using I2S/I2C"
++config SND_EA3131_SOC_I2S_UDA1380
++        bool "EA3131 SoC Audio for the UDA1380 CODEC using I2S/I2C"
+         depends on SND_LPC313X_SOC
++        depends on MACH_EA313X
+         select I2C_PNX
+         select SND_LPC313X_SOC_I2S
+         select SND_SOC_UDA1380
+         help
+           Say Y here if you want to add support for SoC audio on the
+-	  LPC313x with the UDA1380 CODEC. This requires an I2S channel
+-	  and I2C channel connected to the I2C interface of the
+-	  UDA1380 codec.
++	  EA3131 with the UDA1380 CODEC. 
+ 
+ config SND_LPC315X_SOC_I2S_LPC315X_CODEC
+ 	bool "SoC Audio for the Analog Die CODEC using I2S/I2C in 315X SoC"
+@@ -44,7 +43,7 @@ config SND_LPC315X_SOC_I2S_LPC315X_CODEC
+ config SND_USE_EA3131
+         bool "Enable audio configuration for the EA3131 board"
+         depends on SND_LPC313X_SOC
+-	select SND_LPC313X_SOC_I2S_UDA1380
++	select SND_EA3131_SOC_I2S_UDA1380
+ 	select SND_I2C1_CHANNEL_UDA1380
+ 	select SND_I2S_RX1_MASTER
+ 	select SND_I2S_TX1_MASTER
+@@ -69,7 +68,7 @@ config SND_USE_EA3152
+ 
+ config SND_I2C1_CHANNEL_UDA1380
+ 	bool "I2C1 channel connected to the UDA1380"
+-	depends on SND_LPC313X_SOC_I2S_UDA1380
++	depends on SND_EA3131_SOC_I2S_UDA1380
+ 	help
+ 	  Say Y here to use the I2C1 channel to communicate with the
+ 	  UDA1380 CODEC. Not selecting this option will use I2C0.
+diff --git a/sound/soc/lpc313x/Makefile b/sound/soc/lpc313x/Makefile
+index 8c42e30..c991f6c 100644
+--- a/sound/soc/lpc313x/Makefile
++++ b/sound/soc/lpc313x/Makefile
+@@ -7,9 +7,9 @@ obj-$(CONFIG_SND_LPC315X_SOC) += snd-soc-lpc313x.o
+ obj-$(CONFIG_SND_LPC313X_SOC_I2S) += snd-soc-lpc313x-i2s.o lpc313x-i2s-clocking.o
+ 
+ # LPC3XXX Machine Support
+-snd-soc-lpc313x-uda1380-objs := lpc313x-uda1380.o
++snd-soc-ea3131-uda1380-objs := ea3131-uda1380.o
+ 
+-obj-$(CONFIG_SND_LPC313X_SOC_I2S_UDA1380) += snd-soc-lpc313x-uda1380.o
++obj-$(CONFIG_SND_EA3131_SOC_I2S_UDA1380) += snd-soc-ea3131-uda1380.o
+ 
+ # LPC315X Machine Support
+ snd-soc-lpc315x-codec-objs := lpc315x-codec.o
+diff --git a/sound/soc/lpc313x/lpc313x-uda1380.c b/sound/soc/lpc313x/ea3131-uda1380.c
+similarity index 92%
+rename from sound/soc/lpc313x/lpc313x-uda1380.c
+rename to sound/soc/lpc313x/ea3131-uda1380.c
+index 607d545..e19fae2 100644
+--- a/sound/soc/lpc313x/lpc313x-uda1380.c
++++ b/sound/soc/lpc313x/ea3131-uda1380.c
+@@ -141,9 +141,9 @@ static struct snd_soc_dai_link ea3131_uda1380_dai[] = {
+ 		.name = "uda1380",
+ 		.stream_name = "uda1380",
+ 		.codec_name	= "uda1380-codec.1-001a",
+-		.cpu_dai_name = "lpc313x-i2s.0",
++		.cpu_dai_name = "16000000.i2s",
+ 		.codec_dai_name = "uda1380-hifi",
+-		.platform_name	= "lpc313x-audio.0",
++		.platform_name	= "pcm.8",
+ 		.init = ea3131_uda1380_init,
+ 		.ops = &ea3131_uda1380_ops,
+ 	},
+@@ -196,7 +196,7 @@ static int __devinit ea3131_asoc_probe(struct platform_device *pd)
+ 
+ 	snd_dev = platform_device_alloc("soc-audio", -1);
+ 	if (!snd_dev) {
+-		dev_err(&pd->dev, "failed to alloc soc-audio devicec\n");
++		dev_err(&pd->dev, "failed to alloc soc-audio device\n");
+ 		return -ENOMEM;
+ 	}
+ 
+@@ -220,11 +220,22 @@ static int __devexit ea3131_asoc_remove(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
++#if defined(CONFIG_OF)
++static const struct of_device_id ea3131_asoc_of_match[] = {
++	{ .compatible = "ea,ea3131-uda1380" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, ea3131_asoc_of_match);
++#endif
++
+ static struct platform_driver ea3131_asoc_platdrv = {
+ 	.driver	= {
+ 		.owner	= THIS_MODULE,
+-		.name	= "lpc313x-uda1380",
++		.name	= "ea3131-uda1380",
+ 		//.pm	= ea3131_asoc_pm,
++#ifdef CONFIG_OF
++		.of_match_table = ea3131_asoc_of_match,
++#endif
+ 	},
+ 	.probe	= ea3131_asoc_probe,
+ 	.remove	= __devexit_p(ea3131_asoc_remove),
+@@ -244,7 +255,7 @@ module_init(ea3131_asoc_modinit);
+ module_exit(ea3131_asoc_modexit);
+ 
+ MODULE_AUTHOR("Kevin Wells <kevin.wells@nxp.com>");
+-MODULE_DESCRIPTION("ASoC machine driver for LPC313X/UDA1380");
++MODULE_DESCRIPTION("ASoC machine driver for EA3131/UDA1380");
+ MODULE_LICENSE("GPL");
+-MODULE_ALIAS("platform:lpc313x-uda1380");
++MODULE_ALIAS("platform:ea3131-uda1380");
+ 
+diff --git a/sound/soc/lpc313x/lpc313x-i2s.c b/sound/soc/lpc313x/lpc313x-i2s.c
+index bdf6b45..e180788 100644
+--- a/sound/soc/lpc313x/lpc313x-i2s.c
++++ b/sound/soc/lpc313x/lpc313x-i2s.c
+@@ -398,6 +398,7 @@ EXPORT_SYMBOL_GPL(lpc313x_i2s_dai);
+ 
+ static __devinit int lpc313x_i2s_dev_probe(struct platform_device *pdev)
+ {
++	printk("JDS = lpc313x_i2s_dev_probe\n");
+ 	return snd_soc_register_dai(&pdev->dev, &lpc313x_i2s_dai);
+ }
+ 
+@@ -407,12 +408,23 @@ static __devexit int lpc313x_i2s_dev_remove(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
++#if defined(CONFIG_OF)
++static const struct of_device_id lpc313x_i2s_of_match[] = {
++	{ .compatible = "nxp,lpc31xx-i2s" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, lpc313x_i2s_of_match);
++#endif
++
+ static struct platform_driver lpc313x_i2s_driver = {
+ 	.probe  = lpc313x_i2s_dev_probe,
+ 	.remove = lpc313x_i2s_dev_remove,
+ 	.driver = {
+ 		.name = I2S_NAME,
+ 		.owner = THIS_MODULE,
++#ifdef CONFIG_OF
++		.of_match_table = lpc313x_i2s_of_match,
++#endif
+ 	},
+ };
+ 
+diff --git a/sound/soc/lpc313x/lpc313x-pcm.c b/sound/soc/lpc313x/lpc313x-pcm.c
+index 26bdb28..8bd3a5a 100644
+--- a/sound/soc/lpc313x/lpc313x-pcm.c
++++ b/sound/soc/lpc313x/lpc313x-pcm.c
+@@ -543,10 +543,21 @@ static int __devexit lpc313x_asoc_platform_remove(struct platform_device *pdev)
+ 	return 0;
+ }
+ 
++#if defined(CONFIG_OF)
++static const struct of_device_id lpc313x_dma_of_match[] = {
++	{ .compatible = "nxp,lpc313x-audio" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, lpc313x_dma_of_match);
++#endif
++
+ static struct platform_driver lpc313x_dma_driver = {
+ 	.driver = {
+ 		.name = SND_NAME,
+ 		.owner = THIS_MODULE,
++#ifdef CONFIG_OF
++		.of_match_table = lpc313x_dma_of_match,
++#endif
+ 	},
+ 
+ 	.probe = lpc313x_asoc_platform_probe,
