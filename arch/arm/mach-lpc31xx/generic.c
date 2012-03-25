@@ -147,14 +147,6 @@ static struct map_desc lpc313x_io_desc[] __initdata = {
 		.length		= IO_APB4_SIZE,
 		.type		= MT_DEVICE
 	},
-#if 0
-	{
-		.virtual	= io_p2v(IO_DMA_REG_PHYS),
-		.pfn		= __phys_to_pfn(IO_DMA_REG_PHYS),
-		.length		= IO_DMA_REG_SIZE,
-		.type		= MT_DEVICE
-	},
-#endif
 	{
 		.virtual	= io_p2v(IO_MPMC_CFG_PHYS),
 		.pfn		= __phys_to_pfn(IO_MPMC_CFG_PHYS),
@@ -185,6 +177,18 @@ static struct map_desc lpc313x_io_desc[] __initdata = {
 		.virtual	= io_p2v(IO_SDMMC_PHYS),
 		.pfn		= __phys_to_pfn(IO_SDMMC_PHYS),
 		.length		= IO_SDMMC_SIZE,
+		.type		= MT_DEVICE
+	},
+	{
+		.virtual	= io_p2v(EXT_SRAM0_PHYS),
+		.pfn		= __phys_to_pfn(EXT_SRAM0_PHYS),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE
+	},
+	{
+		.virtual	= io_p2v(EXT_SRAM1_PHYS + 0x10000),
+		.pfn		= __phys_to_pfn(EXT_SRAM1_PHYS + 0x10000),
+		.length		= SZ_4K,
 		.type		= MT_DEVICE
 	},
 #endif
