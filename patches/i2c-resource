@@ -1,5 +1,5 @@
 Bottom: 82d6dfaf114e6b7489b8e929cdf5b671646c329f
-Top:    a6f89561d3da2a97815426b08127647dbc9260ac
+Top:    c64047d5e34f2f8f8143effe5969ef3ae0e78e65
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-24 15:38:34 -0400
 
@@ -9,7 +9,7 @@ Fix pnx driver to take standard driver resources
 ---
 
 diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
-index 020c063..7c7cbfc 100644
+index 020c063..1b9d265 100644
 --- a/arch/arm/boot/dts/ea3131.dts
 +++ b/arch/arm/boot/dts/ea3131.dts
 @@ -16,35 +16,100 @@
@@ -41,7 +41,7 @@ index 020c063..7c7cbfc 100644
 +	apb@15000000 {
 +		spi@15002000 {
 +			at45db321d@0 {
-+				compatible = "atmel,at45db321d", "atmel,at45", "atmel,dataflash";
++				compatible = "st,m25";
 +				spi-max-frequency = <1000000>;
 +				reg = <0>;
 +			};
@@ -1285,6 +1285,50 @@ index 23fd901..9ac17b0 100644
  	},
  	.probe		= ads7846_probe,
  	.remove		= __devexit_p(ads7846_remove),
+diff --git a/drivers/mtd/devices/m25p80.c b/drivers/mtd/devices/m25p80.c
+index 7c60ddd..5ceeb94 100644
+--- a/drivers/mtd/devices/m25p80.c
++++ b/drivers/mtd/devices/m25p80.c
+@@ -834,6 +834,7 @@ static int __devinit m25p_probe(struct spi_device *spi)
+ 	 * a chip ID, try the JEDEC id commands; they'll work for most
+ 	 * newer chips, even if we don't recognize the particular chip.
+ 	 */
++
+ 	data = spi->dev.platform_data;
+ 	if (data && data->type) {
+ 		const struct spi_device_id *plat_id;
+@@ -849,7 +850,8 @@ static int __devinit m25p_probe(struct spi_device *spi)
+ 			id = plat_id;
+ 		else
+ 			dev_warn(&spi->dev, "unrecognized id %s\n", data->type);
+-	}
++	} else
++		id = jedec_probe(spi);
+ 
+ 	info = (void *)id->driver_data;
+ 
+@@ -988,11 +990,21 @@ static int __devexit m25p_remove(struct spi_device *spi)
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_OF
++static const struct of_device_id m25p80_dt_ids[] = {
++	{ .compatible = "st,m25", },
++	{ /* sentinel */ }
++};
++#else
++#define m25p80_dt_ids NULL
++#endif
++
+ 
+ static struct spi_driver m25p80_driver = {
+ 	.driver = {
+ 		.name	= "m25p80",
+ 		.owner	= THIS_MODULE,
++		.of_match_table = m25p80_dt_ids,
+ 	},
+ 	.id_table	= m25p_ids,
+ 	.probe	= m25p_probe,
 diff --git a/drivers/mtd/nand/lpc313x_nand.c b/drivers/mtd/nand/lpc313x_nand.c
 index 3e76633..398e3df 100644
 --- a/drivers/mtd/nand/lpc313x_nand.c
