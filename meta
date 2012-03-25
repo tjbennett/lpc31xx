@@ -1,6 +1,6 @@
 Version: 1
-Previous: d208bffe33e93644413a25c94e2814f59024c771
-Head: 9b57a8aa602cb09b214f30f225692da4d2c74f39
+Previous: 0cf816b5db7c50ca511ad52801143d07200dd92e
+Head: 27a87e30941ea3c40af6f0ad6f8604f7327dba31
 Applied:
   i2c-fix: 464d99faefcdcf9f203ba4c8b482d387c8c29467
   base: b391bc787a534e6037fc0ec714215d0635982fcc
@@ -24,5 +24,6 @@ Applied:
   reset: e9b59ed17b4ca46ca5ee4491e690816e63bda19d
   devicetree: 76a79967cdefd8acce0894d1ff73a8582e6eedef
   i2c-resource: 9b57a8aa602cb09b214f30f225692da4d2c74f39
+  refresh-temp: 27a87e30941ea3c40af6f0ad6f8604f7327dba31
 Unapplied:
 Hidden:
