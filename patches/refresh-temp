@@ -1,0 +1,568 @@
+Bottom: 33a24dd483ade8d85836c3d0e1810dbbbd8e1ef3
+Top:    65cde5aa753d2168aeec2f327beba66393d62988
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-03-25 11:37:22 -0400
+
+Refresh of i2c-resource
+
+---
+
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+index 906a51a..2201282 100644
+--- a/arch/arm/boot/dts/ea3131.dts
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -16,85 +16,88 @@
+ 		bootargs = "console=ttyS0,115200n8 root=/dev/mmcblk0p3 init=/etc/preinit rw rootwait loglevel=7";
+ 	};
+ 
+-	ahb {
+-		apb@13008000 {
+-			i2c@1300a000 {
+-				slave-address = <0x6E>;
+-				pca9532: leds@60 {
+-					#gpio-cells = <2>;
+-					compatible = "nxp,pca9532";
+-					reg = <0x60>;
+-					gpio-controller;
+-				};
+-				uda1380: codec@18 {
+-					compatible = "nxp,uda1380";
+-					reg = <0x18>;
+-				};
++	apb@13008000 {
++		i2c@1300a000 {
++			slave-address = <0x6E>;
++			pca9532: leds@60 {
++				#gpio-cells = <2>;
++				compatible = "nxp,pca9532";
++				reg = <0x60>;
++				gpio-controller;
+ 			};
+-		};
+-		apb@15000000 {
+-			spi@15002000 {
+-				at45db321d@0 {
+-					compatible = "atmel,at45db321d", "atmel,at45", "atmel,dataflash";
+-					reg = <0>;
+-				};
+-				ads7846@1 {
+-					compatible = "ti,ads7846";
+-					reg = <1>;
+-				};
++			uda1380: codec@18 {
++				compatible = "nxp,uda1380";
++				reg = <0x18>;
+ 			};
+ 		};
+-		apb@16000000 {
+-			i2s@16000000 {
+-				codec-handle = <&uda1380>;
++	};
++	apb@15000000 {
++		spi@15002000 {
++			at45db321d@0 {
++				compatible = "atmel,at45db321d", "atmel,at45", "atmel,dataflash";
++				reg = <0>;
+ 			};
+-		};
+-		apb@17000000 {
+-			nand@17000800 {
+-				bank-width = <2>;
+-				device-width = <1>;				
++			ads7846@1 {
++				compatible = "ti,ads7846";
++				reg = <1>;
+ 			};
+ 		};
+-		sdmmc@18000000 {
+-			cd-gpio = <&gpio 0x87 0>;
+-			power-gpio = <&gpio 0x45 0>;
+-		};
+-		usb@19000000 {
+-			vbus-over =  <&pca9532 0xFF 0>;
++	};
++	apb@16000000 {
++		i2s@16000000 {
++			codec-handle = <&uda1380>;
+ 		};
+-		sram@20000000 {
+-			STCONFIG = <0x81>;
+-			STWTWEN  = <0>;
+-			STWTOEN  = <0>;
+-			STWTRD   = <31>;
+-			STWTPG   = <0>;
+-			STWTWR   = <3>;
+-			STWTTURN = <0>;
+-			ssd1289@20000000 {
+-				compatible = "ssd,ssd1289";
+-				reg = <0x20000000 0x10000 0x20010000 0x10000>;
+-			};
++	};
++	apb@16000000 {
++		i2s@16000000 {
++			codec-handle = <&uda1380>;
+ 		};
+-		sram@20020000 {
+-			STCONFIG = <0x81>;
+-			STWTWEN = <1>;
+-			STWTOEN = <1>;
+-			STWTRD = <4>;
+-			STWTPG = <1>;
+-			STWTWR = <1>;
+-			STWTTURN = <2>;
+-			/* enable oe toggle between consec reads */
+-			WTD_DEL = <0x24>;
+-			dm9000@20020000 {
+-				compatible = "davicom,dm9000";
+-				reg = <0x20020000 0x100 0x20030000 0x100>;
+-				interrupts = <37>;
+-			};
++	};
++	apb@17000000 {
++		nand@17000800 {
++			bank-width = <2>;
++			device-width = <1>;				
+ 		};
+-		memory@30000000 {
+-			reg = <0x30000000 0x4000000>;
++	};
++	sdmmc@18000000 {
++		cd-gpio = <&gpio 0x87 0>;
++		power-gpio = <&gpio 0x45 0>;
++	};
++	usb@19000000 {
++		vbus-over =  <&pca9532 0xFF 0>;
++	};
++	sram@20000000 {
++		STCONFIG = <0x81>;
++		STWTWEN  = <0>;
++		STWTOEN  = <0>;
++		STWTRD   = <31>;
++		STWTPG   = <0>;
++		STWTWR   = <3>;
++		STWTTURN = <0>;
++		ssd1289@20000000 {
++			compatible = "ssd,ssd1289";
++			reg = <0x20000000 0x10000 0x20010000 0x10000>;
+ 		};
+ 	};
++	sram@20020000 {
++		STCONFIG = <0x81>;
++		STWTWEN = <1>;
++		STWTOEN = <1>;
++		STWTRD = <4>;
++		STWTPG = <1>;
++		STWTWR = <1>;
++		STWTTURN = <2>;
++		/* enable oe toggle between consec reads */
++		WTD_DEL = <0x24>;
++		dm9000@20020000 {
++			compatible = "davicom,dm9000";
++			reg = <0x20020000 0x100 0x20030000 0x100>;
++			interrupts = <37>;
++		};			
++	};
++	memory@30000000 {
++		reg = <0x30000000 0x4000000>;
++	};
+ 	gpio-leds {
+ 		compatible = "gpio-leds";
+ 		green {
+diff --git a/arch/arm/boot/dts/lpc3131.dtsi b/arch/arm/boot/dts/lpc3131.dtsi
+index 86dd5a5..35a3a22 100644
+--- a/arch/arm/boot/dts/lpc3131.dtsi
++++ b/arch/arm/boot/dts/lpc3131.dtsi
+@@ -22,210 +22,202 @@
+ 		};
+ 	};
+ 
+-	ahb {
+-		compatible = "simple-bus";
++	isram0: memory@11028000 {
++		reg = <0x11028000 0x18000>;
++		interrupts = <28>;
++	};
++	isram1: memory@11040000 {
++		reg = <0x11040000 0x18000>;
++		interrupts = <29>;
++	};
++	apb@13000000 {
++		compatible = "nxp,lpc31xx-apb";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+-		ranges;
++		ranges = <0x13000000 0x13000000 0x8000>;
+ 
+-		isram0: memory@11028000 {
+-			reg = <0x11028000 0x18000>;
+-			interrupts = <28>;
+-		};
+-		isram1: memory@11040000 {
+-			reg = <0x11040000 0x18000>;
+-			interrupts = <29>;
++		evtr@13000000 {
++			compatible = "nxp,lpc31xx-evtr";
++			reg = <0x13000000 0x800>;
++			interrupts = <1 2 3 4>;
++		};
++		adc@13002000 {
++			compatible = "nxp,lpc31xx-adc";
++			reg = <0x13002000 0x400>;
++			interrupts = <9>;
++		};
++		wdt@13002400 {
++			compatible = "nxp,lpc31xx-wdt";
++			reg = <0x13002400 0x400>;
++			interrupts = <30>;
++		};
++		sys@13002800 {
++			compatible = "nxp,lpc31xx-sys";
++			reg = <0x13002800 0x400>;
++		};
++		gpio: gpio@13003000 {
++			#gpio-cells = <2>;
++			compatible = "nxp,lpc31xx-gpio";
++			reg = <0x13003000 0x1000>;
++			gpio-controller;
++		};
++		cgu@13004000 {
++			compatible = "nxp,lpc31xx-cgu";
++			reg = <0x13004000 0x1000>;
++		};
++		rng@13006000 {
++			compatible = "nxp,lpc31xx-rng";
++			reg = <0x13006000 0x200>;
+ 		};
++	};
++	apb@13008000 {
++		compatible = "nxp,lpc31xx-apb";
++		#address-cells = <1>;
++		#size-cells = <1>;
++		ranges = <0x13008000 0x13008000 0x4000>;
+ 
+-		apb@13000000 {
+-			compatible = "nxp,lpc31xx-apb";
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-			ranges = <0x13000000 0x13000000 0x8000>;
+-
+-			evtr@13000000 {
+-				compatible = "nxp,lpc31xx-evtr";
+-				reg = <0x13000000 0x800>;
+-				interrupts = <1 2 3 4>;
+-			};
+-			adc@13002000 {
+-				compatible = "nxp,lpc31xx-adc";
+-				reg = <0x13002000 0x400>;
+-				interrupts = <9>;
+-			};
+-			wdt@13002400 {
+-				compatible = "nxp,lpc31xx-wdt";
+-				reg = <0x13002400 0x400>;
+-				interrupts = <30>;
+-			};
+-			sys@13002800 {
+-				compatible = "nxp,lpc31xx-sys";
+-				reg = <0x13002800 0x400>;
+-			};
+-			gpio: gpio@13003000 {
+-				#gpio-cells = <2>;
+-				compatible = "nxp,lpc31xx-gpio";
+-				reg = <0x13003000 0x1000>;
+-				gpio-controller;
+-			};
+-			cgu@13004000 {
+-				compatible = "nxp,lpc31xx-cgu";
+-				reg = <0x13004000 0x1000>;
+-			};
+-			rng@13006000 {
+-				compatible = "nxp,lpc31xx-rng";
+-				reg = <0x13006000 0x200>;
+-			};
+-		};
+-		apb@13008000 {
+-			compatible = "nxp,lpc31xx-apb";
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-			ranges = <0x13008000 0x13008000 0x4000>;
+-
+-			timer@13008000 {
+-				compatible = "nxp,lpc31xx-timer";
+-				reg = <0x13008000 0x400>;
+-				interrupts = <5>;
+-				cell-index = <0>;
+-			};
+-			timer@13008400 {
+-				compatible = "nxp,lpc31xx-timer";
+-				reg = <0x13008400 0x400>;
+-				interrupts = <6>;
+-				cell-index = <1>;
+-			};
+-			timer@13008800 {
+-				compatible = "nxp,lpc31xx-timer";
+-				reg = <0x13008800 0x400>;
+-				interrupts = <7>;
+-				cell-index = <2>;
+-			};
+-			timer@13008c00 {
+-				compatible = "nxp,lpc31xx-timer";
+-				reg = <0x13008c00 0x400>;
+-				interrupts = <8>;
+-				cell-index = <3>;
+-			};
+-			pwm@13009000 {
+-				compatible = "nxp,lpc31xx-pwm";
+-				reg = <0x13009000 0x200>;
+-			};
+-			i2c@1300a000 {
+-				#address-cells = <1>;
+-				#size-cells = <0>;
+-				compatible = "nxp,lpc31xx-i2c", "nxp,pnx-i2c";
+-				reg = <0x1300a000 0x400>;
+-				interrupts = <11>;
+-				cell-index = <0>;
+-			};
+-			i2c@1300a400 {
+-				#address-cells = <1>;
+-				#size-cells = <0>;
+-				compatible = "nxp,lpc31xx-i2c", "nxp,pnx-i2c";
+-				reg = <0x1300a400 0x400>;
+-				interrupts = <12>;
+-				cell-index = <1>;
+-			};
+-		};
+-		apb@15000000 {
+-			compatible = "nxp,lpc31xx-apb";
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-			ranges = <0x15000000 0x15000000 0x3000>;
+-
+-			pcm@15000000 {
+-				compatible = "nxp,lpc31xx-pcm";
+-				reg = <0x15000000 0x400>;
+-				interrupts = <14>;
+-			};
+-			lcd@15000400 {
+-				compatible = "nxp,lpc31xx-lcd";
+-				reg = <0x15000400 0x400>;
+-				interrupts = <18>;
+-			};
+-			uart@15001000 {
+-				compatible = "nxp,lpc31xx-uart";
+-				reg = <0x15001000 0x1000>;
+-				interrupts = <10>;
+-				clock-frequency = <0>;		// from bootloader
+-			};
+-			spi@15002000 {
+-				compatible = "nxp,lpc31xx-spi";
+-				reg = <0x15002000 0x1000>;
+-				interrupts = <19 20 21 22 23>;
+-				#address-cells = <1>;
+-				#size-cells = <0>;				
+-			};
+-		};
+-		apb@16000000 {
+-			compatible = "nxp,lpc31xx-apb";
++		timer@13008000 {
++			compatible = "nxp,lpc31xx-timer";
++			reg = <0x13008000 0x400>;
++			interrupts = <5>;
++			cell-index = <0>;
++		};
++		timer@13008400 {
++			compatible = "nxp,lpc31xx-timer";
++			reg = <0x13008400 0x400>;
++			interrupts = <6>;
++			cell-index = <1>;
++		};
++		timer@13008800 {
++			compatible = "nxp,lpc31xx-timer";
++			reg = <0x13008800 0x400>;
++			interrupts = <7>;
++			cell-index = <2>;
++		};
++		timer@13008c00 {
++			compatible = "nxp,lpc31xx-timer";
++			reg = <0x13008c00 0x400>;
++			interrupts = <8>;
++			cell-index = <3>;
++		};
++		pwm@13009000 {
++			compatible = "nxp,lpc31xx-pwm";
++			reg = <0x13009000 0x200>;
++		};
++		i2c@1300a000 {
+ 			#address-cells = <1>;
+-			#size-cells = <1>;
+-			ranges = <0x16000000 0x16000000 0x1000>;
+-
+-			i2s@16000000 {
+-				compatible = "nxp,lpc31xx-i2s";
+-				reg = <0x16000000 0x1000>;
+-				interrupts = <13 14 15 16>;
+-			};
+-		};
+-		apb@17000000 {
+-			compatible = "nxp,lpc31xx-apb";
++			#size-cells = <0>;
++			compatible = "nxp,lpc31xx-i2c", "nxp,pnx-i2c";
++			reg = <0x1300a000 0x400>;
++			interrupts = <11>;
++			cell-index = <0>;
++		};
++		i2c@1300a400 {
+ 			#address-cells = <1>;
+-			#size-cells = <1>;
+-			ranges = <0x17000000 0x17000000 0x1000>;
++			#size-cells = <0>;
++			compatible = "nxp,lpc31xx-i2c", "nxp,pnx-i2c";
++			reg = <0x1300a400 0x400>;
++			interrupts = <12>;
++			cell-index = <1>;
++		};
++	};
++	apb@15000000 {
++		compatible = "nxp,lpc31xx-apb";
++		#address-cells = <1>;
++		#size-cells = <1>;
++		ranges = <0x15000000 0x15000000 0x3000>;
+ 
+-			dma@17000000 {
+-				compatible = "nxp,lpc31xx-dma";
+-				reg = <0x17000000 0x800>;
+-				interrupts = <24>;
+-			};
+-			nand@17000800 {
+-				compatible = "nxp,lpc31xx-nand";
+-				reg = <0x17000800 0x800>;
+-				interrupts = <25>;
+-			};
+-		};
+-		mpmc@17008000 {
+-			compatible = "nxp,lpc31xx-mpmc";
+-			reg = <0x17008000 0x1000>;
+-			interrupts = <21>;
+-		};
+-		sdmmc@18000000 {
+-			compatible = "nxp,lpc31xx-sdmmc";
+-			reg = <0x18000000 0x1000>;
+-			interrupts = <26>;
+-		};
+-		usb@19000000 {
+-			compatible = "nxp,lpc31xx-usb", "usb-ehci";
+-			reg = <0x19000000 0x1000>;
+-			interrupts = <27>;
+-		};
+-		sram@20000000 {
+-			compatible = "nxp,lpc31xx-sram";
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-			ranges = <0x20000000 0x20000000 0x20000>;
++		pcm@15000000 {
++			compatible = "nxp,lpc31xx-pcm";
++			reg = <0x15000000 0x400>;
++			interrupts = <14>;
++		};
++		lcd@15000400 {
++			compatible = "nxp,lpc31xx-lcd";
++			reg = <0x15000400 0x400>;
++			interrupts = <18>;
++		};
++		uart@15001000 {
++			compatible = "nxp,lpc31xx-uart";
++			reg = <0x15001000 0x1000>;
++			interrupts = <10>;
++			clock-frequency = <0>;		// from bootloader
+ 		};
+-		sram@20020000 {
+-			compatible = "nxp,lpc31xx-sram";
++		spi@15002000 {
++			compatible = "nxp,lpc31xx-spi";
++			reg = <0x15002000 0x1000>;
++			interrupts = <19 20 21 22 23>;
+ 			#address-cells = <1>;
+-			#size-cells = <1>;
+-			ranges = <0x20020000 0x20020000 0x20000>;
+-		};
+-		memory@30000000 {
++			#size-cells = <0>;				
+ 		};
+-		intc: intc@60000000 {
+-			compatible = "nxp,lpc31xx-intc";
+-			reg = <0x60000000 0x1000>;
+-			interrupt-controller;
+-			#interrupt-cells = <1>;
++	};
++	apb@16000000 {
++		compatible = "nxp,lpc31xx-apb";
++		#address-cells = <1>;
++		#size-cells = <1>;
++		ranges = <0x16000000 0x16000000 0x1000>;
++
++		i2s@16000000 {
++			compatible = "nxp,lpc31xx-i2s";
++			reg = <0x16000000 0x1000>;
++			interrupts = <13 14 15 16>;
+ 		};
+-		nand-buffer@70000000 {
+-			compatible = "nxp,lpc31xx-nand-buffer";
+-			reg = <0x70000000 0x1000>;
++	};
++	apb@17000000 {
++		compatible = "nxp,lpc31xx-apb";
++		#address-cells = <1>;
++		#size-cells = <1>;
++		ranges = <0x17000000 0x17000000 0x1000>;
++
++		dma@17000000 {
++			compatible = "nxp,lpc31xx-dma";
++			reg = <0x17000000 0x800>;
+ 			interrupts = <24>;
+ 		};
++		nand@17000800 {
++			compatible = "nxp,lpc31xx-nand";
++			reg = <0x17000800 0x800>;
++			interrupts = <25>;
++		};
++	};
++	mpmc@17008000 {
++		compatible = "nxp,lpc31xx-mpmc";
++		reg = <0x17008000 0x1000>;
++		interrupts = <21>;
++	};
++	sdmmc@18000000 {
++		compatible = "nxp,lpc31xx-sdmmc";
++		reg = <0x18000000 0x1000>;
++		interrupts = <26>;
++	};
++	usb@19000000 {
++		compatible = "nxp,lpc31xx-usb", "usb-ehci";
++		reg = <0x19000000 0x1000>;
++		interrupts = <27>;
++	};
++	sram@20000000 {
++		compatible = "nxp,lpc31xx-sram";
++		#address-cells = <1>;
++		#size-cells = <1>;
++		ranges = <0x20000000 0x20000000 0x20000>;
++	};
++	sram@20020000 {
++		compatible = "nxp,lpc31xx-sram";
++		#address-cells = <1>;
++		#size-cells = <1>;
++		ranges = <0x20020000 0x20020000 0x20000>;
++	};
++	memory@30000000 {
++	};
++	intc: intc@60000000 {
++		compatible = "nxp,lpc31xx-intc";
++		reg = <0x60000000 0x1000>;
++		interrupt-controller;
++		#interrupt-cells = <1>;
++	};
++	nand-buffer@70000000 {
++		compatible = "nxp,lpc31xx-nand-buffer";
++		reg = <0x70000000 0x1000>;
++		interrupts = <24>;
+ 	};
+ };
