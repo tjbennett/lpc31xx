@@ -34,7 +34,7 @@
 	apb@15000000 {
 		spi@15002000 {
 			at45db321d@0 {
-				compatible = "atmel,at45db321d", "atmel,at45", "atmel,dataflash";
+				compatible = "st,m25";
 				spi-max-frequency = <1000000>;
 				reg = <0>;
 			};
