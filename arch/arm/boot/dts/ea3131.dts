@@ -35,10 +35,12 @@
 		spi@15002000 {
 			at45db321d@0 {
 				compatible = "atmel,at45db321d", "atmel,at45", "atmel,dataflash";
+				spi-max-frequency = <1000000>;
 				reg = <0>;
 			};
 			ads7846@1 {
 				compatible = "ti,ads7846";
+				spi-max-frequency = <1200000>;
 				reg = <1>;
 				interrupt = <37>;
 			};

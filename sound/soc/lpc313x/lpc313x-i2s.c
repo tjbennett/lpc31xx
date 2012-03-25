@@ -398,7 +398,6 @@ EXPORT_SYMBOL_GPL(lpc313x_i2s_dai);
 
 static __devinit int lpc313x_i2s_dev_probe(struct platform_device *pdev)
 {
-	printk("JDS = lpc313x_i2s_dev_probe\n");
 	return snd_soc_register_dai(&pdev->dev, &lpc313x_i2s_dai);
 }
 

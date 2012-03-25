@@ -931,6 +931,9 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
 		ret = -EBUSY;
 		goto errout4;
 	}
+#ifdef CONFIG_OF
+	master->dev.of_node = of_node_get(pdev->dev.of_node);
+#endif
 
 	ret = spi_register_master(master);
 	if (ret)

@@ -1423,11 +1423,22 @@ static int __devexit ads7846_remove(struct spi_device *spi)
 	return 0;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id ads7846_of_match[] = {
+	{ .compatible = "ti,ads7846" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ads7846_of_match);
+#endif
+
 static struct spi_driver ads7846_driver = {
 	.driver = {
 		.name	= "ads7846",
 		.owner	= THIS_MODULE,
 		.pm	= &ads7846_pm,
+#ifdef CONFIG_OF
+		.of_match_table = ads7846_of_match,
+#endif
 	},
 	.probe		= ads7846_probe,
 	.remove		= __devexit_p(ads7846_remove),
