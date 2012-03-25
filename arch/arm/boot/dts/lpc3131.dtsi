@@ -31,7 +31,7 @@
 		interrupts = <29>;
 	};
 	apb@13000000 {
-		compatible = "nxp,lpc31xx-apb";
+		compatible = "nxp,lpc31xx-apb", "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0x13000000 0x13000000 0x8000>;
@@ -71,7 +71,7 @@
 		};
 	};
 	apb@13008000 {
-		compatible = "nxp,lpc31xx-apb";
+		compatible = "nxp,lpc31xx-apb", "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0x13008000 0x13008000 0x4000>;
@@ -122,7 +122,7 @@
 		};
 	};
 	apb@15000000 {
-		compatible = "nxp,lpc31xx-apb";
+		compatible = "nxp,lpc31xx-apb", "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0x15000000 0x15000000 0x3000>;
@@ -152,19 +152,19 @@
 		};
 	};
 	apb@16000000 {
-		compatible = "nxp,lpc31xx-apb";
+		compatible = "nxp,lpc31xx-apb", "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0x16000000 0x16000000 0x1000>;
 
-		i2s@16000000 {
+		i2s: i2s@16000000 {
 			compatible = "nxp,lpc31xx-i2s";
 			reg = <0x16000000 0x1000>;
 			interrupts = <13 14 15 16>;
 		};
 	};
 	apb@17000000 {
-		compatible = "nxp,lpc31xx-apb";
+		compatible = "nxp,lpc31xx-apb", "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0x17000000 0x17000000 0x1000>;
@@ -196,13 +196,13 @@
 		interrupts = <27>;
 	};
 	sram@20000000 {
-		compatible = "nxp,lpc31xx-sram";
+		compatible = "nxp,lpc31xx-sram", "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0x20000000 0x20000000 0x20000>;
 	};
 	sram@20020000 {
-		compatible = "nxp,lpc31xx-sram";
+		compatible = "nxp,lpc31xx-sram", "simple-bus";
 		#address-cells = <1>;
 		#size-cells = <1>;
 		ranges = <0x20020000 0x20020000 0x20000>;

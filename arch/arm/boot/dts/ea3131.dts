@@ -40,19 +40,20 @@
 			ads7846@1 {
 				compatible = "ti,ads7846";
 				reg = <1>;
+				interrupt = <37>;
 			};
 		};
 	};
-	apb@16000000 {
-		i2s@16000000 {
-			codec-handle = <&uda1380>;
-		};
+	sound {
+		compatible = "ea,ea3131-uda1380";
+		is2-handle = <&i2s>;
+		codec-handle = <&uda1380>;
+		channel = <1>;
 	};
-	apb@16000000 {
-		i2s@16000000 {
-			codec-handle = <&uda1380>;
-		};
+	pcm {
+		compatible = "nxp,lpc313x-audio";
 	};
+
 	apb@17000000 {
 		nand@17000800 {
 			bank-width = <2>;

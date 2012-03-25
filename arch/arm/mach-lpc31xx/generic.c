@@ -196,7 +196,6 @@ static struct map_desc lpc313x_io_desc[] __initdata = {
 
 void __init lpc313x_map_io(void)
 {
-printk("JDS - lpc313x_map_io\n");
 	iotable_init(lpc313x_io_desc, ARRAY_SIZE(lpc313x_io_desc));
 }
 extern int __init cgu_init(char *str);

@@ -23,6 +23,7 @@
 #include <linux/err.h>
 #include <linux/clk.h>
 #include <linux/slab.h>
+#include <linux/of_i2c.h>
 
 #include <mach/hardware.h>
 #include <mach/i2c.h>
@@ -573,7 +574,6 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 	struct i2c_pnx_algo_data *alg_data;
 	unsigned long freq;
 	struct resource *res;
-	static char *name ="i2c-pnx";
 
 	alg_data = kzalloc(sizeof(*alg_data), GFP_KERNEL);
 	if (!alg_data) {
@@ -670,8 +670,10 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 		goto out_irq;
 	}
 
-	dev_dbg(&pdev->dev, "%s: Master at %#8x, irq %d.\n",
+	dev_info(&pdev->dev, "%s: Master at %#8x, irq %d.\n",
 	       alg_data->adapter.name, res->start, alg_data->irq);
+
+	of_i2c_register_devices(&alg_data->adapter);
 
 	return 0;
 
@@ -689,7 +691,6 @@ out_drvdata:
 	kfree(alg_data);
 err_kzalloc:
 	platform_set_drvdata(pdev, NULL);
-out:
 	return ret;
 }
 

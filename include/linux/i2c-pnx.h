@@ -30,7 +30,7 @@ struct i2c_pnx_algo_data {
 	int			last;
 	struct clk		*clk;
 	struct i2c_adapter	adapter;
-	void __iomem *base;
+	int base;
 	int irq;
 };
 

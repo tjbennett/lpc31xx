@@ -398,6 +398,7 @@ EXPORT_SYMBOL_GPL(lpc313x_i2s_dai);
 
 static __devinit int lpc313x_i2s_dev_probe(struct platform_device *pdev)
 {
+	printk("JDS = lpc313x_i2s_dev_probe\n");
 	return snd_soc_register_dai(&pdev->dev, &lpc313x_i2s_dai);
 }
 
@@ -407,12 +408,23 @@ static __devexit int lpc313x_i2s_dev_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id lpc313x_i2s_of_match[] = {
+	{ .compatible = "nxp,lpc31xx-i2s" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, lpc313x_i2s_of_match);
+#endif
+
 static struct platform_driver lpc313x_i2s_driver = {
 	.probe  = lpc313x_i2s_dev_probe,
 	.remove = lpc313x_i2s_dev_remove,
 	.driver = {
 		.name = I2S_NAME,
 		.owner = THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table = lpc313x_i2s_of_match,
+#endif
 	},
 };
 
