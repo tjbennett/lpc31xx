@@ -30,18 +30,6 @@
 					compatible = "nxp,uda1380";
 					reg = <0x18>;
 				};
-				gpio-leds {
-					compatible = "gpio-leds";
-					green {
-						label = "Green";
-						gpios = <&pca9532 0 1>;
-					};
-					yellow {
-						label = "Yellow";
-						gpios = <&pca9532 1 1>;
-					};
-				};
-
 			};
 		};
 		apb@15000000 {
@@ -72,7 +60,7 @@
 			power-gpio = <&gpio 0x45 0>;
 		};
 		usb@19000000 {
-			vbus-over =  <&gpio 0xFF 0>;
+			vbus-over =  <&pca9532 0xFF 0>;
 		};
 		sram@20000000 {
 			STCONFIG = <0x81>;
@@ -105,6 +93,17 @@
 		};
 		memory@30000000 {
 			reg = <0x30000000 0x4000000>;
+		};
+	};
+	gpio-leds {
+		compatible = "gpio-leds";
+		green {
+			label = "Green";
+			gpios = <&pca9532 0 1>;
+		};
+		yellow {
+			label = "Yellow";
+			gpios = <&pca9532 1 1>;
 		};
 	};
 };
