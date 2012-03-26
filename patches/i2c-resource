@@ -1,5 +1,5 @@
 Bottom: 82d6dfaf114e6b7489b8e929cdf5b671646c329f
-Top:    b0a6e029c1fefef0eb575a4395743be7fa8165b4
+Top:    cc2918a8c9adcf1ca3faad00084ab4402c226a93
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-24 15:38:34 -0400
 
@@ -537,6 +537,19 @@ index a04f2aa..dd1860d 100644
 +		interrupts = <24>;
  	};
  };
+diff --git a/arch/arm/mach-lpc31xx/Makefile b/arch/arm/mach-lpc31xx/Makefile
+index a8ab311..4633f9b 100644
+--- a/arch/arm/mach-lpc31xx/Makefile
++++ b/arch/arm/mach-lpc31xx/Makefile
+@@ -4,7 +4,7 @@
+ 
+ # Object file lists.
+ 
+-obj-y			+= irq.o time.o generic.o i2c.o gpio.o dma.o usb.o wdt.o clock.o
++obj-y			+= irq.o time.o generic.o i2c.o dma.o usb.o wdt.o clock.o
+ obj-$(CONFIG_GPIOLIB) += gpiolib.o
+ obj-$(CONFIG_OF) += dt.o
+ 
 diff --git a/arch/arm/mach-lpc31xx/board-ea313x.c b/arch/arm/mach-lpc31xx/board-ea313x.c
 index 6673805..83226a9 100644
 --- a/arch/arm/mach-lpc31xx/board-ea313x.c
@@ -1032,6 +1045,70 @@ index 1c50945..024ec0b 100644
  	iotable_init(lpc313x_io_desc, ARRAY_SIZE(lpc313x_io_desc));
  }
  extern int __init cgu_init(char *str);
+diff --git a/arch/arm/mach-lpc31xx/gpio.c b/arch/arm/mach-lpc31xx/gpio.c
+index fd09c8b..446faca 100644
+--- a/arch/arm/mach-lpc31xx/gpio.c
++++ b/arch/arm/mach-lpc31xx/gpio.c
+@@ -51,27 +51,6 @@ EXPORT_SYMBOL(lpx313x_gpio_func_mode);
+ 
+ 
+ 
+-int lpc313x_gpio_direction_output(unsigned gpio, int value)
+-{
+-	unsigned long flags;
+-	int port = (gpio & GPIO_PORT_MASK);
+-	int pin = 1 << (gpio & GPIO_PIN_MASK);
+-
+-	raw_local_irq_save(flags);
+-
+-	GPIO_M1_SET(port) = pin; 
+-
+-	if(value) {
+-		GPIO_M0_SET(port) = pin;
+-	} else {
+-		GPIO_M0_RESET(port) = pin;
+-	}
+-
+-	raw_local_irq_restore(flags);
+-	return 0;
+-}
+-
+-EXPORT_SYMBOL(lpc313x_gpio_direction_output);
+ 
+ 
+ #ifndef CONFIG_GPIOLIB
+diff --git a/arch/arm/mach-lpc31xx/gpiolib.c b/arch/arm/mach-lpc31xx/gpiolib.c
+index 1566ec5..9fe8c86 100644
+--- a/arch/arm/mach-lpc31xx/gpiolib.c
++++ b/arch/arm/mach-lpc31xx/gpiolib.c
+@@ -166,6 +166,27 @@ struct lpc313x_gpio_chip lpc313x_gpios[] = {
+ 	},
+ };
+ 
++int lpc313x_gpio_direction_output(unsigned gpio, int value)
++{
++	unsigned long flags;
++	int port = (gpio & GPIO_PORT_MASK);
++	int pin = 1 << (gpio & GPIO_PIN_MASK);
++
++	raw_local_irq_save(flags);
++
++	GPIO_M1_SET(port) = pin;
++
++	if(value) {
++		GPIO_M0_SET(port) = pin;
++	} else {
++		GPIO_M0_RESET(port) = pin;
++	}
++
++	raw_local_irq_restore(flags);
++	return 0;
++}
++
++EXPORT_SYMBOL(lpc313x_gpio_direction_output);
+ 
+ static inline int lpc3131_gpio_direction_input(struct gpio_chip *chip, unsigned offset)
+ {
 diff --git a/arch/arm/mach-lpc31xx/i2c.c b/arch/arm/mach-lpc31xx/i2c.c
 index 1515c3e..5b8b7de 100644
 --- a/arch/arm/mach-lpc31xx/i2c.c

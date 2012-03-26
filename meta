@@ -1,6 +1,6 @@
 Version: 1
-Previous: 885b530e26a031d74a96fc8ab26913deee1c16fa
-Head: 57f8958033d808d1cf0eff15526acee2fd7d075a
+Previous: 96d63bea0311bcbc5b03832221db0d5e78aa38d3
+Head: d6c0bae4300d286949d67e3b244f6eb3697efb96
 Applied:
   i2c-fix: 464d99faefcdcf9f203ba4c8b482d387c8c29467
   base: b391bc787a534e6037fc0ec714215d0635982fcc
@@ -23,7 +23,6 @@ Applied:
   nxp-audio-analog: ea1914f55b9d769cafcb274354a1aa4a4163e37e
   reset: e9b59ed17b4ca46ca5ee4491e690816e63bda19d
   devicetree: 76a79967cdefd8acce0894d1ff73a8582e6eedef
-  i2c-resource: 9d62f5dde30ecfeb342d6e0846a8646058a00239
-  refresh-temp: 57f8958033d808d1cf0eff15526acee2fd7d075a
+  i2c-resource: d6c0bae4300d286949d67e3b244f6eb3697efb96
 Unapplied:
 Hidden:
