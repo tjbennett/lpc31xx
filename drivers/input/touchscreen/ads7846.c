@@ -33,6 +33,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/module.h>
 #include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <asm/irq.h>
 
 /*
@@ -966,11 +967,12 @@ static int __devinit ads7846_setup_pendown(struct spi_device *spi, struct ads784
 	 * reason the touchscreen isn't hooked up, we don't need to access
 	 * the pendown state.
 	 */
-
+printk("JDS pd 1a\n");
 	if (pdata->get_pendown_state) {
 		ts->get_pendown_state = pdata->get_pendown_state;
 	} else if (gpio_is_valid(pdata->gpio_pendown)) {
 
+		printk("JDS pd 1b\n");
 		err = gpio_request_one(pdata->gpio_pendown, GPIOF_IN,
 				       "ads7846_pendown");
 		if (err) {
@@ -979,6 +981,7 @@ static int __devinit ads7846_setup_pendown(struct spi_device *spi, struct ads784
 				pdata->gpio_pendown, err);
 			return err;
 		}
+		printk("JDS pd 1c\n");
 
 		ts->gpio_pendown = pdata->gpio_pendown;
 
@@ -986,6 +989,7 @@ static int __devinit ads7846_setup_pendown(struct spi_device *spi, struct ads784
 		dev_err(&spi->dev, "no get_pendown_state nor gpio_pendown?\n");
 		return -EINVAL;
 	}
+	printk("JDS pd 1d\n");
 
 	return 0;
 }
@@ -1225,24 +1229,36 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 	struct ads7846_platform_data *pdata = spi->dev.platform_data;
 	const struct of_device_id *of_id = of_match_device(ads7846_of_match, &spi->dev);
 	unsigned long irq_flags;
-	int err;
+	struct device_node *nc;
+	const __be32 *prop;
+	int len, err;
 
-printk("JDS 1\n");
 	if (!spi->irq) {
 		dev_dbg(&spi->dev, "no IRQ?\n");
 		return -ENODEV;
 	}
 
 #ifdef CONFIG_OF
-	pdata = of_id ? of_id->data : NULL;
+	nc = spi->dev.of_node;
+	spi->dev.platform_data = pdata = of_id ? of_id->data : NULL;
+
+	prop = of_get_property(nc, "vref_delay_usecs", &len);
+	if (prop && len >= sizeof(*prop))
+		pdata->vref_delay_usecs = be32_to_cpup(prop);
+	prop = of_get_property(nc, "x_plate_ohms", &len);
+	if (prop && len >= sizeof(*prop))
+		pdata->x_plate_ohms = be32_to_cpup(prop);
+	prop = of_get_property(nc, "y_plate_ohms", &len);
+	if (prop && len >= sizeof(*prop))
+		pdata->y_plate_ohms = be32_to_cpup(prop);
+	pdata->gpio_pendown = of_get_named_gpio(nc, "gpio_pendown", 0);
+printk("JDS - pendown %x\n", pdata->gpio_pendown);
 #endif
-	printk("JDS 2\n");
 
 	if (!pdata) {
 		dev_dbg(&spi->dev, "no platform data?\n");
 		return -ENODEV;
 	}
-	printk("JDS 3\n");
 
 	/* don't exceed max specified sample rate */
 	if (spi->max_speed_hz > (125000 * SAMPLE_BITS)) {
@@ -1250,7 +1266,6 @@ printk("JDS 1\n");
 				(spi->max_speed_hz/SAMPLE_BITS)/1000);
 		return -EINVAL;
 	}
-	printk("JDS 4\n");
 
 	/* We'd set TX word size 8 bits and RX word size to 13 bits ... except
 	 * that even if the hardware can do that, the SPI controller driver
@@ -1261,7 +1276,6 @@ printk("JDS 1\n");
 	err = spi_setup(spi);
 	if (err < 0)
 		return err;
-	printk("JDS 5\n");
 
 	ts = kzalloc(sizeof(struct ads7846), GFP_KERNEL);
 	packet = kzalloc(sizeof(struct ads7846_packet), GFP_KERNEL);
@@ -1270,7 +1284,6 @@ printk("JDS 1\n");
 		err = -ENOMEM;
 		goto err_free_mem;
 	}
-	printk("JDS 6\n");
 
 	dev_set_drvdata(&spi->dev, ts);
 
@@ -1279,17 +1292,14 @@ printk("JDS 1\n");
 	ts->input = input_dev;
 	ts->vref_mv = pdata->vref_mv;
 	ts->swap_xy = pdata->swap_xy;
-	printk("JDS 7\n");
 
 	mutex_init(&ts->lock);
 	init_waitqueue_head(&ts->wait);
-	printk("JDS 8\n");
 
 	ts->model = pdata->model ? : 7846;
 	ts->vref_delay_usecs = pdata->vref_delay_usecs ? : 100;
 	ts->x_plate_ohms = pdata->x_plate_ohms ? : 400;
 	ts->pressure_max = pdata->pressure_max ? : ~0;
-	printk("JDS 9\n");
 
 	if (pdata->filter != NULL) {
 		if (pdata->filter_init != NULL) {

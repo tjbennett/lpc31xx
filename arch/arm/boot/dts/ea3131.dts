@@ -42,8 +42,12 @@
 				compatible = "ti,ads7846";
 				spi-max-frequency = <1200000>;
 				reg = <1>;
-				interrupt = <20>;
+				interrupts = <20>;
+				vref_delay_usecs = <100>;
+				x_plate_ohms = <419>;
+				y_plate_ohms = <486>;
 				pen_irq = <37>;
+				gpio_pendown = <&gpio 0x1c4 0>;
 			};
 		};
 	};
