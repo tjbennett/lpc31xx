@@ -166,6 +166,27 @@ struct lpc313x_gpio_chip lpc313x_gpios[] = {
 	},
 };
 
+int lpc313x_gpio_direction_output(unsigned gpio, int value)
+{
+	unsigned long flags;
+	int port = (gpio & GPIO_PORT_MASK);
+	int pin = 1 << (gpio & GPIO_PIN_MASK);
+
+	raw_local_irq_save(flags);
+
+	GPIO_M1_SET(port) = pin;
+
+	if(value) {
+		GPIO_M0_SET(port) = pin;
+	} else {
+		GPIO_M0_RESET(port) = pin;
+	}
+
+	raw_local_irq_restore(flags);
+	return 0;
+}
+
+EXPORT_SYMBOL(lpc313x_gpio_direction_output);
 
 static inline int lpc3131_gpio_direction_input(struct gpio_chip *chip, unsigned offset)
 {
