@@ -1,0 +1,228 @@
+Bottom: c64047d5e34f2f8f8143effe5969ef3ae0e78e65
+Top:    6bada1f6bd33e7e1123c9439c09ae11ddd01462f
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-03-25 21:25:51 -0400
+
+Refresh of i2c-resource
+
+---
+
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+index 1b9d265..cdffa2b 100644
+--- a/arch/arm/boot/dts/ea3131.dts
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -9,7 +9,7 @@
+ /include/ "lpc3131.dtsi"
+ 
+ / {
+-	model = "Electronic Arts EA3131";
++	model = "Embedded Artists EA3131";
+ 	compatible = "ea,ea3131", "nxp,lpc3131";
+ 
+ 	chosen {
+@@ -42,7 +42,8 @@
+ 				compatible = "ti,ads7846";
+ 				spi-max-frequency = <1200000>;
+ 				reg = <1>;
+-				interrupt = <37>;
++				interrupt = <20>;
++				pen_irq = <37>;
+ 			};
+ 		};
+ 	};
+diff --git a/drivers/input/touchscreen/ads7846.c b/drivers/input/touchscreen/ads7846.c
+index 9ac17b0..e2f059c 100644
+--- a/drivers/input/touchscreen/ads7846.c
++++ b/drivers/input/touchscreen/ads7846.c
+@@ -32,6 +32,7 @@
+ #include <linux/spi/ads7846.h>
+ #include <linux/regulator/consumer.h>
+ #include <linux/module.h>
++#include <linux/of_device.h>
+ #include <asm/irq.h>
+ 
+ /*
+@@ -1192,24 +1193,56 @@ static void __devinit ads7846_setup_spi_msg(struct ads7846 *ts,
+ 	spi_message_add_tail(x, m);
+ }
+ 
++#if defined(CONFIG_OF)
++static struct ads7846_platform_data ads7846_pdata[] = {
++		{
++				.model = 7843
++		},{
++				.model = 7845
++		},{
++				.model = 7846
++		},{
++				.model = 7873
++		},
++};
++static const struct of_device_id ads7846_of_match[] = {
++	{ .compatible = "ti,tsc2046", .data = &ads7846_pdata[2], },
++	{ .compatible = "ti,ads7843", .data = &ads7846_pdata[0], },
++	{ .compatible = "ti,ads7845", .data = &ads7846_pdata[1], },
++	{ .compatible = "ti,ads7846", .data = &ads7846_pdata[2], },
++	{ .compatible = "ad,ad7873", .data = &ads7846_pdata[3], },
++	{ .compatible = "ad,ad7843", .data = &ads7846_pdata[0], },
++	{},
++};
++MODULE_DEVICE_TABLE(of, ads7846_of_match);
++#endif
++
+ static int __devinit ads7846_probe(struct spi_device *spi)
+ {
+ 	struct ads7846 *ts;
+ 	struct ads7846_packet *packet;
+ 	struct input_dev *input_dev;
+ 	struct ads7846_platform_data *pdata = spi->dev.platform_data;
++	const struct of_device_id *of_id = of_match_device(ads7846_of_match, &spi->dev);
+ 	unsigned long irq_flags;
+ 	int err;
+ 
++printk("JDS 1\n");
+ 	if (!spi->irq) {
+ 		dev_dbg(&spi->dev, "no IRQ?\n");
+ 		return -ENODEV;
+ 	}
+ 
++#ifdef CONFIG_OF
++	pdata = of_id ? of_id->data : NULL;
++#endif
++	printk("JDS 2\n");
++
+ 	if (!pdata) {
+ 		dev_dbg(&spi->dev, "no platform data?\n");
+ 		return -ENODEV;
+ 	}
++	printk("JDS 3\n");
+ 
+ 	/* don't exceed max specified sample rate */
+ 	if (spi->max_speed_hz > (125000 * SAMPLE_BITS)) {
+@@ -1217,6 +1250,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 				(spi->max_speed_hz/SAMPLE_BITS)/1000);
+ 		return -EINVAL;
+ 	}
++	printk("JDS 4\n");
+ 
+ 	/* We'd set TX word size 8 bits and RX word size to 13 bits ... except
+ 	 * that even if the hardware can do that, the SPI controller driver
+@@ -1227,6 +1261,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 	err = spi_setup(spi);
+ 	if (err < 0)
+ 		return err;
++	printk("JDS 5\n");
+ 
+ 	ts = kzalloc(sizeof(struct ads7846), GFP_KERNEL);
+ 	packet = kzalloc(sizeof(struct ads7846_packet), GFP_KERNEL);
+@@ -1235,6 +1270,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 		err = -ENOMEM;
+ 		goto err_free_mem;
+ 	}
++	printk("JDS 6\n");
+ 
+ 	dev_set_drvdata(&spi->dev, ts);
+ 
+@@ -1243,14 +1279,17 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 	ts->input = input_dev;
+ 	ts->vref_mv = pdata->vref_mv;
+ 	ts->swap_xy = pdata->swap_xy;
++	printk("JDS 7\n");
+ 
+ 	mutex_init(&ts->lock);
+ 	init_waitqueue_head(&ts->wait);
++	printk("JDS 8\n");
+ 
+ 	ts->model = pdata->model ? : 7846;
+ 	ts->vref_delay_usecs = pdata->vref_delay_usecs ? : 100;
+ 	ts->x_plate_ohms = pdata->x_plate_ohms ? : 400;
+ 	ts->pressure_max = pdata->pressure_max ? : ~0;
++	printk("JDS 9\n");
+ 
+ 	if (pdata->filter != NULL) {
+ 		if (pdata->filter_init != NULL) {
+@@ -1271,14 +1310,17 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 	} else {
+ 		ts->filter = ads7846_no_filter;
+ 	}
++	printk("JDS 10\n");
+ 
+ 	err = ads7846_setup_pendown(spi, ts);
+ 	if (err)
+ 		goto err_cleanup_filter;
++	printk("JDS 11\n");
+ 
+ 	if (pdata->penirq_recheck_delay_usecs)
+ 		ts->penirq_recheck_delay_usecs =
+ 				pdata->penirq_recheck_delay_usecs;
++	printk("JDS 12\n");
+ 
+ 	ts->wait_for_sync = pdata->wait_for_sync ? : null_wait_for_sync;
+ 
+@@ -1301,6 +1343,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 			0, 0);
+ 	input_set_abs_params(input_dev, ABS_PRESSURE,
+ 			pdata->pressure_min, pdata->pressure_max, 0, 0);
++	printk("JDS 13\n");
+ 
+ 	ads7846_setup_spi_msg(ts, pdata);
+ 
+@@ -1310,6 +1353,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 		dev_err(&spi->dev, "unable to get regulator: %d\n", err);
+ 		goto err_free_gpio;
+ 	}
++	printk("JDS 14\n");
+ 
+ 	err = regulator_enable(ts->reg);
+ 	if (err) {
+@@ -1319,6 +1363,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 
+ 	irq_flags = pdata->irq_flags ? : IRQF_TRIGGER_FALLING;
+ 	irq_flags |= IRQF_ONESHOT;
++	printk("JDS 15\n");
+ 
+ 	err = request_threaded_irq(spi->irq, ads7846_hard_irq, ads7846_irq,
+ 				   irq_flags, spi->dev.driver->name, ts);
+@@ -1330,6 +1375,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 				  ads7846_hard_irq, ads7846_irq,
+ 				  irq_flags, spi->dev.driver->name, ts);
+ 	}
++	printk("JDS 16\n");
+ 
+ 	if (err) {
+ 		dev_dbg(&spi->dev, "irq %d busy?\n", spi->irq);
+@@ -1341,6 +1387,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 		goto err_free_irq;
+ 
+ 	dev_info(&spi->dev, "touchscreen, irq %d\n", spi->irq);
++	printk("JDS 17\n");
+ 
+ 	/*
+ 	 * Take a first sample, leaving nPENIRQ active and vREF off; avoid
+@@ -1358,9 +1405,11 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 	err = input_register_device(input_dev);
+ 	if (err)
+ 		goto err_remove_attr_group;
++	printk("JDS 18\n");
+ 
+ 	device_init_wakeup(&spi->dev, pdata->wakeup);
+ 
++	printk("JDS 19\n");
+ 	return 0;
+ 
+  err_remove_attr_group:
+@@ -1423,14 +1472,6 @@ static int __devexit ads7846_remove(struct spi_device *spi)
+ 	return 0;
+ }
+ 
+-#if defined(CONFIG_OF)
+-static const struct of_device_id ads7846_of_match[] = {
+-	{ .compatible = "ti,ads7846" },
+-	{},
+-};
+-MODULE_DEVICE_TABLE(of, ads7846_of_match);
+-#endif
+-
+ static struct spi_driver ads7846_driver = {
+ 	.driver = {
+ 		.name	= "ads7846",
