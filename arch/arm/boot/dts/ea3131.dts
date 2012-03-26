@@ -9,7 +9,7 @@
 /include/ "lpc3131.dtsi"
 
 / {
-	model = "Electronic Arts EA3131";
+	model = "Embedded Artists EA3131";
 	compatible = "ea,ea3131", "nxp,lpc3131";
 
 	chosen {
@@ -42,7 +42,8 @@
 				compatible = "ti,ads7846";
 				spi-max-frequency = <1200000>;
 				reg = <1>;
-				interrupt = <37>;
+				interrupt = <20>;
+				pen_irq = <37>;
 			};
 		};
 	};
