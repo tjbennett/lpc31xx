@@ -137,21 +137,23 @@ static int i2c_pnx_start(unsigned char slave_addr,
 		return -EINVAL;
 	}
 
-	/* First, make sure bus is idle */
-	if (wait_timeout(alg_data)) {
-		/* Somebody else is monopolizing the bus */
-		dev_err(&alg_data->adapter.dev,
-			"%s: Bus busy. Slave addr = %02x, cntrl = %x, stat = %x\n",
-			alg_data->adapter.name, slave_addr,
-			ioread32(I2C_REG_CTL(alg_data)),
-			ioread32(I2C_REG_STS(alg_data)));
-		return -EBUSY;
-	} else if (ioread32(I2C_REG_STS(alg_data)) & mstatus_afi) {
-		/* Sorry, we lost the bus */
-		dev_err(&alg_data->adapter.dev,
-		        "%s: Arbitration failure. Slave addr = %02x\n",
-			alg_data->adapter.name, slave_addr);
-		return -EIO;
+	if (alg_data->mif.mode == 0) {
+		/* First, make sure bus is idle */
+		if (wait_timeout(alg_data)) {
+			/* Somebody else is monopolizing the bus */
+			dev_err(&alg_data->adapter.dev,
+				"%s: Bus busy. Slave addr = %02x, cntrl = %x, stat = %x\n",
+				alg_data->adapter.name, slave_addr,
+				ioread32(I2C_REG_CTL(alg_data)),
+				ioread32(I2C_REG_STS(alg_data)));
+			return -EBUSY;
+		} else if (ioread32(I2C_REG_STS(alg_data)) & mstatus_afi) {
+			/* Sorry, we lost the bus */
+			dev_err(&alg_data->adapter.dev,
+				"%s: Arbitration failure. Slave addr = %02x\n",
+				alg_data->adapter.name, slave_addr);
+			return -EIO;
+		}
 	}
 
 	/*
