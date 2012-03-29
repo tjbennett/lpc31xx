@@ -528,15 +528,15 @@ i2c_pnx_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
 		/* initialize the completion var */
 		init_completion(&alg_data->mif.complete);
 
-		/* Enable master interrupt */
-		iowrite32(ioread32(I2C_REG_CTL(alg_data)) | mcntrl_afie |
-				mcntrl_naie | mcntrl_drmie,
-			  I2C_REG_CTL(alg_data));
-
 		/* Put start-code and slave-address on the bus. */
 		rc = i2c_pnx_start(addr, alg_data);
 		if (rc < 0)
 			break;
+
+		/* Enable master interrupt */
+		iowrite32(ioread32(I2C_REG_CTL(alg_data)) | mcntrl_afie |
+				mcntrl_naie | mcntrl_drmie,
+			  I2C_REG_CTL(alg_data));
 
 		/* Wait for completion */
 		wait_for_completion(&alg_data->mif.complete);
