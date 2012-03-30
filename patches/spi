@@ -1,5 +1,5 @@
 Bottom: f7bc862a16e006b6a71371984b255ac78130b7ac
-Top:    95c22ab7173dd7213ed18f227fd192160b79404d
+Top:    ad64ccd5173e57395292df0b688640015da321ee
 Author: Jon Smirl (none) <jonsmirl@terra>
 Date:   2012-03-19 23:01:38 -0400
 
@@ -87,22 +87,22 @@ index 8293658..15ced0b 100644
  # Add new SPI master controllers in alphabetical order above this line
  #
 diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
-index 61c3261..1ac2deb 100644
+index 61c3261..f8cdf79 100644
 --- a/drivers/spi/Makefile
 +++ b/drivers/spi/Makefile
 @@ -31,6 +31,7 @@ obj-$(CONFIG_SPI_FSL_SPI)		+= spi-fsl-spi.o
  obj-$(CONFIG_SPI_GPIO)			+= spi-gpio.o
  obj-$(CONFIG_SPI_IMX)			+= spi-imx.o
  obj-$(CONFIG_SPI_LM70_LLP)		+= spi-lm70llp.o
-+obj-$(CONFIG_SPI_LPC313X)		+= spi_lpc313x.o
++obj-$(CONFIG_SPI_LPC313X)		+= spi-lpc313x.o
  obj-$(CONFIG_SPI_MPC512x_PSC)		+= spi-mpc512x-psc.o
  obj-$(CONFIG_SPI_MPC52xx_PSC)		+= spi-mpc52xx-psc.o
  obj-$(CONFIG_SPI_MPC52xx)		+= spi-mpc52xx.o
-diff --git a/drivers/spi/spi_lpc313x.c b/drivers/spi/spi_lpc313x.c
+diff --git a/drivers/spi/spi-lpc313x.c b/drivers/spi/spi-lpc313x.c
 new file mode 100644
 index 0000000..aa99f79
 --- /dev/null
-+++ b/drivers/spi/spi_lpc313x.c
++++ b/drivers/spi/spi-lpc313x.c
 @@ -0,0 +1,1001 @@
 +/*
 + * drivers/spi/spi_lpc313x.c
