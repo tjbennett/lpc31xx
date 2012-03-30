@@ -11,6 +11,8 @@
  * (at your option) any later version.
  */
 
+#define DEBUG
+
 #include <linux/i2c.h>
 #include <linux/irq.h>
 #include <linux/of.h>
