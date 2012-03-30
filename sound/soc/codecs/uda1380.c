@@ -148,6 +148,7 @@ static void uda1380_sync_cache(struct snd_soc_codec *codec)
 static int uda1380_reset(struct snd_soc_codec *codec)
 {
 	struct uda1380_platform_data *pdata = codec->dev->platform_data;
+	int temp;
 
 	if (gpio_is_valid(pdata->gpio_reset)) {
 		gpio_set_value(pdata->gpio_reset, 1);
@@ -160,10 +161,13 @@ static int uda1380_reset(struct snd_soc_codec *codec)
 		data[1] = 0;
 		data[2] = 0;
 
-		if (codec->hw_write(codec->control_data, data, 3) != 3) {
+		printk("JDS reset 1\n");
+		if ((temp = codec->hw_write(codec->control_data, data, 3)) != 3) {
+			printk("JDS reset 2 %d\n", temp);
 			dev_err(codec->dev, "%s: failed\n", __func__);
 			return -EIO;
 		}
+		printk("JDS reset 3\n");
 	}
 
 	return 0;
@@ -728,6 +732,14 @@ static int uda1380_resume(struct snd_soc_codec *codec)
 	return 0;
 }
 
+#ifdef CONFIG_OF
+struct uda1380_platform_data of_pdata = {
+	.gpio_reset = -EINVAL,
+	.gpio_power = -EINVAL,
+	.dac_clk = UDA1380_DAC_CLK_SYSCLK,
+};
+#endif
+
 static int uda1380_probe(struct snd_soc_codec *codec)
 {
 	struct uda1380_platform_data *pdata =codec->dev->platform_data;
@@ -739,8 +751,12 @@ static int uda1380_probe(struct snd_soc_codec *codec)
 	codec->hw_write = (hw_write_t)i2c_master_send;
 	codec->control_data = uda1380->control_data;
 
+#ifdef CONFIG_OF
+	codec->dev->platform_data = pdata = &of_pdata;
+#else
 	if (!pdata)
 		return -EINVAL;
+#endif
 
 	if (gpio_is_valid(pdata->gpio_reset)) {
 		ret = gpio_request_one(pdata->gpio_reset, GPIOF_OUT_INIT_LOW,
@@ -850,10 +866,17 @@ static const struct i2c_device_id uda1380_i2c_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, uda1380_i2c_id);
 
+static const struct of_device_id uda1380_of_match[] = {
+	{ .compatible = "nxp,uda1380", },
+	{ }
+};
+MODULE_DEVICE_TABLE(of, uda1380_of_match);
+
 static struct i2c_driver uda1380_i2c_driver = {
 	.driver = {
 		.name =  "uda1380-codec",
 		.owner = THIS_MODULE,
+		.of_match_table = uda1380_of_match,
 	},
 	.probe =    uda1380_i2c_probe,
 	.remove =   __devexit_p(uda1380_i2c_remove),
