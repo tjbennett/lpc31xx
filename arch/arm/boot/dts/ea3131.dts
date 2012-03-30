@@ -33,8 +33,8 @@
 	};
 	apb@15000000 {
 		spi@15002000 {
-			at45db321d@0 {
-				compatible = "st,m25";
+			s25sl032a@0 {
+				compatible = "code,s25sl032a";
 				spi-max-frequency = <1000000>;
 				reg = <0>;
 			};
@@ -47,7 +47,8 @@
 				x_plate_ohms = <419>;
 				y_plate_ohms = <486>;
 				pen_irq = <37>;
-				gpio_pendown = <&gpio 0x1c4 0>;
+				gpio_pendown = <&gpio_gpio 4 0>;
+				gpio_cs = <&gpio_ebi_i2stx_0 3 0>; 
 			};
 		};
 	};
@@ -68,39 +69,35 @@
 		};
 	};
 	sdmmc@18000000 {
-		cd-gpio = <&gpio 0x87 0>;
-		power-gpio = <&gpio 0x45 0>;
+		slot@0 {
+			width = <4>;
+			detect-delays = <250>;
+			gpio-cd = <&gpio_cgu 7 0>;
+			gpio-power = <&gpio_ebi_i2stx_0 5 0>;
+			/* gpio-power = <&gpio_ebi_i2stx_0 5 0>; broken in hardware */
+			/* gpio-wp = <>; not implemented in hardware */
+			/* gpio-select = <>; not implemented in hardware */
+			voltage-ranges = <3200 3400>;
+		};
 	};
 	usb@19000000 {
-		vbus-over =  <&pca9532 0xFF 0>;
+		vbus-over =  <&gpio_i2srx_0 2 0>;
+		vbus-interrupts = <36>;
 	};
 	sram@20000000 {
-		STCONFIG = <0x81>;
-		STWTWEN  = <0>;
-		STWTOEN  = <0>;
-		STWTRD   = <31>;
-		STWTPG   = <0>;
-		STWTWR   = <3>;
-		STWTTURN = <0>;
+		mpmc-config = <0x81 0 0 31 0 3 0>;
 		ssd1289@20000000 {
 			compatible = "ssd,ssd1289";
 			reg = <0x20000000 0x10000 0x20010000 0x10000>;
 		};
 	};
 	sram@20020000 {
-		STCONFIG = <0x81>;
-		STWTWEN = <1>;
-		STWTOEN = <1>;
-		STWTRD = <4>;
-		STWTPG = <1>;
-		STWTWR = <1>;
-		STWTTURN = <2>;
 		/* enable oe toggle between consec reads */
-		WTD_DEL = <0x24>;
+		mpmc-config = <0x81 1 1 4 1 1 2 0x24>;
 		dm9000@20020000 {
 			compatible = "davicom,dm9000";
 			reg = <0x20020000 0x100 0x20030000 0x100>;
-			interrupts = <37>;
+			interrupts = <34>;
 		};			
 	};
 	memory@30000000 {

@@ -38,6 +38,7 @@
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
+#include <linux/of_gpio.h>
 
 #include <asm/irq.h>
 #include <asm/system.h>
@@ -119,15 +120,6 @@ struct lpc313x_usb_board_t {
 
 static struct lpc313x_usb_board_t lpc313x_usb_brd;
 
-static u64 usb_dmamask = 0xffffffffUL;;
-/*-------------------------------------------------------------------------*/
-
-static void	lpc313x_usb_release(struct device *dev)
-{
-	// do nothing
-}
-
-
 #if defined(CONFIG_USB_GADGET_FSL_USB2) || defined(CONFIG_USB_OTG)
 
 static struct platform_device lpc313x_udc_device = {
@@ -189,6 +181,7 @@ static void lpc313x_vbusen_timer(unsigned long data)
 /*-------------------------------------------------------------------------*/
 int __init usbotg_init(void)
 {
+	int over;
 	u32 bank = EVT_GET_BANK(EVT_usb_atx_pll_lock);
 	u32 bit_pos = EVT_usb_atx_pll_lock & 0x1F;
 	int retval = 0;
@@ -245,10 +238,13 @@ int __init usbotg_init(void)
 
 #if defined(CONFIG_MACH_EA313X) || defined(CONFIG_MACH_EA3152)
 		/* set thw I2SRX_WS0 pin as GPIO_IN for vbus overcurrent flag */
-		retval = gpio_request(GPIO_I2SRX_WS0, "vbus overcurrent");
+#if 0
+		over = of_get_named_gpio(np, "vbus-over", 0);
+		retval = gpio_request(over, "vbus overcurrent");
 		if ( 0 != retval )
-			printk(KERN_INFO "Can't acquire GPIO_I2SRX_WS0\n");
-		gpio_direction_input(GPIO_I2SRX_WS0);
+			printk(KERN_INFO "Can't acquire vbus-over GPIO\n");
+		gpio_direction_input(over);
+#endif
 		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_EA_VBUS_OVRC;
 
 #else

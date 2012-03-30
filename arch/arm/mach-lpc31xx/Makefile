@@ -5,7 +5,6 @@
 # Object file lists.
 
 obj-y			+= irq.o time.o generic.o i2c.o dma.o usb.o wdt.o clock.o
-obj-$(CONFIG_GPIOLIB) += gpiolib.o
 obj-$(CONFIG_OF) += dt.o
 
 

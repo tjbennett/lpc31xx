@@ -15,6 +15,9 @@
 #include <linux/interrupt.h>
 #include <linux/ioport.h>
 #include <linux/io.h>
+#include <linux/slab.h>
+#include <linux/of_gpio.h>
+#include <linux/of_platform.h>
 
 #include <mach/hardware.h>
 #include <asm/irq.h>
@@ -208,37 +211,58 @@ static inline void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned offse
 	lpc313x_gpio_set_value(chip->base + offset, value);
 }
 
-__init void lpc313x_gpiolib_add(struct lpc313x_gpio_chip *chip)
+static int lpc313x_gpiochip_remove(struct platform_device *ofdev)
 {
-	struct gpio_chip *gc = &chip->chip;
-	int ret;
-
-	BUG_ON(!chip->base);
-	BUG_ON(!gc->label);
-	BUG_ON(!gc->ngpio);
-
-	if (!gc->direction_input)
-		gc->direction_input = lpc3131_gpio_direction_input;
-	if (!gc->direction_output)
-		gc->direction_output = lpc3131_gpio_direction_output;
-	if (!gc->set)
-		gc->set = lpc3131_gpio_set_value;
-	if (!gc->get)
-		gc->get = lpc3131_gpio_get_value;
-
-	/* gpiochip_add() prints own failure message on error. */
-	ret = gpiochip_add(gc);
+	return -EBUSY;
 }
 
-static __init int lpc313x_gpiolib_init(void)
+static int __devinit lpc313x_simple_gpiochip_probe(struct platform_device *ofdev)
 {
-	struct lpc313x_gpio_chip *chip = lpc313x_gpios;
-	int gpn;
+	struct of_mm_gpio_chip *chip;
+	struct gpio_chip *gc;
+	int ret;
 
-	for (gpn = 0; gpn < ARRAY_SIZE(lpc313x_gpios); gpn++, chip++)
-		lpc313x_gpiolib_add(chip);
+	chip = kzalloc(sizeof(*chip), GFP_KERNEL);
+	if (!chip)
+		return -ENOMEM;
+
+	gc = &chip->gc;
+
+	gc->ngpio            = 32;
+	gc->direction_input  = lpc3131_gpio_direction_input;
+	gc->direction_output = lpc3131_gpio_direction_output;
+	gc->get              = lpc3131_gpio_get_value;
+	gc->set              = lpc3131_gpio_set_value;
+
+	ret = of_mm_gpiochip_add(ofdev->dev.of_node, chip);
+	if (ret)
+		return ret;
 
 	return 0;
 }
 
+static const struct of_device_id lpc313x_simple_gpiochip_match[] = {
+	{ .compatible = "nxp,lpc31xx-gpio", },
+	{}
+};
+
+static struct platform_driver lpc313x_simple_gpiochip_driver = {
+	.driver = {
+		.name = "lpc31xx-gpio",
+		.owner = THIS_MODULE,
+		.of_match_table = lpc313x_simple_gpiochip_match,
+	},
+	.probe = lpc313x_simple_gpiochip_probe,
+	.remove = lpc313x_gpiochip_remove,
+};
+
+static __init int lpc313x_gpiolib_init(void)
+{
+	if (platform_driver_register(&lpc313x_simple_gpiochip_driver))
+		printk(KERN_ERR "Unable to register simple GPIO driver\n");
+
+	return 0;
+}
+
+/* Make sure we get initialised before anyone else tries to use us */
 core_initcall(lpc313x_gpiolib_init);
