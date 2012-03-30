@@ -147,14 +147,6 @@ static struct map_desc lpc313x_io_desc[] __initdata = {
 		.length		= IO_APB4_SIZE,
 		.type		= MT_DEVICE
 	},
-#if 0
-	{
-		.virtual	= io_p2v(IO_DMA_REG_PHYS),
-		.pfn		= __phys_to_pfn(IO_DMA_REG_PHYS),
-		.length		= IO_DMA_REG_SIZE,
-		.type		= MT_DEVICE
-	},
-#endif
 	{
 		.virtual	= io_p2v(IO_MPMC_CFG_PHYS),
 		.pfn		= __phys_to_pfn(IO_MPMC_CFG_PHYS),
@@ -173,6 +165,33 @@ static struct map_desc lpc313x_io_desc[] __initdata = {
 		.length		= IO_ISRAM0_SIZE,
 		.type		= MT_DEVICE
 	},
+#ifdef CONFIG_OF
+	{
+		.virtual	= io_p2v(IO_USB_PHYS),
+		.pfn		= __phys_to_pfn(IO_USB_PHYS),
+		.length		= IO_USB_SIZE,
+		.type		= MT_DEVICE
+	},
+
+	{
+		.virtual	= io_p2v(IO_SDMMC_PHYS),
+		.pfn		= __phys_to_pfn(IO_SDMMC_PHYS),
+		.length		= IO_SDMMC_SIZE,
+		.type		= MT_DEVICE
+	},
+	{
+		.virtual	= io_p2v(EXT_SRAM0_PHYS),
+		.pfn		= __phys_to_pfn(EXT_SRAM0_PHYS),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE
+	},
+	{
+		.virtual	= io_p2v(EXT_SRAM1_PHYS + 0x10000),
+		.pfn		= __phys_to_pfn(EXT_SRAM1_PHYS + 0x10000),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE
+	},
+#endif
 };
 
 void __init lpc313x_map_io(void)
@@ -193,9 +212,10 @@ void __init lpc313x_uart_init(void)
 	}
 }
 
-int __init lpc313x_init(void)
+void __init lpc313x_init(void)
 {
 	/* cgu init */
+	clk_init();
 	cgu_init("");
 	/* Switch on the UART clocks */
 	cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
@@ -236,7 +256,9 @@ int __init lpc313x_init(void)
 
 	lpc313x_uart_init();
 
+#ifndef CONFIG_OF
 	return platform_add_devices(devices, ARRAY_SIZE(devices));
+#endif
 }
 
 
