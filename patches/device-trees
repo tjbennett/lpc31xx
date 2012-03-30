@@ -1,5 +1,5 @@
 Bottom: 6f59c907c8ddc703a12a9928cd807d47745cb9e3
-Top:    b3dc79cf8aff7dcd9f9b7e19de2a077d9c211304
+Top:    b373a7c4b40168e9a7f85e06ceb65b2bc37ae12f
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 19:47:49 -0400
 
@@ -2658,57 +2658,6 @@ index f7ca4cc..f8fd607 100644
  	},
  	.probe   = dm9000_probe,
  	.remove  = __devexit_p(dm9000_drv_remove),
-diff --git a/drivers/of/base.c b/drivers/of/base.c
-index 133908a..6765652 100644
---- a/drivers/of/base.c
-+++ b/drivers/of/base.c
-@@ -17,6 +17,8 @@
-  *      as published by the Free Software Foundation; either version
-  *      2 of the License, or (at your option) any later version.
-  */
-+#define DEBUG
-+
- #include <linux/ctype.h>
- #include <linux/module.h>
- #include <linux/of.h>
-diff --git a/drivers/of/gpio.c b/drivers/of/gpio.c
-index 7e62d15..917d66f 100644
---- a/drivers/of/gpio.c
-+++ b/drivers/of/gpio.c
-@@ -11,6 +11,8 @@
-  * (at your option) any later version.
-  */
- 
-+#define DEBUG
-+
- #include <linux/device.h>
- #include <linux/errno.h>
- #include <linux/module.h>
-diff --git a/drivers/of/of_i2c.c b/drivers/of/of_i2c.c
-index f37fbeb..e1d99c0 100644
---- a/drivers/of/of_i2c.c
-+++ b/drivers/of/of_i2c.c
-@@ -18,6 +18,7 @@
- #include <linux/of_irq.h>
- #include <linux/module.h>
- 
-+
- void of_i2c_register_devices(struct i2c_adapter *adap)
- {
- 	void *result;
-diff --git a/drivers/of/of_spi.c b/drivers/of/of_spi.c
-index 6dbc074..4317938 100644
---- a/drivers/of/of_spi.c
-+++ b/drivers/of/of_spi.c
-@@ -6,6 +6,8 @@
-  * tree.
-  */
- 
-+#define DEBUG
-+
- #include <linux/module.h>
- #include <linux/of.h>
- #include <linux/device.h>
 diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
 index 1ac2deb..f8cdf79 100644
 --- a/drivers/spi/Makefile
