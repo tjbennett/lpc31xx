@@ -1,12 +1,13 @@
 Version: 1
-Previous: de1b2f1563d77c49c7e5a09e132ab5d9c0a446a5
-Head: 7bee9a27e7e0eac365449aacb4e173f5c89d9d40
+Previous: ffdec69816e473af3a6ec0a936e6e3d6e176fc22
+Head: 919b219de40afdc1eefc41f7754bb2edd6af793a
 Applied:
   i2c-fix: 464d99faefcdcf9f203ba4c8b482d387c8c29467
   base: b391bc787a534e6037fc0ec714215d0635982fcc
   defconfigs: 2b00f58630491c5cbb664ad7ae9606f0e7523f06
   nand: 5b07c41869677d9dd02ea171efa3a69b629ea877
   spi: 7bee9a27e7e0eac365449aacb4e173f5c89d9d40
+  refresh-temp: 919b219de40afdc1eefc41f7754bb2edd6af793a
 Unapplied:
   mmc: 27b33d90c84449671087c0a7cba781d7e7607cd4
   watchdog: 66152b569e65f2daa5c1f9835031d3814fe34172
