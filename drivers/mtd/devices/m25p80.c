@@ -834,6 +834,7 @@ static int __devinit m25p_probe(struct spi_device *spi)
 	 * a chip ID, try the JEDEC id commands; they'll work for most
 	 * newer chips, even if we don't recognize the particular chip.
 	 */
+
 	data = spi->dev.platform_data;
 	if (data && data->type) {
 		const struct spi_device_id *plat_id;
@@ -849,7 +850,8 @@ static int __devinit m25p_probe(struct spi_device *spi)
 			id = plat_id;
 		else
 			dev_warn(&spi->dev, "unrecognized id %s\n", data->type);
-	}
+	} else
+		id = jedec_probe(spi);
 
 	info = (void *)id->driver_data;
 
@@ -988,11 +990,21 @@ static int __devexit m25p_remove(struct spi_device *spi)
 	return 0;
 }
 
+#ifdef CONFIG_OF
+static const struct of_device_id m25p80_dt_ids[] = {
+	{ .compatible = "st,m25", },
+	{ /* sentinel */ }
+};
+#else
+#define m25p80_dt_ids NULL
+#endif
+
 
 static struct spi_driver m25p80_driver = {
 	.driver = {
 		.name	= "m25p80",
 		.owner	= THIS_MODULE,
+		.of_match_table = m25p80_dt_ids,
 	},
 	.id_table	= m25p_ids,
 	.probe	= m25p_probe,
