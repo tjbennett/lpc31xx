@@ -141,9 +141,9 @@ static struct snd_soc_dai_link ea3131_uda1380_dai[] = {
 		.name = "uda1380",
 		.stream_name = "uda1380",
 		.codec_name	= "uda1380-codec.1-001a",
-		.cpu_dai_name = "lpc313x-i2s.0",
+		.cpu_dai_name = "16000000.i2s",
 		.codec_dai_name = "uda1380-hifi",
-		.platform_name	= "lpc313x-audio.0",
+		.platform_name	= "pcm.8",
 		.init = ea3131_uda1380_init,
 		.ops = &ea3131_uda1380_ops,
 	},
@@ -196,7 +196,7 @@ static int __devinit ea3131_asoc_probe(struct platform_device *pd)
 
 	snd_dev = platform_device_alloc("soc-audio", -1);
 	if (!snd_dev) {
-		dev_err(&pd->dev, "failed to alloc soc-audio devicec\n");
+		dev_err(&pd->dev, "failed to alloc soc-audio device\n");
 		return -ENOMEM;
 	}
 
@@ -220,11 +220,22 @@ static int __devexit ea3131_asoc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id ea3131_asoc_of_match[] = {
+	{ .compatible = "ea,ea3131-uda1380" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ea3131_asoc_of_match);
+#endif
+
 static struct platform_driver ea3131_asoc_platdrv = {
 	.driver	= {
 		.owner	= THIS_MODULE,
-		.name	= "lpc313x-uda1380",
+		.name	= "ea3131-uda1380",
 		//.pm	= ea3131_asoc_pm,
+#ifdef CONFIG_OF
+		.of_match_table = ea3131_asoc_of_match,
+#endif
 	},
 	.probe	= ea3131_asoc_probe,
 	.remove	= __devexit_p(ea3131_asoc_remove),
@@ -244,7 +255,7 @@ module_init(ea3131_asoc_modinit);
 module_exit(ea3131_asoc_modexit);
 
 MODULE_AUTHOR("Kevin Wells <kevin.wells@nxp.com>");
-MODULE_DESCRIPTION("ASoC machine driver for LPC313X/UDA1380");
+MODULE_DESCRIPTION("ASoC machine driver for EA3131/UDA1380");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("platform:lpc313x-uda1380");
+MODULE_ALIAS("platform:ea3131-uda1380");
 
