@@ -76,6 +76,17 @@ static const struct hc_driver lpc_ehci_hc_driver = {
 	.clear_tt_buffer_complete = ehci_clear_tt_buffer_complete,
 };
 
+struct fsl_usb2_platform_data lpc313x_fsl_config = {
+#if defined(CONFIG_USB_OTG) || (defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_GADGET_FSL_USB2))
+	.operating_mode = FSL_USB2_DR_OTG,
+#elif defined(CONFIG_USB_GADGET_FSL_USB2) && !defined(CONFIG_USB_EHCI_HCD)
+	.operating_mode = FSL_USB2_DR_DEVICE,
+#elif !defined(CONFIG_USB_GADGET_FSL_USB2) && defined(CONFIG_USB_EHCI_HCD)
+	.operating_mode = FSL_USB2_DR_HOST,
+#endif
+	.phy_mode = FSL_USB2_PHY_UTMI,
+};
+
 static int lpc_ehci_probe(struct platform_device *pdev)
 {
 	struct fsl_usb2_platform_data *pdata;
@@ -89,7 +100,7 @@ static int lpc_ehci_probe(struct platform_device *pdev)
 		return -ENODEV;
 
 	/* Need platform data for setup */
-	pdata = (struct fsl_usb2_platform_data *)pdev->dev.platform_data;
+	pdata = &lpc313x_fsl_config;
 	if (!pdata) {
 		dev_err(&pdev->dev,
 			"No platform data for %s.\n", dev_name(&pdev->dev));
@@ -342,6 +353,14 @@ static int lpc313x_ehci_resume(struct platform_device * pdev)
 	return 0;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id ehci_lpc_of_match[] = {
+	{ .compatible = "nxp,lpc31xx-usb" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ehci_lpc_of_match);
+#endif
+
 static struct platform_driver ehci_lpc_driver = {
 	.probe = lpc_ehci_probe,
 	.remove = lpc_ehci_remove,
@@ -352,6 +371,9 @@ static struct platform_driver ehci_lpc_driver = {
 #ifdef CONFIG_USB_OTG
 		.suspend = lpc_ehci_suspend,
 		.resume  = lpc_ehci_resume,
+#endif
+#ifdef CONFIG_OF
+		.of_match_table = ehci_lpc_of_match,
 #endif
 	},
 };
