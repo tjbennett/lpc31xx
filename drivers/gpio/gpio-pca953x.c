@@ -639,6 +639,7 @@ static int __devinit pca953x_probe(struct i2c_client *client,
 	int irq_base=0, invert=0;
 	int ret;
 
+printk("pca953x_probe\n");
 	chip = kzalloc(sizeof(struct pca953x_chip), GFP_KERNEL);
 	if (chip == NULL)
 		return -ENOMEM;
@@ -669,20 +670,24 @@ static int __devinit pca953x_probe(struct i2c_client *client,
 	 */
 	pca953x_setup_gpio(chip, id->driver_data & PCA_GPIO_MASK);
 
+	printk("pca953x_probe 1\n");
 	if (chip->chip_type == PCA953X_TYPE)
 		ret = device_pca953x_init(chip, invert);
 	else
 		ret = device_pca957x_init(chip, invert);
 	if (ret)
 		goto out_failed;
+	printk("pca953x_probe 2\n");
 
 	ret = pca953x_irq_setup(chip, id, irq_base);
 	if (ret)
 		goto out_failed;
+	printk("pca953x_probe 3\n");
 
 	ret = gpiochip_add(&chip->gpio_chip);
 	if (ret)
 		goto out_failed_irq;
+	printk("pca953x_probe 4\n");
 
 	if (pdata && pdata->setup) {
 		ret = pdata->setup(client, chip->gpio_chip.base,
@@ -692,6 +697,7 @@ static int __devinit pca953x_probe(struct i2c_client *client,
 	}
 
 	i2c_set_clientdata(client, chip);
+	printk("pca953x_probe exit\n");
 	return 0;
 
 out_failed_irq:
