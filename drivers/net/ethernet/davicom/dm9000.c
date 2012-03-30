@@ -1679,11 +1679,22 @@ dm9000_drv_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id dm9000_of_match[] = {
+	{ .compatible = "davicom,dm9000" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, dm9000_of_match);
+#endif
+
 static struct platform_driver dm9000_driver = {
 	.driver	= {
 		.name    = "dm9000",
 		.owner	 = THIS_MODULE,
 		.pm	 = &dm9000_drv_pm_ops,
+#ifdef CONFIG_OF
+		.of_match_table = dm9000_of_match,
+#endif
 	},
 	.probe   = dm9000_probe,
 	.remove  = __devexit_p(dm9000_drv_remove),

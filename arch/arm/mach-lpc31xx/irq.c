@@ -24,6 +24,8 @@
 #include <linux/init.h>
 #include <linux/list.h>
 #include <linux/timer.h>
+#include <linux/of_irq.h>
+#include <linux/irqdomain.h>
 
 #include <mach/hardware.h>
 #include <asm/irq.h>
@@ -199,12 +201,18 @@ ROUTER_HDLR(2)
 ROUTER_HDLR(3)
 #endif /* IRQ_EVTR3_END */
 
+static const struct of_device_id intc_of_match[] __initconst = {
+	{ .compatible = "nxp,lpc31xx-intc", },
+	{},
+};
 
 void __init lpc313x_init_irq(void)
 {
 	unsigned int irq;
 	int i, j;
 	u32 bank, bit_pos;
+
+	irq_domain_generate_simple(intc_of_match, 0x60000000, 0);
 
 	/* enable clock to interrupt controller */
 	cgu_clk_en_dis(CGU_SB_AHB2INTC_CLK_ID, 1);
