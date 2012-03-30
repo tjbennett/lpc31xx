@@ -80,19 +80,6 @@ static u32 calculate_input_freq(struct platform_device *pdev)
 	return (FFAST_CLOCK/1000000);
 }
 
-
-static struct i2c_pnx_data lpc_pnx_data0 = {
-	.name = I2C_CHIP_NAME "0",
-	.base = I2C0_PHYS,
-	.irq = IRQ_I2C0,
-};
-
-static struct i2c_pnx_data lpc_pnx_data1 = {
-	.name = I2C_CHIP_NAME "1",
-	.base = I2C1_PHYS,
-	.irq = IRQ_I2C1,
-};
-
 static struct i2c_pnx_algo_data i2c0_algo_data;
 static struct i2c_pnx_algo_data i2c1_algo_data;
 
@@ -101,7 +88,6 @@ static struct i2c_pnx_algo_data i2c0_algo_data = {
 		.name = I2C_CHIP_NAME "0",
 		.algo_data = &i2c0_algo_data,
 	},
-	.i2c_pnx = &lpc_pnx_data0,
 };
 
 static struct i2c_pnx_algo_data i2c1_algo_data = {
@@ -109,23 +95,46 @@ static struct i2c_pnx_algo_data i2c1_algo_data = {
 		.name = I2C_CHIP_NAME "1",
 		.algo_data = &i2c1_algo_data,
 	},
-	.i2c_pnx = &lpc_pnx_data1,
+};
+
+static struct resource i2c0_resource[] = {
+	[0] = {
+		.start = I2C0_PHYS,
+		.end   = I2C0_PHYS + 0x400,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= IRQ_I2C0,
+		.end	= IRQ_I2C0,
+		.flags	= IORESOURCE_IRQ,
+	},
 };
 
 static struct platform_device i2c0_device = {
 	.name = "pnx-i2c",
 	.id = 0,
-	.dev = {
-		.platform_data = &lpc_pnx_data0,
+	.num_resources	= ARRAY_SIZE(i2c0_resource),
+	.resource	= i2c0_resource,
+};
+
+static struct resource i2c1_resource[] = {
+	[0] = {
+		.start = I2C1_PHYS,
+		.end   = I2C1_PHYS + 0x400,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start	= IRQ_I2C1,
+		.end	= IRQ_I2C1,
+		.flags	= IORESOURCE_IRQ,
 	},
 };
 
 static struct platform_device i2c1_device = {
 	.name = "pnx-i2c",
 	.id = 1,
-	.dev = {
-		.platform_data = &lpc_pnx_data1,
-	},
+	.num_resources	= ARRAY_SIZE(i2c1_resource),
+	.resource	= i2c1_resource,
 };
 
 static struct platform_device *devices[] __initdata = {
