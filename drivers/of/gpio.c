@@ -11,8 +11,6 @@
  * (at your option) any later version.
  */
 
-#define DEBUG
-
 #include <linux/device.h>
 #include <linux/errno.h>
 #include <linux/module.h>

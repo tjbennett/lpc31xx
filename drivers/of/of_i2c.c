@@ -18,7 +18,6 @@
 #include <linux/of_irq.h>
 #include <linux/module.h>
 
-
 void of_i2c_register_devices(struct i2c_adapter *adap)
 {
 	void *result;
