@@ -55,10 +55,82 @@
 			compatible = "nxp,lpc31xx-sys";
 			reg = <0x13002800 0x400>;
 		};
-		gpio: gpio@13003000 {
+		gpio_ebi_mci: gpio@13003000 {
 			#gpio-cells = <2>;
 			compatible = "nxp,lpc31xx-gpio";
-			reg = <0x13003000 0x1000>;
+			reg = <0x13003000 0x40>;
+			gpio-controller;
+		};
+		gpio_ebi_i2stx_0: gpio@13003040 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x13003040 0x40>;
+			gpio-controller;
+		};
+		gpio_cgu: gpio@13003080 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x13003080 0x40>;
+			gpio-controller;
+		};
+		gpio_i2srx_0: gpio@130030c0 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x130030c0 0x40>;
+			gpio-controller;
+		};
+		gpio_i2srx_1: gpio@13003100 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x13003100 0x40>;
+			gpio-controller;
+		};
+		gpio_i2stx_1: gpio@13003140 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x13003140 0x40>;
+			gpio-controller;
+		};
+		gpio_ebi: gpio@13003180 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x13003180 0x40>;
+			gpio-controller;
+		};
+		gpio_gpio: gpio@130031c0 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x130031c0 0x40>;
+			gpio-controller;
+		};
+		gpio_i2c1: gpio@13003200 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x13003200 0x40>;
+			gpio-controller;
+		};
+		gpio_spi: gpio@13003240 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x13003240 0x40>;
+			gpio-controller;
+		};
+		gpio_nand_ctrl: gpio@13003280 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x13003280 0x40>;
+			gpio-controller;
+		};
+		gpio_pwm: gpio@130032c0 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x130032c0 0x40>;
+			gpio-controller;
+		};
+		gpio_uart: gpio@13003300 {
+			#gpio-cells = <2>;
+			compatible = "nxp,lpc31xx-gpio";
+			reg = <0x13003300 0x40>;
 			gpio-controller;
 		};
 		cgu@13004000 {
@@ -187,8 +259,14 @@
 	};
 	sdmmc@18000000 {
 		compatible = "nxp,lpc31xx-sdmmc";
+		#address-cells = <1>;
+		#size-cells = <0>;
 		reg = <0x18000000 0x1000>;
 		interrupts = <26>;
+		slot@0 {
+			reg = <0>;
+			voltage-ranges = <3300 3300>;
+		};
 	};
 	usb@19000000 {
 		compatible = "nxp,lpc31xx-usb", "usb-ehci";

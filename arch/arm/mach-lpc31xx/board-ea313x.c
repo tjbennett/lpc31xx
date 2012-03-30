@@ -255,13 +255,6 @@ static struct pca9532_platform_data ea313x_leds = {
 	.pwm = { 0, 0 },
 };
 
-static struct i2c_board_info ea313x_i2c_devices[] __initdata = {
-	{
-		I2C_BOARD_INFO("pca9532", 0x60),
-		.platform_data = &ea313x_leds,
-	},
-};
-
 #if defined(CONFIG_MACH_EA3152)
 static struct i2c_board_info ea3152_i2c1_devices[] __initdata = {
 	{
