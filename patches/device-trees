@@ -1,4 +1,4 @@
-Bottom: 6f59c907c8ddc703a12a9928cd807d47745cb9e3
+Bottom: 8cbc2be8af18257609cdae2ae3abd83f2badacfa
 Top:    b373a7c4b40168e9a7f85e06ceb65b2bc37ae12f
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 19:47:49 -0400
@@ -2658,25 +2658,9 @@ index f7ca4cc..f8fd607 100644
  	},
  	.probe   = dm9000_probe,
  	.remove  = __devexit_p(dm9000_drv_remove),
-diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
-index 1ac2deb..f8cdf79 100644
---- a/drivers/spi/Makefile
-+++ b/drivers/spi/Makefile
-@@ -31,7 +31,7 @@ obj-$(CONFIG_SPI_FSL_SPI)		+= spi-fsl-spi.o
- obj-$(CONFIG_SPI_GPIO)			+= spi-gpio.o
- obj-$(CONFIG_SPI_IMX)			+= spi-imx.o
- obj-$(CONFIG_SPI_LM70_LLP)		+= spi-lm70llp.o
--obj-$(CONFIG_SPI_LPC313X)		+= spi_lpc313x.o
-+obj-$(CONFIG_SPI_LPC313X)		+= spi-lpc313x.o
- obj-$(CONFIG_SPI_MPC512x_PSC)		+= spi-mpc512x-psc.o
- obj-$(CONFIG_SPI_MPC52xx_PSC)		+= spi-mpc52xx-psc.o
- obj-$(CONFIG_SPI_MPC52xx)		+= spi-mpc52xx.o
-diff --git a/drivers/spi/spi_lpc313x.c b/drivers/spi/spi-lpc313x.c
-similarity index 93%
-rename from drivers/spi/spi_lpc313x.c
-rename to drivers/spi/spi-lpc313x.c
+diff --git a/drivers/spi/spi-lpc313x.c b/drivers/spi/spi-lpc313x.c
 index aa99f79..0157806 100644
---- a/drivers/spi/spi_lpc313x.c
+--- a/drivers/spi/spi-lpc313x.c
 +++ b/drivers/spi/spi-lpc313x.c
 @@ -45,6 +45,7 @@
  #include <mach/registers.h>
