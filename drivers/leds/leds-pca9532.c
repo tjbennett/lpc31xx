@@ -444,6 +444,34 @@ exit:
 	return err;
 }
 
+#ifdef CONFIG_OF
+/* for now make everything into a GPIO under OF */
+/* LED support needs to be integrated with OF gpio-leds */
+static struct pca9532_platform_data of_gpios = {
+	.gpio_base = -1,
+	.leds = {
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	{	.type = PCA9532_TYPE_GPIO },
+	},
+	.psc = { 0, 0 },
+	.pwm = { 0, 0 },
+};
+#endif
+
 static int pca9532_probe(struct i2c_client *client,
 	const struct i2c_device_id *id)
 {
@@ -451,8 +479,12 @@ static int pca9532_probe(struct i2c_client *client,
 	struct pca9532_platform_data *pca9532_pdata = client->dev.platform_data;
 	int err;
 
+#ifdef CONFIG_OF
+	pca9532_pdata = &of_gpios;
+#else
 	if (!pca9532_pdata)
 		return -EIO;
+#endif
 
 	if (!i2c_check_functionality(client->adapter,
 		I2C_FUNC_SMBUS_BYTE_DATA))
