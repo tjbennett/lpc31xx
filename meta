@@ -1,9 +1,10 @@
 Version: 1
-Previous: 2ea8e00e85cabd0fd9b110291abe75f0a690a0ac
-Head: b391bc787a534e6037fc0ec714215d0635982fcc
+Previous: ff68e2e0e554bf9f805aaea8214720b78d0f9620
+Head: eac1f6ec83773b8434cc264ec9c8a6417b7eb2bd
 Applied:
   i2c-fix: 464d99faefcdcf9f203ba4c8b482d387c8c29467
   base: b391bc787a534e6037fc0ec714215d0635982fcc
+  refresh-temp: eac1f6ec83773b8434cc264ec9c8a6417b7eb2bd
 Unapplied:
   defconfigs: 2b00f58630491c5cbb664ad7ae9606f0e7523f06
   nand: 5b07c41869677d9dd02ea171efa3a69b629ea877

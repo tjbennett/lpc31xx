@@ -1,0 +1,23 @@
+Bottom: 3b6321c86620933e329f0077f33504d5fd393d9e
+Top:    1a85bf96e9d827cbcd8c3607829d3368d70ef43e
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-03-30 20:06:43 -0400
+
+Refresh of base
+
+---
+
+diff --git a/drivers/i2c/busses/i2c-pnx.c b/drivers/i2c/busses/i2c-pnx.c
+index bee912b..627dbda 100644
+--- a/drivers/i2c/busses/i2c-pnx.c
++++ b/drivers/i2c/busses/i2c-pnx.c
+@@ -175,8 +175,7 @@ static int i2c_pnx_master_xmit(struct i2c_pnx_algo_data *alg_data)
+ 		/* We still have something to talk about... */
+ 		val = *alg_data->mif.buf++;
+ 
+-		/* last byte of a message */
+-		if ((alg_data->mif.len == 1) && alg_data->last)
++		if (alg_data->mif.len == 1)
+ 			val |= stop_bit;
+ 
+ 		alg_data->mif.len--;
