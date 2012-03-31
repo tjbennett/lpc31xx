@@ -183,77 +183,7 @@ static int __init lpc313x_spidev_register(void)
 arch_initcall(lpc313x_spidev_register);
 #endif
 
-#if defined(CONFIG_MTD_DATAFLASH)
-/* MTD Data FLASH driver registration */
-static int __init lpc313x_spimtd_register(void)
-{
-	struct spi_board_info info =
-	{
-		.modalias = "mtd_dataflash",
-		.max_speed_hz = 30000000,
-		.bus_num = 0,
-		.chip_select = 0,
-	};
 
-	return spi_register_board_info(&info, 1);
-}
-arch_initcall(lpc313x_spimtd_register);
-#endif
-
-
-#define PCA9532_GPIO_BASE 0x340
-#define VBUS_PWR_EN	(6 + PCA9532_GPIO_BASE)
-#define START_STOP_LED	8  /*led5 */
-#define IDLE_LED	9  /*led6 */
-
-static struct pca9532_platform_data ea313x_leds = {
-	.gpio_base = PCA9532_GPIO_BASE,
-	.leds = {
-	{	.type = PCA9532_TYPE_GPIO }, /* key joy 1 */
-	{	.type = PCA9532_TYPE_GPIO }, /* key joy 2 */
-	{	.type = PCA9532_TYPE_GPIO }, /* key joy 3 */
-	{	.type = PCA9532_TYPE_GPIO }, /* key joy 4 */
-	{	.type = PCA9532_TYPE_GPIO }, /* key joy 5 */
-	{	.type = PCA9532_TYPE_GPIO }, /* OTP gpio */
-	{	.type = PCA9532_TYPE_GPIO }, /* V_BUS_EN gpio */
-	{	.type = PCA9532_TYPE_GPIO }, /* V_PWR_CTRL gpio */
-
-	{	.name = "ea313x:red:led5",
-		.state = PCA9532_OFF,
-		.type = PCA9532_TYPE_LED,
-	},
-	{	.name = "ea313x:red:led6",
-		.state = PCA9532_OFF,
-		.type = PCA9532_TYPE_LED,
-	},
-	{	.name = "ea313x:red:led7",
-		.state = PCA9532_OFF,
-		.type = PCA9532_TYPE_LED,
-	},
-	{	.name = "ea313x:red:led8",
-		.state = PCA9532_OFF,
-		.type = PCA9532_TYPE_LED,
-	},
-	{	.name = "ea313x:red:led9",
-		.state = PCA9532_OFF,
-		.type = PCA9532_TYPE_LED,
-	},
-	{	.name = "ea313x:red:led10",
-		.state = PCA9532_OFF,
-		.type = PCA9532_TYPE_LED,
-	},
-	{	.name = "ea313x:red:led11",
-		.state = PCA9532_OFF,
-		.type = PCA9532_TYPE_LED,
-	},
-	{	.name = "ea313x:red:led12",
-		.state = PCA9532_OFF,
-		.type = PCA9532_TYPE_LED,
-	},
-	},
-	.psc = { 0, 0 },
-	.pwm = { 0, 0 },
-};
 
 #if defined(CONFIG_MACH_EA3152)
 static struct i2c_board_info ea3152_i2c1_devices[] __initdata = {
@@ -266,7 +196,7 @@ static struct i2c_board_info ea3152_i2c1_devices[] __initdata = {
 void lpc313x_vbus_power(int enable)
 {
 	printk (KERN_INFO "enabling USB host vbus_power %d\n", enable);
-	gpio_set_value(VBUS_PWR_EN, enable);
+	//gpio_set_value(VBUS_PWR_EN, enable);
 }
 
 struct of_dev_auxdata ea3131_auxdata_lookup[] __initdata = {
@@ -284,10 +214,10 @@ static void __init ea3131_dt_init(void)
 #if defined(CONFIG_USB_EHCI_HCD)
 static int __init ea_usb_power(void)
 {
-	int ret;
+	int ret = 0;
 
-	ret = gpio_request(VBUS_PWR_EN, "vbus power");
-	ret = gpio_direction_output(VBUS_PWR_EN, 1);
+	//ret = gpio_request(VBUS_PWR_EN, "vbus power");
+	//ret = gpio_direction_output(VBUS_PWR_EN, 1);
 	return ret;
 }
 late_initcall(ea_usb_power);
