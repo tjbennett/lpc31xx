@@ -1,6 +1,6 @@
 Version: 1
-Previous: 1f1a292e7de1e7f2009145fa03ecdaf84abb3dfb
-Head: d709c5d28cade5ddecac75f1d967d1522365389a
+Previous: 968576dcc76ff49d8f3858547bdf21891339b708
+Head: 74fe0dfb14cdc89b2a6e5a4eb7bcc88d7fa797a2
 Applied:
   roland-dt: c3b7a44e0363795f96f00c302998092b51a0dd70
   i2c-start: e443d2c2cd81110992c3b9ea3c2dab1b51d60871
@@ -11,8 +11,8 @@ Applied:
   nand: 496784789e1f3376e1faa152d5d62683fbb51efc
   spi: cb42a60c5943377c71f3e1969a3276d2d7ac5c6c
   mmc: d709c5d28cade5ddecac75f1d967d1522365389a
+  watchdog: 74fe0dfb14cdc89b2a6e5a4eb7bcc88d7fa797a2
 Unapplied:
-  watchdog: 723acd3975d7fd72f0e68ef9da2b540188694c80
   sound: 3b425e4a1794f75ffa7285ebf8bd2e4f9ffbf7d7
   usb: 2f4ce012f1a62f1126ec6bd9ec2634602a80a270
   gadget: d5147ce4746f248293ba6e22dea06c0b564d2404
