@@ -1,0 +1,21 @@
+Bottom: 0f06ac618a5b12cfd11088fbc8c541e6012fbf5f
+Top:    0f06ac618a5b12cfd11088fbc8c541e6012fbf5f
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-03-31 14:04:06 -0400
+
+This patch adds device tree support to the pnx-i2c driver by using platform
+resources for memory region and irq and removing dependency on mach includes.
+
+The following platforms are affected:
+
+* PNX
+* LPC31xx (WIP)
+* LPC32xx
+
+Signed-off-by: Roland Stigge <stigge@antcom.de>
+
+
+
+---
+
+
