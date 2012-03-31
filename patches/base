@@ -1,5 +1,5 @@
 Bottom: b5627fb0e95bee04f2c99967cf8bfb9e97c06432
-Top:    9fff06c4a1e7a460476f5b452278dc636cd49064
+Top:    04aa2e93e42d3bdee3b0c6f971bf16436edef6a9
 Author: Jon Smirl (none) <jonsmirl@terra>
 Date:   2012-03-19 23:01:38 -0400
 
@@ -3809,10 +3809,10 @@ index 0000000..1566ec5
 +core_initcall(lpc313x_gpiolib_init);
 diff --git a/arch/arm/mach-lpc31xx/i2c.c b/arch/arm/mach-lpc31xx/i2c.c
 new file mode 100644
-index 0000000..1515c3e
+index 0000000..ea1e4b2
 --- /dev/null
 +++ b/arch/arm/mach-lpc31xx/i2c.c
-@@ -0,0 +1,156 @@
+@@ -0,0 +1,163 @@
 +/*  linux/arch/arm/mach-lpc313x/i2c.c
 + *
 + *  Author:	Durgesh Pattamatta
@@ -3895,6 +3895,8 @@ index 0000000..1515c3e
 +	return (FFAST_CLOCK/1000000);
 +}
 +
++/* disable this until device tree patch */
++#if 0
 +
 +static struct i2c_pnx_data lpc_pnx_data0 = {
 +	.name = I2C_CHIP_NAME "0",
@@ -3969,6 +3971,11 @@ index 0000000..1515c3e
 +	platform_add_devices(devices, ARRAY_SIZE(devices));
 +}
 +
++#else
++void __init lpc313x_register_i2c_devices(void)
++{
++}
++#endif
 diff --git a/arch/arm/mach-lpc31xx/include/mach/board.h b/arch/arm/mach-lpc31xx/include/mach/board.h
 new file mode 100644
 index 0000000..5fe9ac2
