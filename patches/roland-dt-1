@@ -1,5 +1,5 @@
 Bottom: 0f06ac618a5b12cfd11088fbc8c541e6012fbf5f
-Top:    3c27a5291636266296fbfbd883569d2a58074537
+Top:    45b79191abed4ca3ba19e01fbb7df93bd87c0385
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-31 14:04:06 -0400
 
@@ -18,6 +18,48 @@ Signed-off-by: Roland Stigge <stigge@antcom.de>
 
 ---
 
+diff --git a/Documentation/devicetree/bindings/i2c/pnx.txt b/Documentation/devicetree/bindings/i2c/pnx.txt
+new file mode 100644
+index 0000000..38de2d5
+--- /dev/null
++++ b/Documentation/devicetree/bindings/i2c/pnx.txt
+@@ -0,0 +1,36 @@
++* NXP PNX I2C Controller
++
++Required properties:
++
++ - reg: Offset and length of the register set for the device
++ - compatible: should be "nxp,pnx-i2c"
++ - interrupts: <a b> where a is the interrupt number and b is a
++   field that represents an encoding of the sense and level
++   information for the interrupt
++ - interrupt-parent: the phandle for the interrupt controller that
++   services interrupts for this device.
++
++Optional properties:
++
++ - clock-frequency: desired I2C bus clock frequency in Hz, Default: 100000
++ - pnx,timeout: I2C bus timeout in milliseconds, Default: 10
++ - slave-addr: Address used by the controller, Hardware default: 110
++
++Examples:
++
++	i2c1: i2c@400A0000 {
++		compatible = "nxp,pnx-i2c";
++		reg = <0x400A0000 0x100>;
++		interrupt-parent = <&mic>;
++		interrupts = <51 0>;
++	};
++
++	i2c2: i2c@400A8000 {
++		compatible = "nxp,pnx-i2c";
++		reg = <0x400A8000 0x100>;
++		interrupt-parent = <&mic>;
++		interrupts = <50 0>;
++		clock-frequency = <100000>;
++		pnx,timeout = <100>;
++		slave-addr = <111>;
++	};
 diff --git a/drivers/i2c/busses/i2c-pnx.c b/drivers/i2c/busses/i2c-pnx.c
 index 04be9f8..855c534 100644
 --- a/drivers/i2c/busses/i2c-pnx.c
