@@ -1,5 +1,5 @@
 Bottom: da484f865a6cb70484edac205e9e09cb458f4388
-Top:    445851b5543e1a85d2f2472e7b6216876661a75c
+Top:    d15c7bb2ecee7da0d32377a790ffe463608870b9
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 19:47:49 -0400
 
@@ -2882,10 +2882,10 @@ index 22e12e2..f5c4978 100644
  
 diff --git a/dt_config b/dt_config
 new file mode 100644
-index 0000000..946862d
+index 0000000..8001b7b
 --- /dev/null
 +++ b/dt_config
-@@ -0,0 +1,1837 @@
+@@ -0,0 +1,1840 @@
 +#
 +# Automatically generated file; DO NOT EDIT.
 +# Linux/arm 3.3.0 Kernel Configuration
@@ -3618,6 +3618,9 @@ index 0000000..946862d
 +# Altera FPGA firmware download module
 +#
 +# CONFIG_ALTERA_STAPL is not set
++CONFIG_NEW_LPC313x_IO=y
++CONFIG_LPC313x_ADC=y
++CONFIG_LPC313x_PWM=y
 +
 +#
 +# SCSI device support
@@ -4142,7 +4145,7 @@ index 0000000..946862d
 +CONFIG_SND_SOC=y
 +CONFIG_SND_LPC313X_SOC=y
 +CONFIG_SND_LPC313X_SOC_I2S=y
-+CONFIG_SND_LPC313X_SOC_I2S_UDA1380=y
++CONFIG_SND_EA3131_SOC_I2S_UDA1380=y
 +CONFIG_SND_USE_EA3131=y
 +CONFIG_SND_I2C1_CHANNEL_UDA1380=y
 +CONFIG_SND_I2S_RX0_MASTER=y
