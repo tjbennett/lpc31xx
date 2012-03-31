@@ -29,9 +29,8 @@ struct i2c_pnx_algo_data {
 	struct i2c_pnx_mif	mif;
 	int			last;
 	struct clk		*clk;
+	struct i2c_pnx_data	*i2c_pnx;
 	struct i2c_adapter	adapter;
-	int base;
-	int irq;
 };
 
 struct i2c_pnx_data {
