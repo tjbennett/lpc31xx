@@ -1,6 +1,6 @@
 Version: 1
-Previous: 6080bb2d883318f076107aaeed745da276cbe157
-Head: b38f7ffdeafd278ec440cab97dc170b2ad957c58
+Previous: 5ae6b99ef9f20c9b10c4113588828e900b65487d
+Head: 62d07b38c6c597f7dcba840a406a637f8e5fe4b4
 Applied:
   roland-dt: c3b7a44e0363795f96f00c302998092b51a0dd70
   i2c-start: e443d2c2cd81110992c3b9ea3c2dab1b51d60871
@@ -20,8 +20,8 @@ Applied:
   phys: c29a6165442f6f4f16cc50e698ee0529a89be67e
   mmc-stop-fix: f27248b0c2036674a1ef63f69edfa5440003e5d3
   remove-config-noise: b38f7ffdeafd278ec440cab97dc170b2ad957c58
+  NXP-DMA-fixes: 62d07b38c6c597f7dcba840a406a637f8e5fe4b4
 Unapplied:
-  NXP-DMA-fixes: b7146ea33e9fc3ced7c5ea2a0585b67127687d6c
   NXP-uart-dma: d804e6aff99e8ccc52a586b96edf245adf9b2ca5
   nxp-nand-dma: 737dbe96335ee238ef4c4105646e8ac22f11ae51
   nxp-audio-analog: 87352b6372cfe7eafe1485a72c6b3605ccc60869
