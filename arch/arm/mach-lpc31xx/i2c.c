@@ -80,6 +80,8 @@ static u32 calculate_input_freq(struct platform_device *pdev)
 	return (FFAST_CLOCK/1000000);
 }
 
+/* disable this until device tree patch */
+#if 0
 
 static struct i2c_pnx_data lpc_pnx_data0 = {
 	.name = I2C_CHIP_NAME "0",
@@ -154,3 +156,8 @@ void __init lpc313x_register_i2c_devices(void)
 	platform_add_devices(devices, ARRAY_SIZE(devices));
 }
 
+#else
+void __init lpc313x_register_i2c_devices(void)
+{
+}
+#endif
