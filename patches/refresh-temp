@@ -1,0 +1,22 @@
+Bottom: 93343083bfd6e2272e8b3bb1a1683cb17bf2565b
+Top:    d544a59356693205f7bc06369c7e54a14a57f423
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-03-31 14:29:04 -0400
+
+Refresh of device-trees
+
+---
+
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+index c8e21c9..2ad2999 100644
+--- a/arch/arm/boot/dts/ea3131.dts
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -21,7 +21,7 @@
+ 			slave-address = <0x6E>;
+ 			pca9532: leds@60 {
+ 				#gpio-cells = <2>;
+-				compatible = "nxp,pca953x";
++				compatible = "nxp,pca9532";
+ 				reg = <0x60>;
+ 				gpio-controller;
+ 			};
