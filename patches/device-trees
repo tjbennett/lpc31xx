@@ -1,5 +1,5 @@
 Bottom: b210c191866a69ad9f6047124ec713ce21837b31
-Top:    e4d0836b1383f7c3802101b133dcb87ab52eeffe
+Top:    1f2dac7787cba82282889fb425c8f9761db6c785
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 19:47:49 -0400
 
@@ -2870,10 +2870,10 @@ index 22e12e2..f5c4978 100644
  
 diff --git a/dt_config b/dt_config
 new file mode 100644
-index 0000000..825ff36
+index 0000000..946862d
 --- /dev/null
 +++ b/dt_config
-@@ -0,0 +1,1835 @@
+@@ -0,0 +1,1837 @@
 +#
 +# Automatically generated file; DO NOT EDIT.
 +# Linux/arm 3.3.0 Kernel Configuration
@@ -3131,7 +3131,7 @@ index 0000000..825ff36
 +# CONFIG_ARCH_VT8500 is not set
 +# CONFIG_ARCH_ZYNQ is not set
 +CONFIG_ARCH_LPC31XX=y
-+# CONFIG_GPIO_PCA953X is not set
++CONFIG_GPIO_PCA953X=y
 +
 +#
 +# System MMU
@@ -3488,7 +3488,8 @@ index 0000000..825ff36
 +CONFIG_MTD_DATAFLASH=y
 +# CONFIG_MTD_DATAFLASH_WRITE_VERIFY is not set
 +# CONFIG_MTD_DATAFLASH_OTP is not set
-+# CONFIG_MTD_M25P80 is not set
++CONFIG_MTD_M25P80=y
++CONFIG_M25PXX_USE_FAST_READ=y
 +# CONFIG_MTD_SST25L is not set
 +# CONFIG_MTD_SLRAM is not set
 +# CONFIG_MTD_PHRAM is not set
@@ -3961,6 +3962,7 @@ index 0000000..825ff36
 +#
 +# CONFIG_GPIO_MAX7300 is not set
 +# CONFIG_GPIO_MAX732X is not set
++CONFIG_GPIO_PCA953X_IRQ=y
 +# CONFIG_GPIO_PCF857X is not set
 +# CONFIG_GPIO_SX150X is not set
 +# CONFIG_GPIO_ADP5588 is not set
@@ -4128,7 +4130,7 @@ index 0000000..825ff36
 +CONFIG_SND_SOC=y
 +CONFIG_SND_LPC313X_SOC=y
 +CONFIG_SND_LPC313X_SOC_I2S=y
-+CONFIG_SND_EA3131_SOC_I2S_UDA1380=y
++CONFIG_SND_LPC313X_SOC_I2S_UDA1380=y
 +CONFIG_SND_USE_EA3131=y
 +CONFIG_SND_I2C1_CHANNEL_UDA1380=y
 +CONFIG_SND_I2S_RX0_MASTER=y
