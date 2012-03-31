@@ -1,6 +1,6 @@
 Version: 1
-Previous: bf836eecc22e871448dd4dac11f686d742b9b49b
-Head: 0a4e9987d8f845bdc0c7ef8510816174efe11ea9
+Previous: 2c2ac337212697920b41da71dc0e46ec9f1f4678
+Head: 355be1ef4d3db84a3828ba5c026133cff69ee79d
 Applied:
   roland-dt: c3b7a44e0363795f96f00c302998092b51a0dd70
   i2c-start: e443d2c2cd81110992c3b9ea3c2dab1b51d60871
@@ -26,8 +26,7 @@ Applied:
   nxp-audio-analog: df66e21f0edf3a627820f50f5efb3329862ff25a
   reset: cdc7c72b23945aec464b813dba7b0cf25e7d8659
   adc-registers.patch: 023bacec76764299fdd017b9cd1dc4cff921c0f8
-  adc-pwm: cdcdc5995ebd4a901e87fe99510de0e5dc8aff53
-  refresh-temp: 0a4e9987d8f845bdc0c7ef8510816174efe11ea9
+  adc-pwm: 355be1ef4d3db84a3828ba5c026133cff69ee79d
 Unapplied:
   device-trees: b4f8acaadc66a4a2c86b04bf84b67d5e5908f009
 Hidden:
