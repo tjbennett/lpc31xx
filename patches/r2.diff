@@ -1,0 +1,39 @@
+Bottom: 45b79191abed4ca3ba19e01fbb7df93bd87c0385
+Top:    0b16364efabd9cd0ac814816e5b89103e70b2739
+Author: Roland Stigge <stigge@antcom.de>
+Date:   2012-03-29 23:31:16 +0200
+
+Fix i2c transfers by reordering i2c start and irq
+
+This patch fixed i2c transfers by enabling interrupts only after i2c_pnx_start
+
+Signed-off-by: Roland Stigge <stigge@antcom.de>
+
+
+---
+
+diff --git a/drivers/i2c/busses/i2c-pnx.c b/drivers/i2c/busses/i2c-pnx.c
+index 855c534..e0fea61 100644
+--- a/drivers/i2c/busses/i2c-pnx.c
++++ b/drivers/i2c/busses/i2c-pnx.c
+@@ -527,16 +527,16 @@ i2c_pnx_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+ 		/* initialize the completion var */
+ 		init_completion(&alg_data->mif.complete);
+ 
+-		/* Enable master interrupt */
+-		iowrite32(ioread32(I2C_REG_CTL(alg_data)) | mcntrl_afie |
+-				mcntrl_naie | mcntrl_drmie,
+-			  I2C_REG_CTL(alg_data));
+-
+ 		/* Put start-code and slave-address on the bus. */
+ 		rc = i2c_pnx_start(addr, alg_data);
+ 		if (rc < 0)
+ 			break;
+ 
++		/* Enable master interrupt */
++		iowrite32(ioread32(I2C_REG_CTL(alg_data)) | mcntrl_afie |
++				mcntrl_naie | mcntrl_drmie,
++			  I2C_REG_CTL(alg_data));
++
+ 		/* Wait for completion */
+ 		wait_for_completion(&alg_data->mif.complete);
