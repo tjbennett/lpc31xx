@@ -1,5 +1,5 @@
 Bottom: 0f06ac618a5b12cfd11088fbc8c541e6012fbf5f
-Top:    dcc00caa42ae7b8e0dd093efe9135163f2d073c8
+Top:    762e3476c72f677178d968a07018b7a96b6503bb
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-19 23:01:37 -0400
 
@@ -9,7 +9,7 @@ Fix i2c reads in the ic2-pnx.c driver
 ---
 
 diff --git a/drivers/i2c/busses/i2c-pnx.c b/drivers/i2c/busses/i2c-pnx.c
-index 04be9f8..627dbda 100644
+index 04be9f8..bee912b 100644
 --- a/drivers/i2c/busses/i2c-pnx.c
 +++ b/drivers/i2c/busses/i2c-pnx.c
 @@ -91,21 +91,23 @@ static int i2c_pnx_start(unsigned char slave_addr,
@@ -51,7 +51,17 @@ index 04be9f8..627dbda 100644
  	}
  
  	/*
-@@ -481,16 +483,16 @@ i2c_pnx_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+@@ -173,7 +175,8 @@ static int i2c_pnx_master_xmit(struct i2c_pnx_algo_data *alg_data)
+ 		/* We still have something to talk about... */
+ 		val = *alg_data->mif.buf++;
+ 
+-		if (alg_data->mif.len == 1)
++		/* last byte of a message */
++		if ((alg_data->mif.len == 1) && alg_data->last)
+ 			val |= stop_bit;
+ 
+ 		alg_data->mif.len--;
+@@ -481,16 +484,16 @@ i2c_pnx_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
  		/* initialize the completion var */
  		init_completion(&alg_data->mif.complete);
  
