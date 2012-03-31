@@ -1,6 +1,6 @@
 Version: 1
-Previous: aa986f1ec4d042b318a4ce5d7b64775a9e1c781a
-Head: 6a7831aaa3ca459114a623d7f886a264ba444ac0
+Previous: cee482ab848bbca91c277b269bf61da1e4bec215
+Head: 0742506e965baba3c9638ef1db5f678100203bb3
 Applied:
   roland-dt: c3b7a44e0363795f96f00c302998092b51a0dd70
   i2c-start: e443d2c2cd81110992c3b9ea3c2dab1b51d60871
@@ -16,8 +16,8 @@ Applied:
   usb: 867c3b2839f24efbffb3793964b020def46d7fe5
   gadget: 156ad4acb31eeb0d7a5cb244c69dbd6f0eb3cc9b
   old8250: 6a7831aaa3ca459114a623d7f886a264ba444ac0
+  video: 0742506e965baba3c9638ef1db5f678100203bb3
 Unapplied:
-  video: ec6444f34fe5b18a8be5fe73a6ce88b92d4d29e2
   phys: 6ee4f0874e077c5c039fdb09724164289061bac7
   mmc-stop-fix: 0ee8bbc97566354dec34e4762986560d5c6c0450
   remove-config-noise: 69dceeac48ce08109e10f3e69fc0bd95a9282523
