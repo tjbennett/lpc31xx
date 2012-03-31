@@ -21,7 +21,7 @@
 			slave-address = <0x6E>;
 			pca9532: leds@60 {
 				#gpio-cells = <2>;
-				compatible = "nxp,pca9532";
+				compatible = "nxp,pca953x";
 				reg = <0x60>;
 				gpio-controller;
 			};
