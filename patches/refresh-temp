@@ -1,0 +1,1201 @@
+Bottom: b210c191866a69ad9f6047124ec713ce21837b31
+Top:    2660e3eaaf233e91a6305a4bc108171285daadcf
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-03-31 09:04:43 -0400
+
+Refresh of adc-pwm
+
+---
+
+diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
+index c779509..ce5a005 100644
+--- a/drivers/misc/Kconfig
++++ b/drivers/misc/Kconfig
+@@ -506,4 +506,5 @@ source "drivers/misc/ti-st/Kconfig"
+ source "drivers/misc/lis3lv02d/Kconfig"
+ source "drivers/misc/carma/Kconfig"
+ source "drivers/misc/altera-stapl/Kconfig"
++source "drivers/misc/lpc31xx/Kconfig"
+ endmenu
+diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
+index 3e1d801..3758045 100644
+--- a/drivers/misc/Makefile
++++ b/drivers/misc/Makefile
+@@ -46,6 +46,7 @@ obj-y				+= ti-st/
+ obj-$(CONFIG_AB8500_PWM)	+= ab8500-pwm.o
+ obj-y				+= lis3lv02d/
+ obj-y				+= carma/
++obj-y				+= lpc31xx/
+ obj-$(CONFIG_USB_SWITCH_FSA9480) += fsa9480.o
+ obj-$(CONFIG_ALTERA_STAPL)	+=altera-stapl/
+ obj-$(CONFIG_MAX8997_MUIC)	+= max8997-muic.o
+diff --git a/drivers/misc/lpc31xx/Kconfig b/drivers/misc/lpc31xx/Kconfig
+new file mode 100644
+index 0000000..6131c40
+--- /dev/null
++++ b/drivers/misc/lpc31xx/Kconfig
+@@ -0,0 +1,18 @@
++menuconfig NEW_LPC313x_IO
++	bool "NxP lpc313x IO drivers (ADC, PWM, ...)"
++	help
++	  Say Y to enable support for lpc313x series MCU's on-chip peripherials like AD-converter and Pulse Width Modulator..
++
++if NEW_LPC313x_IO
++
++config LPC313x_ADC
++	tristate "lpc313x ADC support"
++	help
++	  Say Y to enable the ADC driver, when built as a module, the module will be called "lpc313x_adc".
++	  
++config LPC313x_PWM
++	tristate "lpc313x PWM support"
++	help
++	   Say Y to enable the PWM driver, when built as a moule, the module will be called "lpc313x_pwm".
++
++endif
+diff --git a/drivers/misc/lpc31xx/Makefile b/drivers/misc/lpc31xx/Makefile
+new file mode 100644
+index 0000000..d8f65fc
+--- /dev/null
++++ b/drivers/misc/lpc31xx/Makefile
+@@ -0,0 +1,5 @@
++
++# LPC3131x ADC
++obj-$(CONFIG_LPC313x_ADC)			+= adc/lpc313x_adc.o
++
++obj-$(CONFIG_LPC313x_PWM)			+= pwm/lpc313x_pwm.o
+diff --git a/drivers/misc/lpc31xx/README_ADC b/drivers/misc/lpc31xx/README_ADC
+new file mode 100644
+index 0000000..f8aeac3
+--- /dev/null
++++ b/drivers/misc/lpc31xx/README_ADC
+@@ -0,0 +1,79 @@
++The /device-node based configuration consists of a 16bit-value. A single nibble controls a specific 
++part of the configuration, so it's easy to calculate the 16bit-word without paper+pencil.
++
++These are the single nibbles:
++	0x3210
++	  ||||
++	  |||+-- CHANNEL
++	  ||+--- RESOLUTION / CONFIG
++	  |+---- POWERSAVE / AVERAGING
++	  +----- STATUS
++
++CHANNEL: select ADC-channel
++	BIT-NR	3210
++		xx||
++		  |+---- 0x0001 CH_SELECT0
++		  +----- 0x0002 CH_SELECT1
++
++	BIT-NR	1 0 | CHANNEL
++	------------+--------
++		0 0 | channel 0 (default)
++		0 1 | channel 1
++		1 0 | channel 2 (not available on gnublin board)
++		1 1 | channel 3
++
++RESOLUTION / CONFIG: select resolution (4bit, 8bit, 10bit), other configuration
++	BIT-NR  3210
++		|x||
++		| |+---- 0x0010 RES_SELECT0
++		| +----- 0x0020 RES_SELECT1
++                |
++		+------- 0x0080 DEBUG (if set, the driver will be verbose)
++
++	BIT-NR	1 0 | Resolution
++	------------+-----------
++		0 0 | 10bit (default)
++		0 1 | 8bit
++		1 0 | 4bit
++
++POWERSAVE / AVERAGING :
++	BIT-NR	3210
++		||||
++		|||+---- 0x0100 POWERSAVE_SELECT0
++		||+----- 0x0200 POWERSAVE_SELECT1
++		|+------ 0x0400 AVERAGING_MODE0
++		+------- 0x0800 AVERAGING_MODE1
++
++	BIT 	1 0 | Powersave Mode
++	------------+--------
++		0 0 | powersaving off, adc always on
++		0 1 | auto on/off for adc, only on when needed, takes more time, saves power (default)
++		1 0 | adc always off, results are always waste
++
++	BIT 	3 2 | Averaging Mode
++	------------+---------------
++		0 0 | averaging off, single shot ad conversion
++		0 1 | averaging on, build average from 10 conversions
++		1 0 | averaging on, build average from 75 conversions
++		1 1 | averaging on, build average from 150 conversions
++
++
++
++STATUS: if any of these 4 bits is set, the driver will print it's status via printk to "dmesg".
++all other configuration bits are DON'T CARE in this case, no operation/configuration
++will be performed.
++	
++
++
++          
++        
++      
++
++
++
++
++
++
++
++
++
+diff --git a/drivers/misc/lpc31xx/TODO b/drivers/misc/lpc31xx/TODO
+new file mode 100644
+index 0000000..9bd887b
+--- /dev/null
++++ b/drivers/misc/lpc31xx/TODO
+@@ -0,0 +1,12 @@
++a list of all TODOs for the adc and pwm driver for lpc313x:
++
++
++BOTH:
++	* find bugs, add capabilities
++
++ADC:
++	* figure out how to add our device to devtmpfs, so that we don't need to create the dev-node by hand
++	* it's slow, improve speed
++
++PWM:
++	* figure out how to add our device to devtmpfs
+diff --git a/drivers/misc/lpc31xx/lpc313x_adc.c b/drivers/misc/lpc31xx/lpc313x_adc.c
+new file mode 100644
+index 0000000..5d306bf
+--- /dev/null
++++ b/drivers/misc/lpc31xx/lpc313x_adc.c
+@@ -0,0 +1,368 @@
++/* 
++ * lpc313x_adc.c
++ * 
++ * * LAST CHANGE: 3. jan. 2012 Nils Stec
++ * 
++ *  Authors:    Nils Stec, "krumeltee", <info@fi-no.de>, (c) 2011,2012     - the kernel module on top of the adc code
++ *              Michael Schwarz, (c) 2011                                  - the adc code itself
++ *              some module parts are by LKMPG                             - taken from version "2007-05-18 ver 2.6.4"
++ *
++ * ADC driver for LPC313x (gnublin)
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ *
++ */
++
++#include <asm/uaccess.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/delay.h>
++#include <linux/fs.h>
++#include <asm/io.h>
++#include <mach/registers.h>
++
++#include "lpc313x_adc.h"
++
++static int Major;		/* Major number assigned to our device driver */
++static int Device_Open = 0;	/* Is device open? */
++static char msg[BUF_LEN];	/* The msg the device will give when asked */
++static char *msg_Ptr;
++
++static struct file_operations fops = {
++	.read = device_read,
++	.write = device_write,
++	.open = device_open,
++	.release = device_release
++};
++
++static int adc_resolution;	
++static int adc_channel;
++static int adc_powersave;
++static int adc_debug;
++static int adc_averaging;
++static int adc_averagingloops;
++
++/*  Called when a process tries to open the device file */
++static int device_open(struct inode *inode, struct file *file) {
++	u16 adcval;
++	int i;
++	unsigned int addval = 0;
++	if(Device_Open) return -EBUSY;
++	Device_Open++;
++	
++	if((adc_powersave == 0)||(adc_powersave == ADC_POWERSAVE_AUTO)) {
++		if(adc_powersave == ADC_POWERSAVE_AUTO) lpc313x_init_adc();
++		
++		if(adc_averaging == 1) {
++			for(i = 0; i < adc_averagingloops; i++) {
++				addval += lpc313x_adc_read(adc_channel, adc_resolution);
++			}
++			adcval = addval / adc_averagingloops;
++			sprintf(msg, "0x%03x\n", adcval);
++		} else {
++			adcval = lpc313x_adc_read(adc_channel, adc_resolution);
++			sprintf(msg, "0x%03x\n", adcval);
++		}
++		
++		if(adc_powersave == ADC_POWERSAVE_AUTO) lpc313x_deinit_adc();
++	} else {
++		sprintf(msg, "adc is in powersave mode!\n");
++	}
++
++	msg_Ptr = msg;
++	try_module_get(THIS_MODULE);
++	return SUCCESS;
++}
++
++static ssize_t device_write(struct file *filp, const char *buff, size_t len, loff_t * off) {
++	char message_from_user[BUF_LEN];
++	long ltemp;
++	u16 config_word;
++	
++	config_word = 0;
++
++	if(copy_from_user(message_from_user, buff, (len < BUF_LEN) ? len : BUF_LEN)) return -EINVAL;
++	message_from_user[4] = '\0';
++	ltemp = simple_strtol(message_from_user, NULL, 16);
++	
++	config_word = (u16)(ltemp&0xffff);
++	
++	if(config_word & 0x0080) adc_debug = 1; else adc_debug = 0;
++	if(adc_debug) printk(KERN_INFO "[lpc313x adc] got config word 0x%04x, setting up adc:\n", config_word);
++	
++	// first of all, check if user want's to see status, if, print it and exit
++	if(((config_word >> 12) & 0x000f)>0) {
++		printk(KERN_INFO "[lpc313x adc] channel:'%d', resolution:'%d'\n", adc_channel, adc_resolution);
++		printk(KERN_INFO "[lpc313x adc] averaging:'%d'loops, on:'%d'\n", adc_averagingloops, adc_averaging);
++		switch(adc_powersave) {
++			case ADC_POWERSAVE_OFF:  printk(KERN_INFO "[lpc313x adc] powersave off, adc always on\n"); break;
++			case ADC_POWERSAVE_ON:   printk(KERN_INFO "[lpc313x adc] powersave on, adc always off\n"); break;
++			case ADC_POWERSAVE_AUTO: printk(KERN_INFO "[lpc313x adc] powersave auto (default)\n");     break;
++		}
++		return len;
++	}	
++	
++	adc_channel = config_word & 0x0003;	// get adc channel config
++	
++	switch(((config_word >> 4) & 0x000f)) {	// get resolution config
++		case 0:
++			printk(KERN_INFO "set res to 10\n");
++			adc_resolution = 10;
++			break;
++		case 1:
++			printk(KERN_INFO "set res to 8\n");
++			adc_resolution = 8;
++			break;
++		case 2:
++			printk(KERN_INFO "set res to 4\n");
++			adc_resolution = 4;
++			break;
++		default: 
++			printk(KERN_INFO "set res to 10\n");
++			adc_resolution = 10;
++			break;
++	}
++	
++	
++
++	switch(((config_word >> 10) & 0x0003)) { // get averaging config
++		case 0:
++			adc_averaging = 0;
++			adc_averagingloops = 0;
++			break;
++		case 1:
++			adc_averaging = 1;
++			adc_averagingloops = 10;
++			break;
++		case 2:
++			adc_averaging = 1;
++			adc_averagingloops = 75;
++			break;
++		case 3:
++			adc_averaging = 1;
++			adc_averagingloops = 150;
++			break;
++		default:
++			adc_averaging = 0;
++			break;
++	}
++
++	switch(((config_word >> 8) & 0x0003)) {	// get adc powersave mode config
++		case 0:
++			adc_powersave = ADC_POWERSAVE_OFF;	// adc powersave off, adc always on
++			lpc313x_init_adc();			// turn on adc
++			break;
++		case 1:
++			adc_powersave = ADC_POWERSAVE_AUTO;	// adc powersave auto, on/off when needed, takes more time, saves power (default)
++			lpc313x_deinit_adc();			// turn off adc
++			break;
++		case 2:
++			adc_powersave = ADC_POWERSAVE_ON;	// adc always off
++			lpc313x_deinit_adc();			// turn off adc
++			break;
++		default:
++			adc_powersave = ADC_POWERSAVE_AUTO;	// default behaviour, AUTO
++			lpc313x_deinit_adc();			// turn off adc
++			break;
++	}	
++
++	if(adc_debug) {
++		printk(KERN_INFO "[lpc313x adc] channel:'%d', resolution:'%d'\n", adc_channel, adc_resolution);
++		printk(KERN_INFO "[lpc313x adc] averaging:'%d'loops, on:'%d'\n", adc_averagingloops, adc_averaging);
++			switch(adc_powersave) {
++				case ADC_POWERSAVE_OFF:  printk(KERN_INFO "[lpc313x adc] powersave off, adc always on\n"); break;
++				case ADC_POWERSAVE_ON:   printk(KERN_INFO "[lpc313x adc] powersave on, adc always off\n"); break;
++				case ADC_POWERSAVE_AUTO: printk(KERN_INFO "[lpc313x adc] powersave auto (default)\n");     break;
++		}
++	}
++	return len;
++}
++
++
++/** called when module loaded */
++int init_module(void) {
++	adc_resolution = 10;	
++	adc_channel = 0;
++	adc_powersave = ADC_POWERSAVE_AUTO;
++	adc_debug = 0;
++	adc_averaging = 0;
++	adc_averagingloops = 0;
++	
++	Major = register_chrdev(0, DEVICE_NAME, &fops);
++	if (Major < 0) {
++		printk(KERN_ALERT "[lpc313x adc] registering char device failed with %d\n", Major);
++		return Major;
++	}
++
++	switch(adc_powersave) {
++		case ADC_POWERSAVE_AUTO:
++		case ADC_POWERSAVE_ON:
++			lpc313x_deinit_adc();
++			break;
++		case ADC_POWERSAVE_OFF:
++			lpc313x_init_adc();
++			break;
++	}	
++	
++	printk(KERN_INFO "[lpc313x adc] driver loaded with major %d\n", Major);
++	printk(KERN_INFO "[lpc313x adc] >> $ mknod /dev/%s c %d 0\n", DEVICE_NAME, Major);
++	
++	return SUCCESS;
++}
++
++/** called when module unloaded */
++void cleanup_module(void) {
++	lpc313x_deinit_adc();
++	unregister_chrdev(Major, DEVICE_NAME);
++	printk(KERN_INFO "[lpc313x adc] DRIVER UNLOADED\n");
++}
++
++/* Called when a process closes the device file. */
++static int device_release(struct inode *inode, struct file *file) {
++	Device_Open--;		/* We're now ready for our next caller */
++				/* Decrement the usage count, or else once you opened the file, you'll never get get rid of the module. */
++	module_put(THIS_MODULE);
++	return 0;
++}
++
++/* Called when a process, which already opened the dev file, attempts to read from it. */
++static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_t * offset) {
++	int bytes_read = 0;
++	
++	if(*msg_Ptr == 0) return 0;
++	
++	while(length && *msg_Ptr) {
++		put_user(*(msg_Ptr++), buffer++);
++		length--;
++		bytes_read++;
++	}
++	
++	return bytes_read;
++}
++
++u16 lpc313x_adc_read(int channel, int resolution) {
++	u16 result = 0xffff;
++	int timeout = 0xffffff;
++ 
++	
++	if((ADC_INT_STATUS_REG & 1)) {			// wait if there is a conversion
++		while(ADC_INT_STATUS_REG & 1) 
++			ADC_INT_CLEAR_REG |= (ADC_INT_CLEAR);
++	}
++	
++	ADC_INT_ENABLE_REG |= ADC_INT_ENABLE;		// enable ADC interrupt
++	
++	
++	if((ADC_INT_STATUS_REG & 1)) {			// wait until interrupt is cleared
++		while(ADC_INT_STATUS_REG & 1)
++			ADC_INT_CLEAR_REG |= (ADC_INT_CLEAR);
++	} 
++ 
++	ADC_CSEL_REG = ADC_CALC_CSEL(channel & 3, resolution);	// select channel and resolution
++	ADC_CON_REG &= ADC_SSCAN;				// single conversion mode
++	ADC_CON_REG |= ADC_START;				// start
++ 	while((ADC_INT_STATUS_REG == 0) && timeout--);		// wait until a conversion is done
++	
++	if(timeout == 0) return 0xffff;
++ 	
++	ADC_INT_CLEAR_REG |= ADC_INT_CLEAR;			// wait until a conversion is done
++	
++	switch(channel) {					// read in the 10 bit value of the converted channel
++		case 0:
++			result = (u16)ADC_R0_REG & ADC_Rx_DATA;
++			break;
++		case 1:
++			result = (u16)ADC_R1_REG & ADC_Rx_DATA;
++			break;
++		case 2:
++			result = (u16)ADC_R2_REG & ADC_Rx_DATA;
++			break;
++		case 3:
++			result = (u16)ADC_R3_REG & ADC_Rx_DATA;
++			break;
++	}
++	ADC_CON_REG &= ADC_STOP;				// read in the 10 bit value of the converted channel
++	while(ADC_INT_STATUS_REG & 1) ADC_INT_CLEAR_REG |= ADC_INT_CLEAR;	// wait until the interrupt status bit is cleared
++	return result;
++}
++
++int lpc313x_init_adc(void) {
++	int dummy;
++	u32 timeout;
++	
++	SYS_ADC_PD = 0;
++	
++	/* enable clock for ADC */
++	cgu_clk_en_dis(CGU_SB_ADC_CLK_ID, 1);
++	cgu_clk_en_dis(CGU_SB_ADC_PCLK_ID, 1);
++ 
++	/* reset to default */
++	ADC_CON_REG = ADC_CON_DEFAULT;
++	ADC_CSEL_REG = ADC_CSEL_DEFAULT;
++	ADC_INT_ENABLE_REG = ADC_INT_ENABLE_DEFAULT;
++	ADC_INT_CLEAR_REG = ADC_INT_CLEAR_DEFAULT;
++
++	/* dummy interupt status register read */
++	/** TODO: here we have to use a timeout, find out why and change, if neccessary. 
++	    if you re-enable the adc the whole board freezes without this timeout. **/
++	dummy = ADC_INT_STATUS_REG;
++	timeout = 0x2ffff;	// if timeout is too high, we have to wait a bit (system freezes for this time) 
++				// for the driver while reenabling the adc. use 0x2fff.
++	while((ADC_INT_STATUS_REG & 1) && timeout--);
++	
++	/* enable ADC interrupt */
++	ADC_INT_ENABLE_REG |= ADC_INT_ENABLE;
++	
++	/* set ADC power up */
++	ADC_CON_REG |= ADC_ENABLE;	
++	
++	return 0;
++}
++
++int lpc313x_deinit_adc(void) {
++	/* wait while there is a conversion */
++	while (ADC_INT_STATUS_REG & 0x10);
++
++	/* set ADC to default state */
++	ADC_CON_REG = ADC_CON_DEFAULT;
++	ADC_CSEL_REG = ADC_CSEL_DEFAULT;
++	ADC_INT_ENABLE_REG = ADC_INT_ENABLE_DEFAULT;
++	ADC_INT_CLEAR_REG = ADC_INT_CLEAR_DEFAULT;
++
++	/* disable clock for ADC */
++	cgu_clk_en_dis(CGU_SB_ADC_CLK_ID, 0);
++	cgu_clk_en_dis(CGU_SB_ADC_PCLK_ID, 0);
++	
++	return 0;
++}
++/*
++int lpc313x_adc_powersave_on(void) {
++	ADC_CON_REG = ADC_CON_DEFAULT;
++	return 0;
++}
++
++int lpc313x_adc_powersave_off(void) {
++	ADC_CON_REG |= ADC_ENABLE;
++	return 0;
++}
++*/
++
++module_init(init_module);
++module_exit(cleanup_module);
++
++MODULE_LICENSE("GPL");
++MODULE_AUTHOR(DRIVER_AUTHOR);
++MODULE_DESCRIPTION(DRIVER_DESC);
++MODULE_SUPPORTED_DEVICE("lpc313x adc on gnublin");
+diff --git a/drivers/misc/lpc31xx/lpc313x_adc.h b/drivers/misc/lpc31xx/lpc313x_adc.h
+new file mode 100644
+index 0000000..5d306bf
+--- /dev/null
++++ b/drivers/misc/lpc31xx/lpc313x_adc.h
+@@ -0,0 +1,368 @@
++/* 
++ * lpc313x_adc.c
++ * 
++ * * LAST CHANGE: 3. jan. 2012 Nils Stec
++ * 
++ *  Authors:    Nils Stec, "krumeltee", <info@fi-no.de>, (c) 2011,2012     - the kernel module on top of the adc code
++ *              Michael Schwarz, (c) 2011                                  - the adc code itself
++ *              some module parts are by LKMPG                             - taken from version "2007-05-18 ver 2.6.4"
++ *
++ * ADC driver for LPC313x (gnublin)
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ *
++ */
++
++#include <asm/uaccess.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/delay.h>
++#include <linux/fs.h>
++#include <asm/io.h>
++#include <mach/registers.h>
++
++#include "lpc313x_adc.h"
++
++static int Major;		/* Major number assigned to our device driver */
++static int Device_Open = 0;	/* Is device open? */
++static char msg[BUF_LEN];	/* The msg the device will give when asked */
++static char *msg_Ptr;
++
++static struct file_operations fops = {
++	.read = device_read,
++	.write = device_write,
++	.open = device_open,
++	.release = device_release
++};
++
++static int adc_resolution;	
++static int adc_channel;
++static int adc_powersave;
++static int adc_debug;
++static int adc_averaging;
++static int adc_averagingloops;
++
++/*  Called when a process tries to open the device file */
++static int device_open(struct inode *inode, struct file *file) {
++	u16 adcval;
++	int i;
++	unsigned int addval = 0;
++	if(Device_Open) return -EBUSY;
++	Device_Open++;
++	
++	if((adc_powersave == 0)||(adc_powersave == ADC_POWERSAVE_AUTO)) {
++		if(adc_powersave == ADC_POWERSAVE_AUTO) lpc313x_init_adc();
++		
++		if(adc_averaging == 1) {
++			for(i = 0; i < adc_averagingloops; i++) {
++				addval += lpc313x_adc_read(adc_channel, adc_resolution);
++			}
++			adcval = addval / adc_averagingloops;
++			sprintf(msg, "0x%03x\n", adcval);
++		} else {
++			adcval = lpc313x_adc_read(adc_channel, adc_resolution);
++			sprintf(msg, "0x%03x\n", adcval);
++		}
++		
++		if(adc_powersave == ADC_POWERSAVE_AUTO) lpc313x_deinit_adc();
++	} else {
++		sprintf(msg, "adc is in powersave mode!\n");
++	}
++
++	msg_Ptr = msg;
++	try_module_get(THIS_MODULE);
++	return SUCCESS;
++}
++
++static ssize_t device_write(struct file *filp, const char *buff, size_t len, loff_t * off) {
++	char message_from_user[BUF_LEN];
++	long ltemp;
++	u16 config_word;
++	
++	config_word = 0;
++
++	if(copy_from_user(message_from_user, buff, (len < BUF_LEN) ? len : BUF_LEN)) return -EINVAL;
++	message_from_user[4] = '\0';
++	ltemp = simple_strtol(message_from_user, NULL, 16);
++	
++	config_word = (u16)(ltemp&0xffff);
++	
++	if(config_word & 0x0080) adc_debug = 1; else adc_debug = 0;
++	if(adc_debug) printk(KERN_INFO "[lpc313x adc] got config word 0x%04x, setting up adc:\n", config_word);
++	
++	// first of all, check if user want's to see status, if, print it and exit
++	if(((config_word >> 12) & 0x000f)>0) {
++		printk(KERN_INFO "[lpc313x adc] channel:'%d', resolution:'%d'\n", adc_channel, adc_resolution);
++		printk(KERN_INFO "[lpc313x adc] averaging:'%d'loops, on:'%d'\n", adc_averagingloops, adc_averaging);
++		switch(adc_powersave) {
++			case ADC_POWERSAVE_OFF:  printk(KERN_INFO "[lpc313x adc] powersave off, adc always on\n"); break;
++			case ADC_POWERSAVE_ON:   printk(KERN_INFO "[lpc313x adc] powersave on, adc always off\n"); break;
++			case ADC_POWERSAVE_AUTO: printk(KERN_INFO "[lpc313x adc] powersave auto (default)\n");     break;
++		}
++		return len;
++	}	
++	
++	adc_channel = config_word & 0x0003;	// get adc channel config
++	
++	switch(((config_word >> 4) & 0x000f)) {	// get resolution config
++		case 0:
++			printk(KERN_INFO "set res to 10\n");
++			adc_resolution = 10;
++			break;
++		case 1:
++			printk(KERN_INFO "set res to 8\n");
++			adc_resolution = 8;
++			break;
++		case 2:
++			printk(KERN_INFO "set res to 4\n");
++			adc_resolution = 4;
++			break;
++		default: 
++			printk(KERN_INFO "set res to 10\n");
++			adc_resolution = 10;
++			break;
++	}
++	
++	
++
++	switch(((config_word >> 10) & 0x0003)) { // get averaging config
++		case 0:
++			adc_averaging = 0;
++			adc_averagingloops = 0;
++			break;
++		case 1:
++			adc_averaging = 1;
++			adc_averagingloops = 10;
++			break;
++		case 2:
++			adc_averaging = 1;
++			adc_averagingloops = 75;
++			break;
++		case 3:
++			adc_averaging = 1;
++			adc_averagingloops = 150;
++			break;
++		default:
++			adc_averaging = 0;
++			break;
++	}
++
++	switch(((config_word >> 8) & 0x0003)) {	// get adc powersave mode config
++		case 0:
++			adc_powersave = ADC_POWERSAVE_OFF;	// adc powersave off, adc always on
++			lpc313x_init_adc();			// turn on adc
++			break;
++		case 1:
++			adc_powersave = ADC_POWERSAVE_AUTO;	// adc powersave auto, on/off when needed, takes more time, saves power (default)
++			lpc313x_deinit_adc();			// turn off adc
++			break;
++		case 2:
++			adc_powersave = ADC_POWERSAVE_ON;	// adc always off
++			lpc313x_deinit_adc();			// turn off adc
++			break;
++		default:
++			adc_powersave = ADC_POWERSAVE_AUTO;	// default behaviour, AUTO
++			lpc313x_deinit_adc();			// turn off adc
++			break;
++	}	
++
++	if(adc_debug) {
++		printk(KERN_INFO "[lpc313x adc] channel:'%d', resolution:'%d'\n", adc_channel, adc_resolution);
++		printk(KERN_INFO "[lpc313x adc] averaging:'%d'loops, on:'%d'\n", adc_averagingloops, adc_averaging);
++			switch(adc_powersave) {
++				case ADC_POWERSAVE_OFF:  printk(KERN_INFO "[lpc313x adc] powersave off, adc always on\n"); break;
++				case ADC_POWERSAVE_ON:   printk(KERN_INFO "[lpc313x adc] powersave on, adc always off\n"); break;
++				case ADC_POWERSAVE_AUTO: printk(KERN_INFO "[lpc313x adc] powersave auto (default)\n");     break;
++		}
++	}
++	return len;
++}
++
++
++/** called when module loaded */
++int init_module(void) {
++	adc_resolution = 10;	
++	adc_channel = 0;
++	adc_powersave = ADC_POWERSAVE_AUTO;
++	adc_debug = 0;
++	adc_averaging = 0;
++	adc_averagingloops = 0;
++	
++	Major = register_chrdev(0, DEVICE_NAME, &fops);
++	if (Major < 0) {
++		printk(KERN_ALERT "[lpc313x adc] registering char device failed with %d\n", Major);
++		return Major;
++	}
++
++	switch(adc_powersave) {
++		case ADC_POWERSAVE_AUTO:
++		case ADC_POWERSAVE_ON:
++			lpc313x_deinit_adc();
++			break;
++		case ADC_POWERSAVE_OFF:
++			lpc313x_init_adc();
++			break;
++	}	
++	
++	printk(KERN_INFO "[lpc313x adc] driver loaded with major %d\n", Major);
++	printk(KERN_INFO "[lpc313x adc] >> $ mknod /dev/%s c %d 0\n", DEVICE_NAME, Major);
++	
++	return SUCCESS;
++}
++
++/** called when module unloaded */
++void cleanup_module(void) {
++	lpc313x_deinit_adc();
++	unregister_chrdev(Major, DEVICE_NAME);
++	printk(KERN_INFO "[lpc313x adc] DRIVER UNLOADED\n");
++}
++
++/* Called when a process closes the device file. */
++static int device_release(struct inode *inode, struct file *file) {
++	Device_Open--;		/* We're now ready for our next caller */
++				/* Decrement the usage count, or else once you opened the file, you'll never get get rid of the module. */
++	module_put(THIS_MODULE);
++	return 0;
++}
++
++/* Called when a process, which already opened the dev file, attempts to read from it. */
++static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_t * offset) {
++	int bytes_read = 0;
++	
++	if(*msg_Ptr == 0) return 0;
++	
++	while(length && *msg_Ptr) {
++		put_user(*(msg_Ptr++), buffer++);
++		length--;
++		bytes_read++;
++	}
++	
++	return bytes_read;
++}
++
++u16 lpc313x_adc_read(int channel, int resolution) {
++	u16 result = 0xffff;
++	int timeout = 0xffffff;
++ 
++	
++	if((ADC_INT_STATUS_REG & 1)) {			// wait if there is a conversion
++		while(ADC_INT_STATUS_REG & 1) 
++			ADC_INT_CLEAR_REG |= (ADC_INT_CLEAR);
++	}
++	
++	ADC_INT_ENABLE_REG |= ADC_INT_ENABLE;		// enable ADC interrupt
++	
++	
++	if((ADC_INT_STATUS_REG & 1)) {			// wait until interrupt is cleared
++		while(ADC_INT_STATUS_REG & 1)
++			ADC_INT_CLEAR_REG |= (ADC_INT_CLEAR);
++	} 
++ 
++	ADC_CSEL_REG = ADC_CALC_CSEL(channel & 3, resolution);	// select channel and resolution
++	ADC_CON_REG &= ADC_SSCAN;				// single conversion mode
++	ADC_CON_REG |= ADC_START;				// start
++ 	while((ADC_INT_STATUS_REG == 0) && timeout--);		// wait until a conversion is done
++	
++	if(timeout == 0) return 0xffff;
++ 	
++	ADC_INT_CLEAR_REG |= ADC_INT_CLEAR;			// wait until a conversion is done
++	
++	switch(channel) {					// read in the 10 bit value of the converted channel
++		case 0:
++			result = (u16)ADC_R0_REG & ADC_Rx_DATA;
++			break;
++		case 1:
++			result = (u16)ADC_R1_REG & ADC_Rx_DATA;
++			break;
++		case 2:
++			result = (u16)ADC_R2_REG & ADC_Rx_DATA;
++			break;
++		case 3:
++			result = (u16)ADC_R3_REG & ADC_Rx_DATA;
++			break;
++	}
++	ADC_CON_REG &= ADC_STOP;				// read in the 10 bit value of the converted channel
++	while(ADC_INT_STATUS_REG & 1) ADC_INT_CLEAR_REG |= ADC_INT_CLEAR;	// wait until the interrupt status bit is cleared
++	return result;
++}
++
++int lpc313x_init_adc(void) {
++	int dummy;
++	u32 timeout;
++	
++	SYS_ADC_PD = 0;
++	
++	/* enable clock for ADC */
++	cgu_clk_en_dis(CGU_SB_ADC_CLK_ID, 1);
++	cgu_clk_en_dis(CGU_SB_ADC_PCLK_ID, 1);
++ 
++	/* reset to default */
++	ADC_CON_REG = ADC_CON_DEFAULT;
++	ADC_CSEL_REG = ADC_CSEL_DEFAULT;
++	ADC_INT_ENABLE_REG = ADC_INT_ENABLE_DEFAULT;
++	ADC_INT_CLEAR_REG = ADC_INT_CLEAR_DEFAULT;
++
++	/* dummy interupt status register read */
++	/** TODO: here we have to use a timeout, find out why and change, if neccessary. 
++	    if you re-enable the adc the whole board freezes without this timeout. **/
++	dummy = ADC_INT_STATUS_REG;
++	timeout = 0x2ffff;	// if timeout is too high, we have to wait a bit (system freezes for this time) 
++				// for the driver while reenabling the adc. use 0x2fff.
++	while((ADC_INT_STATUS_REG & 1) && timeout--);
++	
++	/* enable ADC interrupt */
++	ADC_INT_ENABLE_REG |= ADC_INT_ENABLE;
++	
++	/* set ADC power up */
++	ADC_CON_REG |= ADC_ENABLE;	
++	
++	return 0;
++}
++
++int lpc313x_deinit_adc(void) {
++	/* wait while there is a conversion */
++	while (ADC_INT_STATUS_REG & 0x10);
++
++	/* set ADC to default state */
++	ADC_CON_REG = ADC_CON_DEFAULT;
++	ADC_CSEL_REG = ADC_CSEL_DEFAULT;
++	ADC_INT_ENABLE_REG = ADC_INT_ENABLE_DEFAULT;
++	ADC_INT_CLEAR_REG = ADC_INT_CLEAR_DEFAULT;
++
++	/* disable clock for ADC */
++	cgu_clk_en_dis(CGU_SB_ADC_CLK_ID, 0);
++	cgu_clk_en_dis(CGU_SB_ADC_PCLK_ID, 0);
++	
++	return 0;
++}
++/*
++int lpc313x_adc_powersave_on(void) {
++	ADC_CON_REG = ADC_CON_DEFAULT;
++	return 0;
++}
++
++int lpc313x_adc_powersave_off(void) {
++	ADC_CON_REG |= ADC_ENABLE;
++	return 0;
++}
++*/
++
++module_init(init_module);
++module_exit(cleanup_module);
++
++MODULE_LICENSE("GPL");
++MODULE_AUTHOR(DRIVER_AUTHOR);
++MODULE_DESCRIPTION(DRIVER_DESC);
++MODULE_SUPPORTED_DEVICE("lpc313x adc on gnublin");
+diff --git a/drivers/misc/lpc31xx/lpc313x_pwm.c b/drivers/misc/lpc31xx/lpc313x_pwm.c
+new file mode 100644
+index 0000000..b47ece5
+--- /dev/null
++++ b/drivers/misc/lpc31xx/lpc313x_pwm.c
+@@ -0,0 +1,136 @@
++/*  pwm-module.c
++ *
++ *  Author:    Michael Schwarz
++ *  Copyright (C) 2011 Michael Schwarz
++ *
++ * PWM module for LPC313x
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ *
++ */
++
++#include <linux/module.h>
++#include <linux/proc_fs.h>
++#include <linux/delay.h>
++#include <asm/io.h>
++#include <asm/uaccess.h>
++
++#include <mach/hardware.h>
++#include <mach/gpio.h>
++
++#include "lpc313x_pwm.h"
++
++static int pwm_value = 0;
++
++static int dev_major = 0;
++static int dev_open = 0; 
++
++static struct file_operations fops = {
++ .read = device_read,
++ .write = device_write,
++ .open = device_open,
++ .release = device_release
++};
++
++
++
++// ------------------------------------ /dev functions ----------------------------------------
++
++static int device_open(struct inode *inode, struct file *file) {
++ if(dev_open) return -EBUSY;
++ dev_open++;
++ try_module_get(THIS_MODULE);
++ return 0;
++}
++
++static ssize_t device_write(struct file *filp, const char *buff, size_t len, loff_t * off) {
++ char in_buffer[DEVICE_LEN]; 
++ 
++ len = (len > DEVICE_LEN ? DEVICE_LEN : len);
++ 
++ if(copy_from_user(in_buffer, buff, len)) return -EINVAL;
++
++ pwm_value = (in_buffer[0] + (in_buffer[1] << 8));
++ PWM_TMR_REG = pwm_value & PWM_MR_MASK;
++ 
++ printk("[lpc313x pwm debug message] pwm to %d (%d%%)\n", pwm_value, pwm_value * 100 / 4095);
++
++ return len;
++}
++
++
++static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_t * offset) {
++ if(*offset == 0) {
++  *offset += 2;
++ } else return 0;
++ 
++ put_user(pwm_value & 0xff, buffer++);
++ put_user((pwm_value >> 8) & 0xff, buffer++);
++ return 2;
++}
++
++static int device_release(struct inode *inode, struct file *file) {
++ dev_open--;
++ module_put(THIS_MODULE);
++ return 0;
++}
++
++
++
++int __init init_pwm(void) {
++ printk("[lpc313x pwm] pwm frequency: %u Hz\n", cgu_get_clk_freq(CGU_SB_PWM_CLK_ID) / 4096);
++ 
++ /* enable clock for PWM */
++ cgu_clk_en_dis(CGU_SB_PWM_PCLK_ID, 1);
++ cgu_clk_en_dis(CGU_SB_PWM_PCLK_REGS_ID, 1);
++ cgu_clk_en_dis(CGU_SB_PWM_CLK_ID, 1);
++ 
++ /* reset to default */
++ PWM_TMR_REG = PWM_TMR_DEFAULT;
++ PWM_CNTL_REG = PWM_CNTL_DEFAULT;
++ 
++ dev_major = register_chrdev(0, DEVICE_NAME, &fops);
++ if (dev_major < 0) {
++  printk(KERN_ALERT "[lpc313x pwm] Registering char device failed with %d\n", dev_major);
++  return dev_major;
++ }
++ printk(KERN_INFO "[lpc313x pwm] driver loaded with major %d\n", dev_major);
++ printk(KERN_INFO "[lpc313x pwm] >> $ mknod /dev/%s c %d 0\n", DEVICE_NAME, dev_major);
++ 
++ pwm_value = 0; 
++ 
++ return 0;
++}
++
++void __exit cleanup_pwm(void) {
++ printk("[lpc313x pwm] cleanup\n");
++ 
++ /* disable clock for PWM */
++ cgu_clk_en_dis(CGU_SB_PWM_PCLK_ID, 0);
++ cgu_clk_en_dis(CGU_SB_PWM_PCLK_REGS_ID, 0);
++ cgu_clk_en_dis(CGU_SB_PWM_CLK_ID, 0);
++ 
++ unregister_chrdev(dev_major, DEVICE_NAME);
++}
++
++
++module_init(init_pwm);
++module_exit(cleanup_pwm);
++
++MODULE_LICENSE("GPL");
++
++MODULE_AUTHOR(PWM_AUTHOR);  
++MODULE_DESCRIPTION(PWM_DESCRIPTION);    
++ 
+diff --git a/drivers/misc/lpc31xx/lpc313x_pwm.h b/drivers/misc/lpc31xx/lpc313x_pwm.h
+new file mode 100644
+index 0000000..b47ece5
+--- /dev/null
++++ b/drivers/misc/lpc31xx/lpc313x_pwm.h
+@@ -0,0 +1,136 @@
++/*  pwm-module.c
++ *
++ *  Author:    Michael Schwarz
++ *  Copyright (C) 2011 Michael Schwarz
++ *
++ * PWM module for LPC313x
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ *
++ */
++
++#include <linux/module.h>
++#include <linux/proc_fs.h>
++#include <linux/delay.h>
++#include <asm/io.h>
++#include <asm/uaccess.h>
++
++#include <mach/hardware.h>
++#include <mach/gpio.h>
++
++#include "lpc313x_pwm.h"
++
++static int pwm_value = 0;
++
++static int dev_major = 0;
++static int dev_open = 0; 
++
++static struct file_operations fops = {
++ .read = device_read,
++ .write = device_write,
++ .open = device_open,
++ .release = device_release
++};
++
++
++
++// ------------------------------------ /dev functions ----------------------------------------
++
++static int device_open(struct inode *inode, struct file *file) {
++ if(dev_open) return -EBUSY;
++ dev_open++;
++ try_module_get(THIS_MODULE);
++ return 0;
++}
++
++static ssize_t device_write(struct file *filp, const char *buff, size_t len, loff_t * off) {
++ char in_buffer[DEVICE_LEN]; 
++ 
++ len = (len > DEVICE_LEN ? DEVICE_LEN : len);
++ 
++ if(copy_from_user(in_buffer, buff, len)) return -EINVAL;
++
++ pwm_value = (in_buffer[0] + (in_buffer[1] << 8));
++ PWM_TMR_REG = pwm_value & PWM_MR_MASK;
++ 
++ printk("[lpc313x pwm debug message] pwm to %d (%d%%)\n", pwm_value, pwm_value * 100 / 4095);
++
++ return len;
++}
++
++
++static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_t * offset) {
++ if(*offset == 0) {
++  *offset += 2;
++ } else return 0;
++ 
++ put_user(pwm_value & 0xff, buffer++);
++ put_user((pwm_value >> 8) & 0xff, buffer++);
++ return 2;
++}
++
++static int device_release(struct inode *inode, struct file *file) {
++ dev_open--;
++ module_put(THIS_MODULE);
++ return 0;
++}
++
++
++
++int __init init_pwm(void) {
++ printk("[lpc313x pwm] pwm frequency: %u Hz\n", cgu_get_clk_freq(CGU_SB_PWM_CLK_ID) / 4096);
++ 
++ /* enable clock for PWM */
++ cgu_clk_en_dis(CGU_SB_PWM_PCLK_ID, 1);
++ cgu_clk_en_dis(CGU_SB_PWM_PCLK_REGS_ID, 1);
++ cgu_clk_en_dis(CGU_SB_PWM_CLK_ID, 1);
++ 
++ /* reset to default */
++ PWM_TMR_REG = PWM_TMR_DEFAULT;
++ PWM_CNTL_REG = PWM_CNTL_DEFAULT;
++ 
++ dev_major = register_chrdev(0, DEVICE_NAME, &fops);
++ if (dev_major < 0) {
++  printk(KERN_ALERT "[lpc313x pwm] Registering char device failed with %d\n", dev_major);
++  return dev_major;
++ }
++ printk(KERN_INFO "[lpc313x pwm] driver loaded with major %d\n", dev_major);
++ printk(KERN_INFO "[lpc313x pwm] >> $ mknod /dev/%s c %d 0\n", DEVICE_NAME, dev_major);
++ 
++ pwm_value = 0; 
++ 
++ return 0;
++}
++
++void __exit cleanup_pwm(void) {
++ printk("[lpc313x pwm] cleanup\n");
++ 
++ /* disable clock for PWM */
++ cgu_clk_en_dis(CGU_SB_PWM_PCLK_ID, 0);
++ cgu_clk_en_dis(CGU_SB_PWM_PCLK_REGS_ID, 0);
++ cgu_clk_en_dis(CGU_SB_PWM_CLK_ID, 0);
++ 
++ unregister_chrdev(dev_major, DEVICE_NAME);
++}
++
++
++module_init(init_pwm);
++module_exit(cleanup_pwm);
++
++MODULE_LICENSE("GPL");
++
++MODULE_AUTHOR(PWM_AUTHOR);  
++MODULE_DESCRIPTION(PWM_DESCRIPTION);    
++
