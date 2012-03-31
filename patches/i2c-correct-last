@@ -3,6 +3,7 @@ Top:    b5627fb0e95bee04f2c99967cf8bfb9e97c06432
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 20:17:22 -0400
 
+Only set the stop bit on the last message
 
 
 
