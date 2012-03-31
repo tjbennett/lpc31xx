@@ -1,0 +1,54 @@
+Bottom: d544a59356693205f7bc06369c7e54a14a57f423
+Top:    f679691b0b34cf408795c40bf9cc70febef8c257
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-03-31 14:30:55 -0400
+
+Refresh of device-trees
+
+---
+
+diff --git a/drivers/gpio/gpio-pca953x.c b/drivers/gpio/gpio-pca953x.c
+index 9ecf010..d3f3e8f 100644
+--- a/drivers/gpio/gpio-pca953x.c
++++ b/drivers/gpio/gpio-pca953x.c
+@@ -639,7 +639,6 @@ static int __devinit pca953x_probe(struct i2c_client *client,
+ 	int irq_base=0, invert=0;
+ 	int ret;
+ 
+-printk("pca953x_probe\n");
+ 	chip = kzalloc(sizeof(struct pca953x_chip), GFP_KERNEL);
+ 	if (chip == NULL)
+ 		return -ENOMEM;
+@@ -670,24 +669,20 @@ printk("pca953x_probe\n");
+ 	 */
+ 	pca953x_setup_gpio(chip, id->driver_data & PCA_GPIO_MASK);
+ 
+-	printk("pca953x_probe 1\n");
+ 	if (chip->chip_type == PCA953X_TYPE)
+ 		ret = device_pca953x_init(chip, invert);
+ 	else
+ 		ret = device_pca957x_init(chip, invert);
+ 	if (ret)
+ 		goto out_failed;
+-	printk("pca953x_probe 2\n");
+ 
+ 	ret = pca953x_irq_setup(chip, id, irq_base);
+ 	if (ret)
+ 		goto out_failed;
+-	printk("pca953x_probe 3\n");
+ 
+ 	ret = gpiochip_add(&chip->gpio_chip);
+ 	if (ret)
+ 		goto out_failed_irq;
+-	printk("pca953x_probe 4\n");
+ 
+ 	if (pdata && pdata->setup) {
+ 		ret = pdata->setup(client, chip->gpio_chip.base,
+@@ -697,7 +692,6 @@ printk("pca953x_probe\n");
+ 	}
+ 
+ 	i2c_set_clientdata(client, chip);
+-	printk("pca953x_probe exit\n");
+ 	return 0;
+ 
+ out_failed_irq:
