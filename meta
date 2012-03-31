@@ -1,13 +1,13 @@
 Version: 1
-Previous: f0b164650c9a5d0bbd06ccf40d5160c58ed62530
-Head: ac2eba18f35558f02bf7217b81b0b5dad8fb6ef8
+Previous: a7958212baeeb062f07375fa8e09e56516a1e76e
+Head: 39c4bf88c3541a419194e0c251adaa787aeedbc2
 Applied:
   roland-dt: c3b7a44e0363795f96f00c302998092b51a0dd70
   i2c-start: e443d2c2cd81110992c3b9ea3c2dab1b51d60871
   i2c-mif: 93b5ebe8fc6fdacaacceed9582933151aaff081a
   i2c-correct-last: ac2eba18f35558f02bf7217b81b0b5dad8fb6ef8
+  base: 39c4bf88c3541a419194e0c251adaa787aeedbc2
 Unapplied:
-  base: b7b131b02e945352fe2fa36686bc988ac781732a
   defconfigs: 2b00f58630491c5cbb664ad7ae9606f0e7523f06
   nand: 5b07c41869677d9dd02ea171efa3a69b629ea877
   spi: 5b2d40485dc59fdac762dacca5a21448b4fe4228
