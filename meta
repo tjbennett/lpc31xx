@@ -1,8 +1,9 @@
 Version: 1
-Previous: 09189f07e53c8d0e23bbdce9ed3a7a38c4fda718
-Head: 4da4a6f5aa15af2c4847eb8fd80663a835416a62
+Previous: 2f765421c1c32eb7e410b2087142af3007330e5b
+Head: 54c6e74367c1d3776ea3df51fefa1aaeeaa4544a
 Applied:
   roland-dt-1: 4da4a6f5aa15af2c4847eb8fd80663a835416a62
+  refresh-temp: 54c6e74367c1d3776ea3df51fefa1aaeeaa4544a
 Unapplied:
   roland-dt: c3b7a44e0363795f96f00c302998092b51a0dd70
   i2c-start: e443d2c2cd81110992c3b9ea3c2dab1b51d60871
