@@ -19,28 +19,65 @@
  */
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/platform_device.h>
 
+#include <mach/hardware.h>
+
+/* Note that these seven registers can be assigned sequentially */
+#define MPMC_SEQ_COUNT        7
+#define MPMC_STCONFIG      0x00
+#define MPMC_STWTWEN       0x04
+#define MPMC_STWTOEN       0x08
+#define MPMC_STWTRD        0x0C
+#define MPMC_STWTPG        0x10
+#define MPMC_STWTWR        0x14
+#define MPMC_STWTTURN      0x18
 
 static int lpc313x_sram_probe(struct platform_device *pdev)
 {
-#if 0
-	/* number of slave select bits is required */
-	prop = of_get_property(pdev->dev.of_node, "mpmc-config", &len);
-	if (prop && len >= sizeof(*prop))
-		num_cs = __be32_to_cpup(prop);
+	const unsigned int *prop;
+	const unsigned int *ranges;
+	int len, count, i;
+	volatile u32 *base;
 
-	MPMC_STCONFIG1 = 0x81;
-	MPMC_STWTWEN1 = 1;
-	MPMC_STWTOEN1 = 1;
-	MPMC_STWTRD1 = 4;
-	MPMC_STWTPG1 = 1;
-	MPMC_STWTWR1 = 1;
-	MPMC_STWTTURN1 = 2;
-	/* enable oe toggle between consec reads */
-	SYS_MPMC_WTD_DEL1 = _BIT(5) | 4;
-#endif
-	return 0;
+	prop = of_get_property(pdev->dev.of_node, "mpmc-config", &len);
+	if (!prop)
+		return 0;
+	count = len / sizeof(*prop);
+
+	ranges = of_get_property(pdev->dev.of_node, "ranges", &len);
+	if (!prop) {
+		dev_err(&pdev->dev, "Ranges property missing on SRAM DT");
+		return -EINVAL;
+	}
+
+	if (__be32_to_cpup(ranges) == EXT_SRAM0_PHYS) {
+		base = &MPMC_STCONFIG0;
+	} else if (__be32_to_cpup(ranges) == EXT_SRAM1_PHYS) {
+		base = &MPMC_STCONFIG1;
+	} else {
+		dev_err(&pdev->dev, "SRAM Ranges is not a valid base address");
+		return  -EINVAL;
+	}
+
+	/* Note that the seven MPMC register are sequential */
+	for (i = 0; (i < MPMC_SEQ_COUNT) && (count >= 0); i++) {
+		*base = __be32_to_cpup(prop);
+		base++;prop++;count--;
+		if (count <= 0)
+			return 0;
+	}
+	/* enable OE toggle between consecutive reads */
+	if (count == 1) {
+		if (__be32_to_cpup(ranges) == EXT_SRAM0_PHYS)
+			SYS_MPMC_WTD_DEL0 = __be32_to_cpup(prop);
+		else
+			SYS_MPMC_WTD_DEL1 = __be32_to_cpup(prop);
+		return 0;
+	}
+	dev_err(&pdev->dev, "SRAM too many parameters");
+	return  -EINVAL;
 }
 
 static const struct of_device_id lpc313x_sram_of_match[] = {

@@ -17,7 +17,7 @@
 	};
 
 	i2c@1300a000 {
-		slave-address = <0x6E>;
+		slave-addr = <0x6E>;
 		pca9532: leds@60 {
 			#gpio-cells = <2>;
 			compatible = "nxp,pca9532";
@@ -26,7 +26,7 @@
 		};
 	};
 	i2c@1300a400 {
-		slave-address = <0x6E>;
+		slave-addr = <0x6E>;
 		uda1380: codec@1a {
 			compatible = "nxp,uda1380";
 			reg = <0x1a>;
