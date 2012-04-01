@@ -159,13 +159,6 @@ static struct uda1380_platform_data uda1380_info = {
 	.gpio_reset = -1,
 };
 
-static struct i2c_board_info i2c_board_info[] = {
-	{
-		I2C_BOARD_INFO("uda1380", 0x1A),
-		.platform_data = &uda1380_info,
-	},
-};
-
 static struct platform_device *ea3131_snd_device;
 
 static int __devinit ea3131_asoc_probe(struct platform_device *pdev)
@@ -173,24 +166,11 @@ static int __devinit ea3131_asoc_probe(struct platform_device *pdev)
 	struct platform_device *snd_dev;
 	int ret = 0;
 	struct i2c_adapter *adapter;
-	struct i2c_client *client;
 
 	/*
 	 * Enable CODEC clock first or I2C will fail to the CODEC
 	 */
 	lpc313x_main_clk_rate(48000);
-
-#if defined (CONFIG_SND_I2C1_CHANNEL_UDA1380)
-	adapter = i2c_get_adapter(1);
-#else
-	adapter = i2c_get_adapter(0);
-#endif
-	if (!adapter)
-		return -ENODEV;
-	client = i2c_new_device(adapter, i2c_board_info);
-	i2c_put_adapter(adapter);
-	if (!client)
-		return -ENODEV;
 
 	snd_dev = platform_device_alloc("soc-audio", -1);
 	if (!snd_dev) {
