@@ -1,6 +1,6 @@
 Version: 1
-Previous: a64a606fcb656c003ef3506ff6ff9d930a25ba08
-Head: cd0a8e91ee7dc0b2fe384be4d7e6e0b5552b459c
+Previous: 63377c5c7885d191f37919df77df865a0b48af8f
+Head: c5341bd631cd7382767baba1ee65c26a0a2664fa
 Applied:
   roland-dt-1: 7e6b4367ad218d2750ec048d4654f03e87097501
   i2c-correct-last: d07e320297d3037b8d5a5ff8c78531b1caf62ddb
@@ -26,5 +26,6 @@ Applied:
   adc-registers.patch: 0f76c8d651e18368d4ec0cc6a3bcdd2eec57a076
   adc-pwm: a14bee9cc8d7b015191483a51ba8dc8b294eaa24
   device-trees: cd0a8e91ee7dc0b2fe384be4d7e6e0b5552b459c
+  refresh-temp: c5341bd631cd7382767baba1ee65c26a0a2664fa
 Unapplied:
 Hidden:
