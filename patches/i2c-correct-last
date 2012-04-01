@@ -1,5 +1,5 @@
-Bottom: aa28be9cf5344669994716a5f84b8a0f7e4c8455
-Top:    b5627fb0e95bee04f2c99967cf8bfb9e97c06432
+Bottom: 412cc612c3773faafe6782b2f3ba29b69c23967c
+Top:    c83278bbf22d3a809e54997ec81d3c56f54a3395
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 20:17:22 -0400
 
@@ -10,10 +10,10 @@ Only set the stop bit on the last message
 ---
 
 diff --git a/drivers/i2c/busses/i2c-pnx.c b/drivers/i2c/busses/i2c-pnx.c
-index 83ae3b3..e4519d9 100644
+index 855c534..585971a 100644
 --- a/drivers/i2c/busses/i2c-pnx.c
 +++ b/drivers/i2c/busses/i2c-pnx.c
-@@ -221,7 +221,8 @@ static int i2c_pnx_master_xmit(struct i2c_pnx_algo_data *alg_data)
+@@ -219,7 +219,8 @@ static int i2c_pnx_master_xmit(struct i2c_pnx_algo_data *alg_data)
  		/* We still have something to talk about... */
  		val = *alg_data->mif.buf++;
  
