@@ -1,5 +1,5 @@
-Bottom: 412cc612c3773faafe6782b2f3ba29b69c23967c
-Top:    0d70189585bf92e044c80bd9816fadc6f24561df
+Bottom: c83278bbf22d3a809e54997ec81d3c56f54a3395
+Top:    5b8ec8160f6bf6c8e4811e199d91c8e369fa98e3
 Author: Roland Stigge <stigge@antcom.de>
 Date:   2012-03-29 23:31:16 +0200
 
@@ -13,10 +13,10 @@ Signed-off-by: Roland Stigge <stigge@antcom.de>
 ---
 
 diff --git a/drivers/i2c/busses/i2c-pnx.c b/drivers/i2c/busses/i2c-pnx.c
-index 855c534..e0fea61 100644
+index 585971a..e9d66b6 100644
 --- a/drivers/i2c/busses/i2c-pnx.c
 +++ b/drivers/i2c/busses/i2c-pnx.c
-@@ -527,16 +527,16 @@ i2c_pnx_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
+@@ -528,16 +528,16 @@ i2c_pnx_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs, int num)
  		/* initialize the completion var */
  		init_completion(&alg_data->mif.complete);
  
