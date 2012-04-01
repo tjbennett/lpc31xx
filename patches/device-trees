@@ -1,5 +1,5 @@
 Bottom: cec4685bc68f34ffefea73aade8e4016cf32868a
-Top:    412cc612c3773faafe6782b2f3ba29b69c23967c
+Top:    ae1a449178a85ae5a43851edf52dc8759e6cedf0
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 19:47:49 -0400
 
@@ -5040,7 +5040,7 @@ index 0000000..5ac5df2
 +CONFIG_AVERAGE=y
 +# CONFIG_CORDIC is not set
 diff --git a/sound/soc/codecs/uda1380.c b/sound/soc/codecs/uda1380.c
-index 773e76f..197463a 100644
+index 773e76f..bddaf4d 100644
 --- a/sound/soc/codecs/uda1380.c
 +++ b/sound/soc/codecs/uda1380.c
 @@ -148,6 +148,7 @@ static void uda1380_sync_cache(struct snd_soc_codec *codec)
@@ -5051,22 +5051,16 @@ index 773e76f..197463a 100644
  
  	if (gpio_is_valid(pdata->gpio_reset)) {
  		gpio_set_value(pdata->gpio_reset, 1);
-@@ -160,10 +161,13 @@ static int uda1380_reset(struct snd_soc_codec *codec)
+@@ -160,7 +161,7 @@ static int uda1380_reset(struct snd_soc_codec *codec)
  		data[1] = 0;
  		data[2] = 0;
  
 -		if (codec->hw_write(codec->control_data, data, 3) != 3) {
-+		printk("JDS reset 1\n");
 +		if ((temp = codec->hw_write(codec->control_data, data, 3)) != 3) {
-+			printk("JDS reset 2 %d\n", temp);
  			dev_err(codec->dev, "%s: failed\n", __func__);
  			return -EIO;
  		}
-+		printk("JDS reset 3\n");
- 	}
- 
- 	return 0;
-@@ -728,6 +732,14 @@ static int uda1380_resume(struct snd_soc_codec *codec)
+@@ -728,6 +729,14 @@ static int uda1380_resume(struct snd_soc_codec *codec)
  	return 0;
  }
  
@@ -5081,7 +5075,7 @@ index 773e76f..197463a 100644
  static int uda1380_probe(struct snd_soc_codec *codec)
  {
  	struct uda1380_platform_data *pdata =codec->dev->platform_data;
-@@ -739,8 +751,12 @@ static int uda1380_probe(struct snd_soc_codec *codec)
+@@ -739,8 +748,12 @@ static int uda1380_probe(struct snd_soc_codec *codec)
  	codec->hw_write = (hw_write_t)i2c_master_send;
  	codec->control_data = uda1380->control_data;
  
@@ -5094,7 +5088,7 @@ index 773e76f..197463a 100644
  
  	if (gpio_is_valid(pdata->gpio_reset)) {
  		ret = gpio_request_one(pdata->gpio_reset, GPIOF_OUT_INIT_LOW,
-@@ -850,10 +866,17 @@ static const struct i2c_device_id uda1380_i2c_id[] = {
+@@ -850,10 +863,17 @@ static const struct i2c_device_id uda1380_i2c_id[] = {
  };
  MODULE_DEVICE_TABLE(i2c, uda1380_i2c_id);
  
@@ -5346,16 +5340,3 @@ index 26bdb28..5af9b97 100644
  static u64 lpc313x_pcm_dmamask = DMA_BIT_MASK(32);
  
  #if defined (CONFIG_SND_USE_DMA_LINKLIST)
-diff --git a/sound/soc/soc-core.c b/sound/soc/soc-core.c
-index 92cee24..306a577 100644
---- a/sound/soc/soc-core.c
-+++ b/sound/soc/soc-core.c
-@@ -22,6 +22,8 @@
-  *   o Support TDM on PCM and I2S
-  */
- 
-+#define DEBUG
-+
- #include <linux/module.h>
- #include <linux/moduleparam.h>
- #include <linux/init.h>
