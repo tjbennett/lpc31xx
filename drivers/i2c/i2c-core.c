@@ -531,6 +531,7 @@ i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
 
 	/* Check for address business */
 	status = i2c_check_addr_busy(adap, client->addr);
+printk("JDS i2c status %d\n", status);
 	if (status)
 		goto out_err;
 

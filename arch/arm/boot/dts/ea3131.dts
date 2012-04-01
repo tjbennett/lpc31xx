@@ -16,57 +16,50 @@
 		bootargs = "console=ttyS0,115200n8 root=/dev/mmcblk0p3 init=/etc/preinit rw rootwait loglevel=7";
 	};
 
-	apb@13008000 {
-		i2c@1300a000 {
-			slave-address = <0x6E>;
-			pca9532: leds@60 {
-				#gpio-cells = <2>;
-				compatible = "nxp,pca9532";
-				reg = <0x60>;
-				gpio-controller;
-			};
-			uda1380: codec@18 {
-				compatible = "nxp,uda1380";
-				reg = <0x18>;
-			};
+	i2c@1300a000 {
+		slave-address = <0x6E>;
+		pca9532: leds@60 {
+			#gpio-cells = <2>;
+			compatible = "nxp,pca9532";
+			reg = <0x60>;
+			gpio-controller;
 		};
 	};
-	apb@15000000 {
-		spi@15002000 {
-			s25sl032a@0 {
-				compatible = "code,s25sl032a";
-				spi-max-frequency = <1000000>;
-				reg = <0>;
-			};
-			ads7846@1 {
-				compatible = "ti,ads7846";
-				spi-max-frequency = <1200000>;
-				reg = <1>;
-				interrupts = <20>;
-				vref_delay_usecs = <100>;
-				x_plate_ohms = <419>;
-				y_plate_ohms = <486>;
-				pen_irq = <37>;
-				gpio_pendown = <&gpio_gpio 4 0>;
-				gpio_cs = <&gpio_ebi_i2stx_0 3 0>; 
-			};
+	i2c@1300a400 {
+		slave-address = <0x6E>;
+		uda1380: codec@1a {
+			compatible = "nxp,uda1380";
+			reg = <0x1a>;
+		};
+	};
+	spi@15002000 {
+		s25sl032a@0 {
+			compatible = "code,s25sl032a";
+			spi-max-frequency = <1000000>;
+			reg = <0>;
+		};
+		ads7846@1 {
+			compatible = "ti,ads7846";
+			spi-max-frequency = <1200000>;
+			reg = <1>;
+			interrupts = <20>;
+			vref_delay_usecs = <100>;
+			x_plate_ohms = <419>;
+			y_plate_ohms = <486>;
+			pen_irq = <37>;
+			gpio_pendown = <&gpio_gpio 4 0>;
+			gpio_cs = <&gpio_ebi_i2stx_0 3 0>; 
 		};
 	};
 	sound {
 		compatible = "ea,ea3131-uda1380";
-		is2-handle = <&i2s>;
-		codec-handle = <&uda1380>;
-		channel = <1>;
+		audio-codec = <&uda1380>;
+		i2s-controller = <&i2s>;
+		i2s-channel = <1>;
 	};
-	pcm {
-		compatible = "nxp,lpc313x-audio";
-	};
-
-	apb@17000000 {
-		nand@17000800 {
-			bank-width = <2>;
-			device-width = <1>;				
-		};
+	nand@17000800 {
+		bank-width = <2>;
+		device-width = <1>;				
 	};
 	sdmmc@18000000 {
 		slot@0 {

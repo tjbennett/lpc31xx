@@ -11,13 +11,14 @@
  * (at your option) any later version.
  */
 
+#define DEBUG
+
 #include <linux/i2c.h>
 #include <linux/irq.h>
 #include <linux/of.h>
 #include <linux/of_i2c.h>
 #include <linux/of_irq.h>
 #include <linux/module.h>
-
 
 void of_i2c_register_devices(struct i2c_adapter *adap)
 {

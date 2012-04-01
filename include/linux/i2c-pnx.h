@@ -30,14 +30,9 @@ struct i2c_pnx_algo_data {
 	int			last;
 	struct clk		*clk;
 	struct i2c_adapter	adapter;
-	int base;
-	int irq;
-};
-
-struct i2c_pnx_data {
-	const char *name;
-	u32 base;
-	int irq;
+	phys_addr_t		base;
+	int			irq;
+	u32			timeout;
 };
 
 #endif /* __I2C_PNX_H__ */
