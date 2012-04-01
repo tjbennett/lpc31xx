@@ -1,5 +1,5 @@
 Bottom: 87726329cb4ba850c4b055dcc21e81fba9c84d48
-Top:    e5476f2b73dba3d992ebc26b4d37a74db1a9576a
+Top:    729f5807a47ed36768191a7ccda4fecc303f2e7c
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 19:47:49 -0400
 
@@ -2949,19 +2949,6 @@ index f7ca4cc..f8fd607 100644
  	},
  	.probe   = dm9000_probe,
  	.remove  = __devexit_p(dm9000_drv_remove),
-diff --git a/drivers/of/of_i2c.c b/drivers/of/of_i2c.c
-index f37fbeb..e752fe9 100644
---- a/drivers/of/of_i2c.c
-+++ b/drivers/of/of_i2c.c
-@@ -11,6 +11,8 @@
-  * (at your option) any later version.
-  */
- 
-+#define DEBUG
-+
- #include <linux/i2c.h>
- #include <linux/irq.h>
- #include <linux/of.h>
 diff --git a/drivers/spi/spi-lpc313x.c b/drivers/spi/spi-lpc313x.c
 index aa99f79..0157806 100644
 --- a/drivers/spi/spi-lpc313x.c
