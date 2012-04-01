@@ -1,5 +1,5 @@
 Bottom: 87726329cb4ba850c4b055dcc21e81fba9c84d48
-Top:    729f5807a47ed36768191a7ccda4fecc303f2e7c
+Top:    869a1683ca41af7129e5bab3edb64ea801993920
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 19:47:49 -0400
 
@@ -2076,18 +2076,6 @@ index 1566ec5..6e523fa 100644
  
 +/* Make sure we get initialised before anyone else tries to use us */
  core_initcall(lpc313x_gpiolib_init);
-diff --git a/drivers/i2c/i2c-core.c b/drivers/i2c/i2c-core.c
-index e9c1893..7587197 100644
---- a/drivers/i2c/i2c-core.c
-+++ b/drivers/i2c/i2c-core.c
-@@ -531,6 +531,7 @@ i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
- 
- 	/* Check for address business */
- 	status = i2c_check_addr_busy(adap, client->addr);
-+printk("JDS i2c status %d\n", status);
- 	if (status)
- 		goto out_err;
- 
 diff --git a/drivers/input/touchscreen/ads7846.c b/drivers/input/touchscreen/ads7846.c
 index 23fd901..2ec9049 100644
 --- a/drivers/input/touchscreen/ads7846.c
