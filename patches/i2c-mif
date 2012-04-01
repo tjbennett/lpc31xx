@@ -1,5 +1,5 @@
-Bottom: 0b16364efabd9cd0ac814816e5b89103e70b2739
-Top:    aa28be9cf5344669994716a5f84b8a0f7e4c8455
+Bottom: 5b8ec8160f6bf6c8e4811e199d91c8e369fa98e3
+Top:    6102c91c1c31ad00d077ec76e5e1690e94628ead
 Author: Roland Stigge <stigge@antcom.de>
 Date:   2012-03-29 23:31:15 +0200
 
@@ -13,7 +13,7 @@ Signed-off-by: Roland Stigge <stigge@antcom.de>
 ---
 
 diff --git a/drivers/i2c/busses/i2c-pnx.c b/drivers/i2c/busses/i2c-pnx.c
-index e0fea61..83ae3b3 100644
+index e9d66b6..e4519d9 100644
 --- a/drivers/i2c/busses/i2c-pnx.c
 +++ b/drivers/i2c/busses/i2c-pnx.c
 @@ -137,21 +137,23 @@ static int i2c_pnx_start(unsigned char slave_addr,
