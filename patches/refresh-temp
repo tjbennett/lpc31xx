@@ -1,0 +1,53 @@
+Bottom: 611f10335bde27dfdb549ae98d858241a687d803
+Top:    6102c91c1c31ad00d077ec76e5e1690e94628ead
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-01 09:32:54 -0400
+
+Refresh of device-trees
+
+---
+
+diff --git a/sound/soc/lpc313x/ea3131-uda1380.c b/sound/soc/lpc313x/ea3131-uda1380.c
+index 220b7fd..0083c41 100644
+--- a/sound/soc/lpc313x/ea3131-uda1380.c
++++ b/sound/soc/lpc313x/ea3131-uda1380.c
+@@ -159,13 +159,6 @@ static struct uda1380_platform_data uda1380_info = {
+ 	.gpio_reset = -1,
+ };
+ 
+-static struct i2c_board_info i2c_board_info[] = {
+-	{
+-		I2C_BOARD_INFO("uda1380", 0x1A),
+-		.platform_data = &uda1380_info,
+-	},
+-};
+-
+ static struct platform_device *ea3131_snd_device;
+ 
+ static int __devinit ea3131_asoc_probe(struct platform_device *pdev)
+@@ -173,25 +166,12 @@ static int __devinit ea3131_asoc_probe(struct platform_device *pdev)
+ 	struct platform_device *snd_dev;
+ 	int ret = 0;
+ 	struct i2c_adapter *adapter;
+-	struct i2c_client *client;
+ 
+ 	/*
+ 	 * Enable CODEC clock first or I2C will fail to the CODEC
+ 	 */
+ 	lpc313x_main_clk_rate(48000);
+ 
+-#if defined (CONFIG_SND_I2C1_CHANNEL_UDA1380)
+-	adapter = i2c_get_adapter(1);
+-#else
+-	adapter = i2c_get_adapter(0);
+-#endif
+-	if (!adapter)
+-		return -ENODEV;
+-	client = i2c_new_device(adapter, i2c_board_info);
+-	i2c_put_adapter(adapter);
+-	if (!client)
+-		return -ENODEV;
+-
+ 	snd_dev = platform_device_alloc("soc-audio", -1);
+ 	if (!snd_dev) {
+ 		dev_err(&pdev->dev, "failed to alloc soc-audio device\n");
