@@ -1,0 +1,22 @@
+Bottom: e5476f2b73dba3d992ebc26b4d37a74db1a9576a
+Top:    729f5807a47ed36768191a7ccda4fecc303f2e7c
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-01 11:34:52 -0400
+
+Refresh of device-trees
+
+---
+
+diff --git a/drivers/of/of_i2c.c b/drivers/of/of_i2c.c
+index e752fe9..f37fbeb 100644
+--- a/drivers/of/of_i2c.c
++++ b/drivers/of/of_i2c.c
+@@ -11,8 +11,6 @@
+  * (at your option) any later version.
+  */
+ 
+-#define DEBUG
+-
+ #include <linux/i2c.h>
+ #include <linux/irq.h>
+ #include <linux/of.h>
