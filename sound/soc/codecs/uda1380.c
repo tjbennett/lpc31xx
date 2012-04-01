@@ -161,10 +161,13 @@ static int uda1380_reset(struct snd_soc_codec *codec)
 		data[1] = 0;
 		data[2] = 0;
 
+		printk("JDS reset 1\n");
 		if ((temp = codec->hw_write(codec->control_data, data, 3)) != 3) {
+			printk("JDS reset 2 %d\n", temp);
 			dev_err(codec->dev, "%s: failed\n", __func__);
 			return -EIO;
 		}
+		printk("JDS reset 3\n");
 	}
 
 	return 0;
