@@ -111,87 +111,71 @@ static struct platform_device serial_device = {
 	},
 };
 
+struct platform_device lpc31xx_pcm_device = {
+	.name = "lpc31xx-pcm-audio",
+	.id = -1,
+};
 
 static struct platform_device *devices[] __initdata = {
 	&serial_device,
+	&lpc31xx_pcm_device,
 };
 
 static struct map_desc lpc313x_io_desc[] __initdata = {
 	{
-		.virtual	= io_p2v(IO_INTC_PHYS),
-		.pfn		= __phys_to_pfn(IO_INTC_PHYS),
-		.length		= IO_INTC_SIZE,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_APB01_PHYS),
-		.pfn		= __phys_to_pfn(IO_APB01_PHYS),
-		.length		= IO_APB01_SIZE,
+		.virtual	= io_p2v(IO_APB1_PHYS),
+		.pfn		= __phys_to_pfn(IO_APB1_PHYS),
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
 	{
 		.virtual	= io_p2v(IO_APB2_PHYS),
 		.pfn		= __phys_to_pfn(IO_APB2_PHYS),
-		.length		= IO_APB2_SIZE,
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
 	{
 		.virtual	= io_p2v(IO_APB3_PHYS),
 		.pfn		= __phys_to_pfn(IO_APB3_PHYS),
-		.length		= IO_APB3_SIZE,
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
 	{
 		.virtual	= io_p2v(IO_APB4_PHYS),
 		.pfn		= __phys_to_pfn(IO_APB4_PHYS),
-		.length		= IO_APB4_SIZE,
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
-	{
-		.virtual	= io_p2v(IO_MPMC_CFG_PHYS),
-		.pfn		= __phys_to_pfn(IO_MPMC_CFG_PHYS),
-		.length		= IO_MPMC_CFG_SIZE,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_NAND_BUF_PHYS),
-		.pfn		= __phys_to_pfn(IO_NAND_BUF_PHYS),
-		.length		= IO_NAND_BUF_SIZE,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_ISRAM0_PHYS),
-		.pfn		= __phys_to_pfn(IO_ISRAM0_PHYS),
-		.length		= IO_ISRAM0_SIZE,
-		.type		= MT_DEVICE
-	},
-#ifdef CONFIG_OF
-	{
-		.virtual	= io_p2v(IO_USB_PHYS),
-		.pfn		= __phys_to_pfn(IO_USB_PHYS),
-		.length		= IO_USB_SIZE,
-		.type		= MT_DEVICE
-	},
-
 	{
 		.virtual	= io_p2v(IO_SDMMC_PHYS),
 		.pfn		= __phys_to_pfn(IO_SDMMC_PHYS),
-		.length		= IO_SDMMC_SIZE,
+		.length		= SZ_1M,
+		.type		= MT_DEVICE
+	},
+	{
+		.virtual	= io_p2v(IO_USB_PHYS),
+		.pfn		= __phys_to_pfn(IO_USB_PHYS),
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
 	{
 		.virtual	= io_p2v(EXT_SRAM0_PHYS),
 		.pfn		= __phys_to_pfn(EXT_SRAM0_PHYS),
-		.length		= SZ_4K,
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
 	{
-		.virtual	= io_p2v(EXT_SRAM1_PHYS + 0x10000),
-		.pfn		= __phys_to_pfn(EXT_SRAM1_PHYS + 0x10000),
-		.length		= SZ_4K,
+		.virtual	= io_p2v(IO_INTC_PHYS),
+		.pfn		= __phys_to_pfn(IO_INTC_PHYS),
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
-#endif
+	{
+		.virtual	= io_p2v(IO_NAND_BUF_PHYS),
+		.pfn		= __phys_to_pfn(IO_NAND_BUF_PHYS),
+		.length		= SZ_1M,
+		.type		= MT_DEVICE
+	},
 };
 
 void __init lpc313x_map_io(void)
@@ -256,9 +240,7 @@ void __init lpc313x_init(void)
 
 	lpc313x_uart_init();
 
-#ifndef CONFIG_OF
 	return platform_add_devices(devices, ARRAY_SIZE(devices));
-#endif
 }
 
 

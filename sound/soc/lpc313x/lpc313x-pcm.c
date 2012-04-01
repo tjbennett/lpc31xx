@@ -33,7 +33,7 @@
 #include <mach/dma.h>
 #include "lpc313x-pcm.h"
 
-#define SND_NAME "lpc313x-audio"
+#define SND_NAME "lpc31xx-pcm-audio"
 static u64 lpc313x_pcm_dmamask = DMA_BIT_MASK(32);
 
 #if defined (CONFIG_SND_USE_DMA_LINKLIST)
@@ -543,21 +543,10 @@ static int __devexit lpc313x_asoc_platform_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#if defined(CONFIG_OF)
-static const struct of_device_id lpc313x_dma_of_match[] = {
-	{ .compatible = "nxp,lpc313x-audio" },
-	{},
-};
-MODULE_DEVICE_TABLE(of, lpc313x_dma_of_match);
-#endif
-
 static struct platform_driver lpc313x_dma_driver = {
 	.driver = {
 		.name = SND_NAME,
 		.owner = THIS_MODULE,
-#ifdef CONFIG_OF
-		.of_match_table = lpc313x_dma_of_match,
-#endif
 	},
 
 	.probe = lpc313x_asoc_platform_probe,
