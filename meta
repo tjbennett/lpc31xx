@@ -1,6 +1,6 @@
 Version: 1
-Previous: a985ac4c8f6e8d7d42c7ad35a0c3c0401c6aac2c
-Head: 6245e38b62f50294ec2d58afb18d1ffa63ca2949
+Previous: c42b4b13c8971de24ce99e631c5951d2d22815c1
+Head: ea24ee4c213408e00224caaff2fef2290ffe51b4
 Applied:
   roland-dt-1: 7e6b4367ad218d2750ec048d4654f03e87097501
   base: c9a49a1d658fad581959b24cef290124aeb987ee
@@ -28,5 +28,6 @@ Applied:
   i2c-correct-last: c3347e910084c8a293e6e6dd1915a27c9008c778
   i2c-start: 8910a3bbf5c8dac88fd5143d23152060fccf14a0
   i2c-mif: 6245e38b62f50294ec2d58afb18d1ffa63ca2949
+  refresh-temp: ea24ee4c213408e00224caaff2fef2290ffe51b4
 Unapplied:
 Hidden:
