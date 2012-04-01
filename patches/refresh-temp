@@ -1,0 +1,20 @@
+Bottom: 729f5807a47ed36768191a7ccda4fecc303f2e7c
+Top:    869a1683ca41af7129e5bab3edb64ea801993920
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-01 11:35:38 -0400
+
+Refresh of device-trees
+
+---
+
+diff --git a/drivers/i2c/i2c-core.c b/drivers/i2c/i2c-core.c
+index 7587197..e9c1893 100644
+--- a/drivers/i2c/i2c-core.c
++++ b/drivers/i2c/i2c-core.c
+@@ -531,7 +531,6 @@ i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
+ 
+ 	/* Check for address business */
+ 	status = i2c_check_addr_busy(adap, client->addr);
+-printk("JDS i2c status %d\n", status);
+ 	if (status)
+ 		goto out_err;
