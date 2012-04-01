@@ -1,5 +1,5 @@
 Bottom: da484f865a6cb70484edac205e9e09cb458f4388
-Top:    611f10335bde27dfdb549ae98d858241a687d803
+Top:    6102c91c1c31ad00d077ec76e5e1690e94628ead
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 19:47:49 -0400
 
@@ -5173,10 +5173,10 @@ index 8c42e30..c991f6c 100644
  # LPC315X Machine Support
  snd-soc-lpc315x-codec-objs := lpc315x-codec.o
 diff --git a/sound/soc/lpc313x/lpc313x-uda1380.c b/sound/soc/lpc313x/ea3131-uda1380.c
-similarity index 84%
+similarity index 83%
 rename from sound/soc/lpc313x/lpc313x-uda1380.c
 rename to sound/soc/lpc313x/ea3131-uda1380.c
-index 607d545..220b7fd 100644
+index 607d545..0083c41 100644
 --- a/sound/soc/lpc313x/lpc313x-uda1380.c
 +++ b/sound/soc/lpc313x/ea3131-uda1380.c
 @@ -140,10 +140,8 @@ static struct snd_soc_dai_link ea3131_uda1380_dai[] = {
@@ -5191,8 +5191,17 @@ index 607d545..220b7fd 100644
  		.init = ea3131_uda1380_init,
  		.ops = &ea3131_uda1380_ops,
  	},
-@@ -170,7 +168,7 @@ static struct i2c_board_info i2c_board_info[] = {
+@@ -161,54 +159,55 @@ static struct uda1380_platform_data uda1380_info = {
+ 	.gpio_reset = -1,
+ };
  
+-static struct i2c_board_info i2c_board_info[] = {
+-	{
+-		I2C_BOARD_INFO("uda1380", 0x1A),
+-		.platform_data = &uda1380_info,
+-	},
+-};
+-
  static struct platform_device *ea3131_snd_device;
  
 -static int __devinit ea3131_asoc_probe(struct platform_device *pd)
@@ -5200,8 +5209,26 @@ index 607d545..220b7fd 100644
  {
  	struct platform_device *snd_dev;
  	int ret = 0;
-@@ -196,19 +194,40 @@ static int __devinit ea3131_asoc_probe(struct platform_device *pd)
+ 	struct i2c_adapter *adapter;
+-	struct i2c_client *client;
  
+ 	/*
+ 	 * Enable CODEC clock first or I2C will fail to the CODEC
+ 	 */
+ 	lpc313x_main_clk_rate(48000);
+ 
+-#if defined (CONFIG_SND_I2C1_CHANNEL_UDA1380)
+-	adapter = i2c_get_adapter(1);
+-#else
+-	adapter = i2c_get_adapter(0);
+-#endif
+-	if (!adapter)
+-		return -ENODEV;
+-	client = i2c_new_device(adapter, i2c_board_info);
+-	i2c_put_adapter(adapter);
+-	if (!client)
+-		return -ENODEV;
+-
  	snd_dev = platform_device_alloc("soc-audio", -1);
  	if (!snd_dev) {
 -		dev_err(&pd->dev, "failed to alloc soc-audio devicec\n");
@@ -5244,7 +5271,7 @@ index 607d545..220b7fd 100644
  	return ret;
  }
  
-@@ -220,11 +239,22 @@ static int __devexit ea3131_asoc_remove(struct platform_device *pdev)
+@@ -220,11 +219,22 @@ static int __devexit ea3131_asoc_remove(struct platform_device *pdev)
  	return 0;
  }
  
@@ -5268,7 +5295,7 @@ index 607d545..220b7fd 100644
  	},
  	.probe	= ea3131_asoc_probe,
  	.remove	= __devexit_p(ea3131_asoc_remove),
-@@ -244,7 +274,7 @@ module_init(ea3131_asoc_modinit);
+@@ -244,7 +254,7 @@ module_init(ea3131_asoc_modinit);
  module_exit(ea3131_asoc_modexit);
  
  MODULE_AUTHOR("Kevin Wells <kevin.wells@nxp.com>");
