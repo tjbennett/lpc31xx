@@ -1,11 +1,11 @@
 Version: 1
-Previous: ee45e4b997d1a77288a3573269a59d7951adff87
+Previous: 044c0112fceccd4527e3e13ce9413405d8ea65bf
 Head: be9bd955d8e4d1b5e933118fbad2df4889dfad11
 Applied:
   roland-dt-1: 7e6b4367ad218d2750ec048d4654f03e87097501
   base.patch: 7de39230429aaac13de0f4a672dd3054717ecd1b
   defconfigs.patch: 2497bd075d308fc0c39d05b95104b4f0a02f0165
-  nand: ea1de97d91c41707253dea16b831d04d791a4e50
+  nand.patch: ea1de97d91c41707253dea16b831d04d791a4e50
   spi.patch: 57a092771bfe2ddb27f0a7b2b3b64e3fa2d3619a
   mmc.patch: cedb80c9caeed8f381fe5cf0a4ffd3d2d771056b
   watchdog: 0671c29353b8e232afe2760c16275bbdeaddd0ba
