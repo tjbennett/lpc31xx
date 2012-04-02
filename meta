@@ -1,5 +1,5 @@
 Version: 1
-Previous: 6d094f224389af497f361ef095a6903a8c5010c0
+Previous: 280fc646b3e0b2dd048dc2057c7f886811f00096
 Head: be9bd955d8e4d1b5e933118fbad2df4889dfad11
 Applied:
   roland-dt-1: 7e6b4367ad218d2750ec048d4654f03e87097501
@@ -24,6 +24,6 @@ Applied:
   reset: eb681aeb758af7940b008946c02136048c051f12
   adc-registers.patch: 704396d3cf867c78db2f32fd9cd3d92cdb6fb380
   adc-pwm.patch: f2d959ff308def33c2fa612a4addf8e04c4adde3
-  device-trees: be9bd955d8e4d1b5e933118fbad2df4889dfad11
+  device-trees.patch: be9bd955d8e4d1b5e933118fbad2df4889dfad11
 Unapplied:
 Hidden:
