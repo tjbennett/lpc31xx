@@ -1,5 +1,5 @@
 Bottom: 87726329cb4ba850c4b055dcc21e81fba9c84d48
-Top:    9e174670838c5fe248ae945717232b2b538f4cd7
+Top:    fd0c525c655f2908b30757c7eb487260282c5d88
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 19:47:49 -0400
 
@@ -404,10 +404,10 @@ index 5298fdf..a40b338 100644
  
  # Specific board support
 diff --git a/arch/arm/mach-lpc31xx/board-ea313x.c b/arch/arm/mach-lpc31xx/board-ea313x.c
-index 0e537ec..fc51b32 100644
+index 0e537ec..76679ce 100644
 --- a/arch/arm/mach-lpc31xx/board-ea313x.c
 +++ b/arch/arm/mach-lpc31xx/board-ea313x.c
-@@ -32,158 +32,25 @@
+@@ -32,200 +32,33 @@
  #include <linux/spi/spi.h>
  #include <linux/leds-pca9532.h>
  #include <linux/gpio.h>
@@ -567,17 +567,19 @@ index 0e537ec..fc51b32 100644
 -	.num_resources = ARRAY_SIZE(ssd1289_resource),
 -	.resource      = ssd1289_resource,
 -};
-+#ifdef CONFIG_OF
- 
- static void __init ea_add_device_ssd1289(void)
- {
-@@ -194,38 +61,16 @@ static void __init ea_add_device_ssd1289(void)
- 	MPMC_STWTPG0   = 0;
- 	MPMC_STWTWR0   = 3;
- 	MPMC_STWTTURN0 = 0;
+-
+-static void __init ea_add_device_ssd1289(void)
+-{
+-	MPMC_STCONFIG0 = 0x81;
+-	MPMC_STWTWEN0  = 0;
+-	MPMC_STWTOEN0  = 0;
+-	MPMC_STWTRD0   = 31;
+-	MPMC_STWTPG0   = 0;
+-	MPMC_STWTWR0   = 3;
+-	MPMC_STWTTURN0 = 0;
 -
 -	platform_device_register(&ssd1289_device);
- }
+-}
 -#else
 -static void __init ea_add_device_ssd1289(void) {}
 -#endif /* CONFIG_SSD1289 */
@@ -614,7 +616,7 @@ index 0e537ec..fc51b32 100644
  LPC313x has external logic outside of MPMC IP to toggle nOE to split consecutive reads.
  The latest Apex bootloader pacth makes use of this feture.
  For this to work SYS_MPMC_WTD_DEL0 & SYS_MPMC_WTD_DEL1 should be programmed with MPMC_STWTRD0
-@@ -264,15 +109,6 @@ static struct dm9000_plat_data dm9000_platdata = {
+@@ -264,199 +97,6 @@ static struct dm9000_plat_data dm9000_platdata = {
  	.inblk = dm9000_inblk,
  };
  
@@ -627,13 +629,21 @@ index 0e537ec..fc51b32 100644
 -		.platform_data	= &dm9000_platdata,
 -	}
 -};
- static void __init ea_add_device_dm9000(void)
- {
- 	/*
-@@ -288,175 +124,11 @@ static void __init ea_add_device_dm9000(void)
- 	MPMC_STWTWR1 = 1;
- 	MPMC_STWTTURN1 = 2;
- 	/* enable oe toggle between consec reads */
+-static void __init ea_add_device_dm9000(void)
+-{
+-	/*
+-	 * Configure Chip-Select 2 on SMC for the DM9000.
+-	 * Note: These timings were calculated for MASTER_CLOCK = 90000000
+-	 *  according to the DM9000 timings.
+-	 */
+-	MPMC_STCONFIG1 = 0x81;
+-	MPMC_STWTWEN1 = 1;
+-	MPMC_STWTOEN1 = 1;
+-	MPMC_STWTRD1 = 4;
+-	MPMC_STWTPG1 = 1;
+-	MPMC_STWTWR1 = 1;
+-	MPMC_STWTTURN1 = 2;
+-	/* enable oe toggle between consec reads */
 -	SYS_MPMC_WTD_DEL1 = _BIT(5) | 4;
 -
 -	/* Configure Interrupt pin as input, no pull-up */
@@ -641,15 +651,14 @@ index 0e537ec..fc51b32 100644
 -		return;
 -
 -	gpio_direction_input(GPIO_MNAND_RYBN3);
-+	SYS_MPMC_WTD_DEL1 = 0x24;
- 
+-
 -	platform_device_register(&dm9000_device);
- }
+-}
 -#else
 -static void __init ea_add_device_dm9000(void) {}
 -#endif /* CONFIG_DM9000 */
- 
- 
+-
+-
 -#if defined (CONFIG_MTD_NAND_LPC313X)
 -static struct resource lpc313x_nand_resources[] = {
 -	[0] = {
@@ -807,10 +816,13 @@ index 0e537ec..fc51b32 100644
  
  /* spi_board_info.controller_data for SPI slave devices,
   * copied to spi_device.platform_data ... mostly for dma tuning
-@@ -511,158 +183,7 @@ static int __init lpc313x_spidev_register(void)
- arch_initcall(lpc313x_spidev_register);
- #endif
+@@ -508,161 +148,10 @@ static int __init lpc313x_spidev_register(void)
  
+ 	return spi_register_board_info(info, 3);
+ }
+-arch_initcall(lpc313x_spidev_register);
+-#endif
+-
 -#if defined(CONFIG_MTD_DATAFLASH)
 -/* MTD Data FLASH driver registration */
 -static int __init lpc313x_spimtd_register(void)
@@ -822,7 +834,7 @@ index 0e537ec..fc51b32 100644
 -		.bus_num = 0,
 -		.chip_select = 0,
 -	};
- 
+-
 -	return spi_register_board_info(&info, 1);
 -}
 -arch_initcall(lpc313x_spimtd_register);
@@ -865,7 +877,8 @@ index 0e537ec..fc51b32 100644
 -	&lpc313x_mci_device,
 -#if defined (CONFIG_MTD_NAND_LPC313X)
 -	&lpc313x_nand_device,
--#endif
++//arch_initcall(lpc313x_spidev_register);
+ #endif
 -#if defined(CONFIG_SPI_LPC313X)
 -	&lpc313x_spi_device,
 -#endif
@@ -875,7 +888,7 @@ index 0e537ec..fc51b32 100644
 -	&lpc313x_audio_device,
 -#endif
 -};
--
+ 
 -static struct map_desc ea313x_io_desc[] __initdata = {
 -	{
 -		.virtual	= io_p2v(EXT_SRAM0_PHYS),
@@ -956,7 +969,7 @@ index 0e537ec..fc51b32 100644
 -	.psc = { 0, 0 },
 -	.pwm = { 0, 0 },
 -};
--
+ 
 -static struct i2c_board_info ea313x_i2c_devices[] __initdata = {
 -	{
 -		I2C_BOARD_INFO("pca9532", 0x60),
@@ -966,7 +979,7 @@ index 0e537ec..fc51b32 100644
  
  #if defined(CONFIG_MACH_EA3152)
  static struct i2c_board_info ea3152_i2c1_devices[] __initdata = {
-@@ -675,69 +196,46 @@ static struct i2c_board_info ea3152_i2c1_devices[] __initdata = {
+@@ -675,69 +164,44 @@ static struct i2c_board_info ea3152_i2c1_devices[] __initdata = {
  void lpc313x_vbus_power(int enable)
  {
  	printk (KERN_INFO "enabling USB host vbus_power %d\n", enable);
@@ -982,27 +995,26 @@ index 0e537ec..fc51b32 100644
 -	
 -
 -	platform_add_devices(devices, ARRAY_SIZE(devices));
+-
+-	/* add DM9000 device */
+-	ea_add_device_dm9000();
+-	
+-	ea_add_device_ssd1289();
+-
+-	i2c_register_board_info(0, ea313x_i2c_devices,
+-		ARRAY_SIZE(ea313x_i2c_devices));
 +struct of_dev_auxdata ea3131_auxdata_lookup[] __initdata = {
 +	OF_DEV_AUXDATA("davicom,dm9000", EXT_SRAM1_PHYS, "dm9000", &dm9000_platdata),
 +	{}
 +};
  
--	/* add DM9000 device */
--	ea_add_device_dm9000();
--	
-+static void __init ea3131_dt_init(void)
-+{
-+	lpc31xx_dt_init_common(ea3131_auxdata_lookup);
- 	ea_add_device_ssd1289();
--
--	i2c_register_board_info(0, ea313x_i2c_devices,
--		ARRAY_SIZE(ea313x_i2c_devices));
--
 -#if defined(CONFIG_MACH_EA3152)
 -	i2c_register_board_info(1, ea3152_i2c1_devices,
 -		ARRAY_SIZE(ea3152_i2c1_devices));
 -#endif
-+	ea_add_device_dm9000();
++static void __init ea3131_dt_init(void)
++{
++	lpc31xx_dt_init_common(ea3131_auxdata_lookup);
  }
  
  #if defined(CONFIG_USB_EHCI_HCD)
@@ -1018,7 +1030,8 @@ index 0e537ec..fc51b32 100644
 +	//ret = gpio_direction_output(VBUS_PWR_EN, 1);
 +	return ret;
  }
- late_initcall(ea_usb_power);
+-late_initcall(ea_usb_power);
++//late_initcall(ea_usb_power);
  #endif
  
 -static void __init ea313x_map_io(void)
@@ -1056,9 +1069,9 @@ index 0e537ec..fc51b32 100644
 +	.dt_compat	= ea3131_dt_match,
  	.restart	= arch_reset,
  MACHINE_END
- #endif
+-#endif
  
--
+ 
 diff --git a/arch/arm/mach-lpc31xx/clock.c b/arch/arm/mach-lpc31xx/clock.c
 index 69ab97a..2bc3921 100644
 --- a/arch/arm/mach-lpc31xx/clock.c
