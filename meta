@@ -1,5 +1,5 @@
 Version: 1
-Previous: d0da0b9ff9f07a60aa80d0ec644cea3ab53d605a
+Previous: cf5085f5f22eb0172bca008a7b55d9669d59e8d2
 Head: be9bd955d8e4d1b5e933118fbad2df4889dfad11
 Applied:
   roland-dt-1: 7e6b4367ad218d2750ec048d4654f03e87097501
@@ -16,7 +16,7 @@ Applied:
   video.patch: d4efeeec48e519dc30b65b335885f4f4bb961a7d
   phys.patch: e6a256b4ba10e16ad51186d3b57b6e096143c029
   mmc-stop-fix.patch: 3f52c6e79e4e74e9229c90db72950c70f1728a19
-  remove-config-noise: 269ea9ac7496a774ab91d5ad0358d74fcaf909a2
+  remove-config-noise.patch: 269ea9ac7496a774ab91d5ad0358d74fcaf909a2
   NXP-DMA-fixes.patch: 74388c528b72a430e6e795a012589cddf1b003ea
   NXP-uart-dma.patch: b18a4277300073f2de210e9c93fbd17718a608c7
   nxp-nand-dma.patch: 9dc6af74befbb44f6a179b236a047d3d53d71f6f
