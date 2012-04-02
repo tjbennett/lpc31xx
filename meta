@@ -1,8 +1,8 @@
 Version: 1
-Previous: cf5085f5f22eb0172bca008a7b55d9669d59e8d2
+Previous: e2003f18c6bbbff973d288d435a6086b79b19f8b
 Head: be9bd955d8e4d1b5e933118fbad2df4889dfad11
 Applied:
-  roland-dt-1: 7e6b4367ad218d2750ec048d4654f03e87097501
+  roland-dt-1.patch: 7e6b4367ad218d2750ec048d4654f03e87097501
   base.patch: 7de39230429aaac13de0f4a672dd3054717ecd1b
   defconfigs.patch: 2497bd075d308fc0c39d05b95104b4f0a02f0165
   nand.patch: ea1de97d91c41707253dea16b831d04d791a4e50
