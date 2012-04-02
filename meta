@@ -1,12 +1,12 @@
 Version: 1
-Previous: 280fc646b3e0b2dd048dc2057c7f886811f00096
+Previous: 4f19807d5e7748e10fc3f01ebc122f99df93fdf6
 Head: be9bd955d8e4d1b5e933118fbad2df4889dfad11
 Applied:
   roland-dt-1: 7e6b4367ad218d2750ec048d4654f03e87097501
   base.patch: 7de39230429aaac13de0f4a672dd3054717ecd1b
   defconfigs.patch: 2497bd075d308fc0c39d05b95104b4f0a02f0165
   nand: ea1de97d91c41707253dea16b831d04d791a4e50
-  spi: 57a092771bfe2ddb27f0a7b2b3b64e3fa2d3619a
+  spi.patch: 57a092771bfe2ddb27f0a7b2b3b64e3fa2d3619a
   mmc: cedb80c9caeed8f381fe5cf0a4ffd3d2d771056b
   watchdog: 0671c29353b8e232afe2760c16275bbdeaddd0ba
   sound: ea1301a11e674ea2e076c7d009a2f64c9f3d0ea9
