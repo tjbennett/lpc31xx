@@ -1,0 +1,3459 @@
+Bottom: 7c9a76f8b5d8d63e3c5ca7b2c5a3c7014a6dd899
+Top:    0240b5fa8905398a859ec36fa3a96ecc053e8ccc
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-10 00:02:26 -0400
+
+Refresh of dma
+
+---
+
+diff --git a/arch/arm/mach-lpc31xx/dma.c b/arch/arm/mach-lpc31xx/dma.c
+index bf6e040..62e2ca0 100644
+--- a/arch/arm/mach-lpc31xx/dma.c
++++ b/arch/arm/mach-lpc31xx/dma.c
+@@ -35,7 +35,7 @@
+ #include <mach/clock.h>
+ #include <mach/dma.h>
+ 
+-
++#ifdef LPDMA
+ static spinlock_t driver_lock; /* to guard state variables */
+ 
+ static inline void lpc313x_dma_lock(void)
+@@ -103,7 +103,7 @@ int dma_prog_channel (unsigned int chn, dma_setup_t *dma_setup)
+ 	return 0;
+ }
+ 
+-int dma_request_channel (char *name, dma_cb_t cb, void *data)
++int dma_request_channel_x (char *name, dma_cb_t cb, void *data)
+ {
+ 	unsigned int mask;
+ 	unsigned int chn;
+@@ -233,7 +233,7 @@ int dma_stop_channel_sg (unsigned int chn)
+ 	return 0;
+ }
+ 
+-int dma_release_channel (unsigned int chn)
++int dma_release_channel_x (unsigned int chn)
+ {
+ 	unsigned int mask = (0x3 << (chn * 2));
+ 	unsigned long flags;
+@@ -264,6 +264,7 @@ int dma_release_channel (unsigned int chn)
+ 	return 0;
+ }
+ 
++#if 0
+ static irqreturn_t dma_irq_handler (int irq, void *dev_id)
+ {
+ 	unsigned int mask;
+@@ -312,6 +313,7 @@ static irqreturn_t dma_irq_handler (int irq, void *dev_id)
+ 
+ 	return IRQ_HANDLED;
+ }
++#endif
+ 
+ int dma_read_counter (unsigned int chn, unsigned int * pcnt)
+ {
+@@ -484,6 +486,7 @@ int dma_channel_enabled(unsigned int chn)
+ 	return (DMACH_EN(chn) & 1);
+ }
+ 
++#if 0
+ static int __init lpc313x_dma_init (void)
+ {
+ 	int ret = 0;
+@@ -499,6 +502,7 @@ static int __init lpc313x_dma_init (void)
+ 
+ 	return ret;
+ }
++#endif
+ 
+ int dma_release_sg_channel (unsigned int chn)
+ {
+@@ -539,23 +543,44 @@ int dma_prepare_sg_list(int n, dma_sg_ll_t * sg)
+     /* fixed me: not yet implement */
+     return 0;
+ }
++#else
++int dma_request_channel_x (char *name, dma_cb_t cb, void *data){return 0;}
++int dma_request_specific_channel (int chn, char *name, void (*cb)(int, dma_irq_type_t, void *), void *data){return 0;}
++int dma_request_sg_channel (char *name, dma_cb_t cb, void *data, dma_cb_t cb1, void *data1, int usesoftirq){return 0;}
++int dma_request_specific_sg_channel (int chn, char *name, dma_cb_t cb, void *data, dma_cb_t cb1, void *data1, int usesoftirq){return 0;}
++int dma_release_channel_x (unsigned int chn){return 0;}
++int dma_release_sg_channel (unsigned int chn){return 0;}
++int dma_prog_channel (unsigned int chn, dma_setup_t *dma_setup){return 0;}
++int dma_start_channel (unsigned int chn){return 0;}
++int dma_stop_channel (unsigned int chn){return 0;}
++int dma_prog_sg_channel(int chn, u32 dma_sg_list){return 0;}
++int dma_set_irq_mask(unsigned int chn, int half_int, int fin_int){return 0;}
++int dma_write_counter (unsigned int chn, u32 cnt){return 0;}
++int dma_stop_channel_sg (unsigned int chn){return 0;}
++int dma_channel_enabled(unsigned int chn){return 0;}
++int dma_current_state (unsigned int   chn, unsigned int * psrc, unsigned int * pdst, unsigned int * plen, unsigned int * pcfg, unsigned int * pena, unsigned int * pcnt){return 0;}
++int dma_read_counter (unsigned int chn, unsigned int * pcnt){return 0;}
++int dma_prepare_sg_list(int n, dma_sg_ll_t * sg){return 0;}
++#endif
++
++//device_initcall(lpc313x_dma_init);
++
++EXPORT_SYMBOL(dma_request_channel_x);
++EXPORT_SYMBOL(dma_request_specific_channel);
++EXPORT_SYMBOL(dma_request_sg_channel);
++EXPORT_SYMBOL(dma_request_specific_sg_channel);
+ 
+-device_initcall(lpc313x_dma_init);
++EXPORT_SYMBOL(dma_release_channel_x);
++EXPORT_SYMBOL(dma_release_sg_channel);
+ 
+ 
+ EXPORT_SYMBOL(dma_prog_channel);
+-EXPORT_SYMBOL(dma_request_channel);
+-EXPORT_SYMBOL(dma_request_specific_channel);
+ EXPORT_SYMBOL(dma_start_channel);
+ EXPORT_SYMBOL(dma_stop_channel);
+-EXPORT_SYMBOL(dma_release_channel);
+ EXPORT_SYMBOL(dma_set_irq_mask);
+ EXPORT_SYMBOL(dma_read_counter);
+ EXPORT_SYMBOL(dma_write_counter);
+ EXPORT_SYMBOL(dma_current_state);
+-EXPORT_SYMBOL(dma_request_sg_channel);
+-EXPORT_SYMBOL(dma_request_specific_sg_channel);
+ EXPORT_SYMBOL(dma_prog_sg_channel);
+-EXPORT_SYMBOL(dma_release_sg_channel);
+ EXPORT_SYMBOL(dma_prepare_sg_list);
+ EXPORT_SYMBOL(dma_channel_enabled);
+diff --git a/arch/arm/mach-lpc31xx/include/mach/dma.h b/arch/arm/mach-lpc31xx/include/mach/dma.h
+index a5cc411..0e06a68 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/dma.h
++++ b/arch/arm/mach-lpc31xx/include/mach/dma.h
+@@ -24,6 +24,7 @@
+ #ifndef __ASM_ARCH_DMA_H
+ #define __ASM_ARCH_DMA_H
+ 
++#include <linux/dmaengine.h>
+ #include <mach/constants.h>
+ 
+ /***********************************************************************
+@@ -186,7 +187,7 @@ int dma_prog_channel (unsigned int, dma_setup_t   *);
+  *
+  * Returns: channel number on success, otherwise (negative) failure
+  */
+-int dma_request_channel (char *, dma_cb_t cb, void *);
++int dma_request_channel_x (char *, dma_cb_t cb, void *);
+ 
+ /*
+  * Request specific SDMA channel
+@@ -245,7 +246,7 @@ int dma_stop_channel (unsigned int);
+  *
+  * Returns: 0 on success, otherwise failure
+  */
+-int dma_release_channel (unsigned int);
++int dma_release_channel_x (unsigned int);
+ 
+ /*
+  * Read channel counter
+@@ -389,4 +390,23 @@ int dma_release_sg_channel (unsigned int);
+  */
+ int dma_channel_enabled(unsigned int);
+ 
++
++/**
++ * struct lpc31xx_dma_data - configuration data for the LPC31xx dmaengine
++ * @port: peripheral which is requesting the channel
++ * @direction: TX/RX channel
++ * @name: optional name for the channel, this is displayed in /proc/interrupts
++ *
++ * This information is passed as private channel parameter in a filter
++ * function. Note that this is only needed for slave/cyclic channels.  For
++ * memcpy channels %NULL data should be passed.
++ */
++struct lpc31xx_dma_data {
++	int port;
++	enum dma_transfer_direction	direction;
++	const char *name;
++};
++
++
++
+ #endif				/* _ASM_ARCH_DMA_H */
+diff --git a/arch/arm/mach-lpc31xx/include/mach/registers.h b/arch/arm/mach-lpc31xx/include/mach/registers.h
+index 01f4114..9dbb131 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/registers.h
++++ b/arch/arm/mach-lpc31xx/include/mach/registers.h
+@@ -126,6 +126,7 @@
+ #define UART_ICR_REG      __REG (UART_PHYS + 0x24)
+ #define UART_FDR_REG      __REG (UART_PHYS + 0x28)
+ 
++#if 0
+ /***********************************************************************
+  * SPI register definitions
+  **********************************************************************/
+@@ -213,6 +214,7 @@
+ #define SPI_TO_INT                _BIT(1)
+ #define SPI_OVR_INT               _BIT(0)
+ #define SPI_ALL_INTS              (SPI_SMS_INT | SPI_TX_INT | SPI_RX_INT | SPI_TO_INT | SPI_OVR_INT)
++#endif
+ 
+ /***********************************************************************
+ * Audio Subsystem (ADSS) register definitions
+diff --git a/drivers/dma/Kconfig b/drivers/dma/Kconfig
+index f1a2749..502456e 100644
+--- a/drivers/dma/Kconfig
++++ b/drivers/dma/Kconfig
+@@ -245,6 +245,13 @@ config MXS_DMA
+ 	  Support the MXS DMA engine. This engine including APBH-DMA
+ 	  and APBX-DMA is integrated into Freescale i.MX23/28 chips.
+ 
++config LPC31XX_DMA
++	bool "LPC31xx DMA support"
++	depends on ARCH_LPC31XX
++	select DMA_ENGINE
++	help
++	  Support the NXP LPC31xx DMA engine.
++
+ config EP93XX_DMA
+ 	bool "Cirrus Logic EP93xx DMA support"
+ 	depends on ARCH_EP93XX
+diff --git a/drivers/dma/Makefile b/drivers/dma/Makefile
+index 009a222..9a6d637 100644
+--- a/drivers/dma/Makefile
++++ b/drivers/dma/Makefile
+@@ -20,6 +20,7 @@ obj-$(CONFIG_AMCC_PPC440SPE_ADMA) += ppc4xx/
+ obj-$(CONFIG_IMX_SDMA) += imx-sdma.o
+ obj-$(CONFIG_IMX_DMA) += imx-dma.o
+ obj-$(CONFIG_MXS_DMA) += mxs-dma.o
++obj-$(CONFIG_LPC31XX_DMA) += lpc31xx-dma.o
+ obj-$(CONFIG_TIMB_DMA) += timb_dma.o
+ obj-$(CONFIG_SIRF_DMA) += sirf-dma.o
+ obj-$(CONFIG_STE_DMA40) += ste_dma40.o ste_dma40_ll.o
+diff --git a/drivers/dma/dmaengine.c b/drivers/dma/dmaengine.c
+index a6c6051..d9a9eaf 100644
+--- a/drivers/dma/dmaengine.c
++++ b/drivers/dma/dmaengine.c
+@@ -45,6 +45,8 @@
+  * See Documentation/dmaengine.txt for more details
+  */
+ 
++#define DEBUG
++
+ #include <linux/dma-mapping.h>
+ #include <linux/init.h>
+ #include <linux/module.h>
+diff --git a/drivers/dma/lpc31xx-dma.c b/drivers/dma/lpc31xx-dma.c
+new file mode 100644
+index 0000000..326a03f
+--- /dev/null
++++ b/drivers/dma/lpc31xx-dma.c
+@@ -0,0 +1,1179 @@
++/*  arch/arm/mach-lpc313x/dma.c
++ *
++ *  Author:	Durgesh Pattamatta
++ *  Copyright (C) 2009 NXP semiconductors
++ *
++ *  DMA driver for machines with LPC313x and LPC315x SoCs.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ *
++ */
++
++#include <linux/init.h>
++#include <linux/interrupt.h>
++#include <linux/dmaengine.h>
++#include <linux/module.h>
++#include <linux/platform_device.h>
++#include <linux/slab.h>
++#include <linux/dma-mapping.h>
++
++#include <mach/dma.h>
++
++struct lpc31xx_dma_engine;
++
++/**
++ * struct lpc31xx_dma_desc - LPC31xx specific transaction descriptor
++ * @src_addr: source address of the transaction
++ * @dst_addr: destination address of the transaction
++ * @size: size of the transaction (in bytes)
++ * @complete: this descriptor is completed
++ * @txd: dmaengine API descriptor
++ * @tx_list: list of linked descriptors
++ * @node: link used for putting this into a channel queue
++ */
++struct lpc31xx_dma_desc {
++	uint32_t src_addr;
++	uint32_t dst_addr;
++	size_t size;
++	bool complete;
++	struct dma_async_tx_descriptor txd;
++	struct list_head tx_list;
++	struct list_head node;
++};
++#define DMA_MAX_CHAN_DESCRIPTORS 32
++
++/**
++ * struct lpc31xx_dma_chan - an LPC31xx DMA channel
++ * @chan: dmaengine API channel
++ * @number: number of the channel
++ * @edma: pointer to to the engine device
++ * @regs: memory mapped registers
++ * @tasklet: channel specific tasklet used for callbacks
++ * @lock: lock protecting the fields following
++ * @flags: flags for the channel
++ * @buffer: which buffer to use next (0/1)
++ * @last_completed: last completed cookie value
++ * @active: flattened chain of descriptors currently being processed
++ * @queue: pending descriptors which are handled next
++ * @free_list: list of free descriptors which can be used
++ * @runtime_addr: physical address currently used as dest/src (M2M only). This
++ *                is set via %DMA_SLAVE_CONFIG before slave operation is
++ *                prepared
++ * @runtime_ctrl: M2M runtime values for the control register.
++ *
++ * As LPC31xx DMA controller doesn't support real chained DMA descriptors we
++ * will have slightly different scheme here: @active points to a head of
++ * flattened DMA descriptor chain.
++ *
++ * @queue holds pending transactions. These are linked through the first
++ * descriptor in the chain. When a descriptor is moved to the @active queue,
++ * the first and chained descriptors are flattened into a single list.
++ *
++ * @chan.private holds pointer to &struct lpc31xx_dma_data which contains
++ * necessary channel configuration information. For memcpy channels this must
++ * be %NULL.
++ */
++struct lpc31xx_dma_chan {
++	struct dma_chan chan;
++	int number;
++	const struct lpc31xx_dma_engine	*edma;
++	void __iomem *regs;
++	struct tasklet_struct tasklet;
++	unsigned long flags;
++/* Channel is configured for cyclic transfers */
++#define LPC31xx_DMA_IS_CYCLIC 0
++
++	int buffer;
++	dma_cookie_t last_completed;
++	struct list_head active;
++	struct list_head queue;
++	struct list_head free_list;
++	uint32_t runtime_addr;
++	uint32_t runtime_ctrl;
++};
++
++/**
++ * struct lpc31xx_dma_engine - the LPC31xx DMA engine instance
++ * @dma_dev: holds the dmaengine device
++ * @channels: array of channels
++ */
++struct lpc31xx_dma_engine {
++	struct dma_device dma_dev;
++#define INTERRUPT_UNKNOWN 0
++#define INTERRUPT_DONE 1
++#define INTERRUPT_NEXT_BUFFER 2
++
++	struct lpc31xx_dma_chan	channels[DMA_MAX_CHANNELS];
++};
++
++static inline struct device *chan2dev(struct lpc31xx_dma_chan *edmac)
++{
++	return &edmac->chan.dev->device;
++}
++
++static struct lpc31xx_dma_chan *to_lpc31xx_dma_chan(struct dma_chan *chan)
++{
++	return container_of(chan, struct lpc31xx_dma_chan, chan);
++}
++
++static spinlock_t driver_lock; /* to guard state variables */
++
++static unsigned int dma_irq_mask = 0xFFFFFFFF;
++static int sg_higher_channel[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
++static int softirqmask[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
++static int softirqen = 0;
++
++static int dma_channels_requested = 0;
++
++static inline void lpc31xx_dma_increment_usage(void)
++{
++	if (!dma_channels_requested++) {
++		cgu_clk_en_dis(CGU_SB_DMA_CLK_GATED_ID, 1);
++		cgu_clk_en_dis(CGU_SB_DMA_PCLK_ID, 1);
++	}
++}
++static inline void lpc31xx_dma_decrement_usage(void)
++{
++	if (!--dma_channels_requested) {
++		cgu_clk_en_dis(CGU_SB_DMA_CLK_GATED_ID, 0);
++		cgu_clk_en_dis(CGU_SB_DMA_PCLK_ID, 0);
++	}
++}
++
++/**
++ * lpc31xx_dma_set_active - set new active descriptor chain
++ * @edmac: channel
++ * @desc: head of the new active descriptor chain
++ *
++ * Sets @desc to be the head of the new active descriptor chain. This is the
++ * chain which is processed next. The active list must be empty before calling
++ * this function.
++ *
++ * Called with @driver_lock held and interrupts disabled.
++ */
++static void lpc31xx_dma_set_active(struct lpc31xx_dma_chan *edmac,
++				  struct lpc31xx_dma_desc *desc)
++{
++	printk("jds - lpc31xx_dma_set_active\n");
++	BUG_ON(!list_empty(&edmac->active));
++
++	list_add_tail(&desc->node, &edmac->active);
++
++	/* Flatten the @desc->tx_list chain into @edmac->active list */
++	while (!list_empty(&desc->tx_list)) {
++		struct lpc31xx_dma_desc *d = list_first_entry(&desc->tx_list,
++			struct lpc31xx_dma_desc, node);
++
++		/*
++		 * We copy the callback parameters from the first descriptor
++		 * to all the chained descriptors. This way we can call the
++		 * callback without having to find out the first descriptor in
++		 * the chain. Useful for cyclic transfers.
++		 */
++		d->txd.callback = desc->txd.callback;
++		d->txd.callback_param = desc->txd.callback_param;
++
++		list_move_tail(&d->node, &edmac->active);
++	}
++}
++
++/* Called with @driver_lock held and interrupts disabled */
++static struct lpc31xx_dma_desc *
++lpc31xx_dma_get_active(struct lpc31xx_dma_chan *edmac)
++{
++	printk("jds - lpc31xx_dma_get_active\n");
++	if (list_empty(&edmac->active))
++		return NULL;
++
++	return list_first_entry(&edmac->active, struct lpc31xx_dma_desc, node);
++}
++
++/**
++ * lpc31xx_dma_advance_active - advances to the next active descriptor
++ * @edmac: channel
++ *
++ * Function advances active descriptor to the next in the @edmac->active and
++ * returns %true if we still have descriptors in the chain to process.
++ * Otherwise returns %false.
++ *
++ * When the channel is in cyclic mode always returns %true.
++ *
++ * Called with @driver_lock held and interrupts disabled.
++ */
++static bool lpc31xx_dma_advance_active(struct lpc31xx_dma_chan *edmac)
++{
++	struct lpc31xx_dma_desc *desc;
++
++	printk("jds - lpc31xx_dma_advance_active\n");
++	list_rotate_left(&edmac->active);
++
++	if (test_bit(LPC31xx_DMA_IS_CYCLIC, &edmac->flags))
++		return true;
++
++	desc = lpc31xx_dma_get_active(edmac);
++	if (!desc)
++		return false;
++
++	/*
++	 * If txd.cookie is set it means that we are back in the first
++	 * descriptor in the chain and hence done with it.
++	 */
++	return !desc->txd.cookie;
++}
++
++/*
++ * M2P DMA implementation
++ */
++
++static void m2p_set_control(struct lpc31xx_dma_chan *edmac, uint32_t control)
++{
++	printk("jds - m2p_set_control\n");
++#if 0
++	writel(control, edmac->regs + M2P_CONTROL);
++	/*
++	 * LPC31xx User's Guide states that we must perform a dummy read after
++	 * write to the control register.
++	 */
++	readl(edmac->regs + M2P_CONTROL);
++#endif
++}
++
++static int m2p_hw_setup(struct lpc31xx_dma_chan *edmac)
++{
++	struct lpc31xx_dma_data *data = edmac->chan.private;
++	uint32_t control;
++
++	printk("jds - m2p_hw_setup\n");
++#if 0
++	writel(data->port & 0xf, edmac->regs + M2P_PPALLOC);
++
++	control = M2P_CONTROL_CH_ERROR_INT | M2P_CONTROL_ICE
++		| M2P_CONTROL_ENABLE;
++	m2p_set_control(edmac, control);
++#endif
++	return 0;
++}
++
++static inline uint32_t m2p_channel_state(struct lpc31xx_dma_chan *edmac)
++{
++	printk("jds - m2p_channel_state\n");
++#if 0
++	return (readl(edmac->regs + M2P_STATUS) >> 4) & 0x3;
++#endif
++}
++
++static void m2p_hw_shutdown(struct lpc31xx_dma_chan *edmac)
++{
++	uint32_t control;
++	printk("jds - m2p_channel_state\n");
++#if 0
++	control = readl(edmac->regs + M2P_CONTROL);
++	control &= ~(M2P_CONTROL_STALLINT | M2P_CONTROL_NFBINT);
++	m2p_set_control(edmac, control);
++
++	while (m2p_channel_state(edmac) >= M2P_STATE_ON)
++		cpu_relax();
++
++	m2p_set_control(edmac, 0);
++
++	while (m2p_channel_state(edmac) == M2P_STATE_STALL)
++		cpu_relax();
++#endif
++}
++
++static void m2p_fill_desc(struct lpc31xx_dma_chan *edmac)
++{
++	struct lpc31xx_dma_desc *desc;
++	uint32_t bus_addr;
++
++	printk("jds - m2p_fill_desc\n");
++	desc = lpc31xx_dma_get_active(edmac);
++	if (!desc) {
++		dev_warn(chan2dev(edmac), "M2P: empty descriptor list\n");
++		return;
++	}
++#if 0
++	if (lpc31xx_dma_chan_direction(&edmac->chan) == DMA_MEM_TO_DEV)
++		bus_addr = desc->src_addr;
++	else
++		bus_addr = desc->dst_addr;
++
++	if (edmac->buffer == 0) {
++		writel(desc->size, edmac->regs + M2P_MAXCNT0);
++		writel(bus_addr, edmac->regs + M2P_BASE0);
++	} else {
++		writel(desc->size, edmac->regs + M2P_MAXCNT1);
++		writel(bus_addr, edmac->regs + M2P_BASE1);
++	}
++#endif
++	edmac->buffer ^= 1;
++}
++
++static void m2p_hw_submit(struct lpc31xx_dma_chan *edmac)
++{
++	printk("jds - m2p_hw_submit\n");
++#if 0
++	uint32_t control = readl(edmac->regs + M2P_CONTROL);
++
++	m2p_fill_desc(edmac);
++	control |= M2P_CONTROL_STALLINT;
++
++	if (lpc31xx_dma_advance_active(edmac)) {
++		m2p_fill_desc(edmac);
++		control |= M2P_CONTROL_NFBINT;
++	}
++
++	m2p_set_control(edmac, control);
++#endif
++}
++
++static int m2p_hw_interrupt(struct lpc31xx_dma_chan *edmac)
++{
++	printk("jds - m2p_hw_interrupt\n");
++#if 0
++	uint32_t irq_status = readl(edmac->regs + M2P_INTERRUPT);
++	uint32_t control;
++
++	if (irq_status & M2P_INTERRUPT_ERROR) {
++		struct lpc31xx_dma_desc *desc = lpc31xx_dma_get_active(edmac);
++
++		/* Clear the error interrupt */
++		writel(1, edmac->regs + M2P_INTERRUPT);
++
++		/*
++		 * It seems that there is no easy way of reporting errors back
++		 * to client so we just report the error here and continue as
++		 * usual.
++		 *
++		 * Revisit this when there is a mechanism to report back the
++		 * errors.
++		 */
++		dev_err(chan2dev(edmac),
++			"DMA transfer failed! Details:\n"
++			"\tcookie	: %d\n"
++			"\tsrc_addr	: 0x%08x\n"
++			"\tdst_addr	: 0x%08x\n"
++			"\tsize		: %zu\n",
++			desc->txd.cookie, desc->src_addr, desc->dst_addr,
++			desc->size);
++	}
++
++	switch (irq_status & (M2P_INTERRUPT_STALL | M2P_INTERRUPT_NFB)) {
++	case M2P_INTERRUPT_STALL:
++		/* Disable interrupts */
++		control = readl(edmac->regs + M2P_CONTROL);
++		control &= ~(M2P_CONTROL_STALLINT | M2P_CONTROL_NFBINT);
++		m2p_set_control(edmac, control);
++
++		return INTERRUPT_DONE;
++
++	case M2P_INTERRUPT_NFB:
++		if (lpc31xx_dma_advance_active(edmac))
++			m2p_fill_desc(edmac);
++
++		return INTERRUPT_NEXT_BUFFER;
++	}
++#endif
++	return INTERRUPT_UNKNOWN;
++}
++
++/*
++ * DMA engine API implementation
++ */
++
++static struct lpc31xx_dma_desc *
++lpc31xx_dma_desc_get(struct lpc31xx_dma_chan *edmac)
++{
++	struct lpc31xx_dma_desc *desc, *_desc;
++	struct lpc31xx_dma_desc *ret = NULL;
++	unsigned long flags;
++
++	printk("jds - lpc31xx_dma_desc_get\n");
++	spin_lock_irqsave(&driver_lock, flags);
++	list_for_each_entry_safe(desc, _desc, &edmac->free_list, node) {
++		if (async_tx_test_ack(&desc->txd)) {
++			list_del_init(&desc->node);
++
++			/* Re-initialize the descriptor */
++			desc->src_addr = 0;
++			desc->dst_addr = 0;
++			desc->size = 0;
++			desc->complete = false;
++			desc->txd.cookie = 0;
++			desc->txd.callback = NULL;
++			desc->txd.callback_param = NULL;
++
++			ret = desc;
++			break;
++		}
++	}
++	spin_unlock_irqrestore(&driver_lock, flags);
++	return ret;
++}
++
++static void lpc31xx_dma_desc_put(struct lpc31xx_dma_chan *edmac,
++				struct lpc31xx_dma_desc *desc)
++{
++	if (desc) {
++		unsigned long flags;
++
++		spin_lock_irqsave(&driver_lock, flags);
++		list_splice_init(&desc->tx_list, &edmac->free_list);
++		list_add(&desc->node, &edmac->free_list);
++		spin_unlock_irqrestore(&driver_lock, flags);
++	}
++}
++
++/**
++ * lpc31xx_dma_advance_work - start processing the next pending transaction
++ * @edmac: channel
++ *
++ * If we have pending transactions queued and we are currently idling, this
++ * function takes the next queued transaction from the @edmac->queue and
++ * pushes it to the hardware for execution.
++ */
++static void lpc31xx_dma_advance_work(struct lpc31xx_dma_chan *edmac)
++{
++	struct lpc31xx_dma_desc *new;
++	unsigned long flags;
++
++	printk("jds - lpc31xx_dma_advance_work\n");
++	spin_lock_irqsave(&driver_lock, flags);
++	if (!list_empty(&edmac->active) || list_empty(&edmac->queue)) {
++		spin_unlock_irqrestore(&driver_lock, flags);
++		return;
++	}
++
++	/* Take the next descriptor from the pending queue */
++	new = list_first_entry(&edmac->queue, struct lpc31xx_dma_desc, node);
++	list_del_init(&new->node);
++
++	lpc31xx_dma_set_active(edmac, new);
++
++	/* Push it to the hardware */
++	m2p_hw_submit(edmac);
++	spin_unlock_irqrestore(&driver_lock, flags);
++}
++
++static void lpc31xx_dma_unmap_buffers(struct lpc31xx_dma_desc *desc)
++{
++	struct device *dev = desc->txd.chan->device->dev;
++
++	printk("jds - lpc31xx_dma_unmap_buffers\n");
++	if (!(desc->txd.flags & DMA_COMPL_SKIP_SRC_UNMAP)) {
++		if (desc->txd.flags & DMA_COMPL_SRC_UNMAP_SINGLE)
++			dma_unmap_single(dev, desc->src_addr, desc->size,
++					 DMA_TO_DEVICE);
++		else
++			dma_unmap_page(dev, desc->src_addr, desc->size,
++				       DMA_TO_DEVICE);
++	}
++	if (!(desc->txd.flags & DMA_COMPL_SKIP_DEST_UNMAP)) {
++		if (desc->txd.flags & DMA_COMPL_DEST_UNMAP_SINGLE)
++			dma_unmap_single(dev, desc->dst_addr, desc->size,
++					 DMA_FROM_DEVICE);
++		else
++			dma_unmap_page(dev, desc->dst_addr, desc->size,
++				       DMA_FROM_DEVICE);
++	}
++}
++
++static void lpc31xx_dma_tasklet(unsigned long data)
++{
++	struct lpc31xx_dma_chan *edmac = (struct lpc31xx_dma_chan *)data;
++	struct lpc31xx_dma_desc *desc, *d;
++	dma_async_tx_callback callback = NULL;
++	void *callback_param = NULL;
++	LIST_HEAD(list);
++
++	printk("jds - lpc31xx_dma_tasklet\n");
++	spin_lock_irq(&driver_lock);
++	/*
++	 * If dma_terminate_all() was called before we get to run, the active
++	 * list has become empty. If that happens we aren't supposed to do
++	 * anything more than call lpc31xx_dma_advance_work().
++	 */
++	desc = lpc31xx_dma_get_active(edmac);
++	if (desc) {
++		if (desc->complete) {
++			edmac->last_completed = desc->txd.cookie;
++			list_splice_init(&edmac->active, &list);
++		}
++		callback = desc->txd.callback;
++		callback_param = desc->txd.callback_param;
++	}
++	spin_unlock_irq(&driver_lock);
++
++	/* Pick up the next descriptor from the queue */
++	lpc31xx_dma_advance_work(edmac);
++
++	/* Now we can release all the chained descriptors */
++	list_for_each_entry_safe(desc, d, &list, node) {
++		/*
++		 * For the memcpy channels the API requires us to unmap the
++		 * buffers unless requested otherwise.
++		 */
++		if (!edmac->chan.private)
++			lpc31xx_dma_unmap_buffers(desc);
++
++		lpc31xx_dma_desc_put(edmac, desc);
++	}
++
++	if (callback)
++		callback(callback_param);
++}
++
++static irqreturn_t lpc31xx_dma_irq_handler(int irq, void *dev_id)
++{
++	struct lpc31xx_dma_chan *edmac = dev_id;
++	struct lpc31xx_dma_desc *desc;
++	irqreturn_t ret = IRQ_HANDLED;
++
++	printk("jds - lpc31xx_dma_irq_handler\n");
++	spin_lock(&driver_lock);
++
++	desc = lpc31xx_dma_get_active(edmac);
++	if (!desc) {
++		dev_warn(chan2dev(edmac),
++			 "got interrupt while active list is empty\n");
++		spin_unlock(&driver_lock);
++		return IRQ_NONE;
++	}
++
++	switch (m2p_hw_interrupt(edmac)) {
++	case INTERRUPT_DONE:
++		desc->complete = true;
++		tasklet_schedule(&edmac->tasklet);
++		break;
++
++	case INTERRUPT_NEXT_BUFFER:
++		if (test_bit(LPC31xx_DMA_IS_CYCLIC, &edmac->flags))
++			tasklet_schedule(&edmac->tasklet);
++		break;
++
++	default:
++		dev_warn(chan2dev(edmac), "unknown interrupt!\n");
++		ret = IRQ_NONE;
++		break;
++	}
++
++	spin_unlock(&driver_lock);
++	return ret;
++}
++
++/**
++ * lpc31xx_dma_tx_submit - set the prepared descriptor(s) to be executed
++ * @tx: descriptor to be executed
++ *
++ * Function will execute given descriptor on the hardware or if the hardware
++ * is busy, queue the descriptor to be executed later on. Returns cookie which
++ * can be used to poll the status of the descriptor.
++ */
++static dma_cookie_t lpc31xx_dma_tx_submit(struct dma_async_tx_descriptor *tx)
++{
++	struct lpc31xx_dma_chan *edmac = to_lpc31xx_dma_chan(tx->chan);
++	struct lpc31xx_dma_desc *desc;
++	dma_cookie_t cookie;
++	unsigned long flags;
++
++	printk("jds - lpc31xx_dma_tx_submit\n");
++	spin_lock_irqsave(&driver_lock, flags);
++
++	cookie = edmac->chan.cookie;
++
++	if (++cookie < 0)
++		cookie = 1;
++
++	desc = container_of(tx, struct lpc31xx_dma_desc, txd);
++
++	edmac->chan.cookie = cookie;
++	desc->txd.cookie = cookie;
++
++	/*
++	 * If nothing is currently processed, we push this descriptor
++	 * directly to the hardware. Otherwise we put the descriptor
++	 * to the pending queue.
++	 */
++	if (list_empty(&edmac->active)) {
++		lpc31xx_dma_set_active(edmac, desc);
++		m2p_hw_submit(edmac);
++	} else {
++		list_add_tail(&desc->node, &edmac->queue);
++	}
++
++	spin_unlock_irqrestore(&driver_lock, flags);
++	return cookie;
++}
++
++/**
++ * lpc31xx_dma_alloc_chan_resources - allocate resources for the channel
++ * @chan: channel to allocate resources
++ *
++ * Function allocates necessary resources for the given DMA channel and
++ * returns number of allocated descriptors for the channel. Negative errno
++ * is returned in case of failure.
++ */
++static int lpc31xx_dma_alloc_chan_resources(struct dma_chan *chan)
++{
++	struct lpc31xx_dma_chan *edmac = to_lpc31xx_dma_chan(chan);
++	struct lpc31xx_dma_data *data = chan->private;
++	const char *name = dma_chan_name(chan);
++	int ret, i;
++
++	printk("jds - lpc31xx_dma_alloc_chan_resources\n");
++	/* Sanity check the channel parameters */
++	if (data) {
++		if (data->port) {
++			if (data->direction != DMA_MEM_TO_DEV &&
++				data->direction != DMA_DEV_TO_MEM)
++				return -EINVAL;
++		}
++	}
++	if (data && data->name)
++		name = data->name;
++
++	lpc31xx_dma_increment_usage();
++
++	spin_lock_irq(&driver_lock);
++	edmac->last_completed = 1;
++	edmac->chan.cookie = 1;
++	ret = m2p_hw_setup(edmac);
++	spin_unlock_irq(&driver_lock);
++
++	if (ret)
++		goto fail;
++
++	for (i = 0; i < DMA_MAX_CHAN_DESCRIPTORS; i++) {
++		struct lpc31xx_dma_desc *desc;
++
++		desc = kzalloc(sizeof(*desc), GFP_KERNEL);
++		if (!desc) {
++			dev_warn(chan2dev(edmac), "not enough descriptors\n");
++			break;
++		}
++
++		INIT_LIST_HEAD(&desc->tx_list);
++
++		dma_async_tx_descriptor_init(&desc->txd, chan);
++		desc->txd.flags = DMA_CTRL_ACK;
++		desc->txd.tx_submit = lpc31xx_dma_tx_submit;
++
++		lpc31xx_dma_desc_put(edmac, desc);
++	}
++
++	return i;
++
++fail:
++	lpc31xx_dma_decrement_usage();
++
++	return ret;
++}
++
++/**
++ * lpc31xx_dma_free_chan_resources - release resources for the channel
++ * @chan: channel
++ *
++ * Function releases all the resources allocated for the given channel.
++ * The channel must be idle when this is called.
++ */
++static void lpc31xx_dma_free_chan_resources(struct dma_chan *chan)
++{
++	struct lpc31xx_dma_chan *edmac = to_lpc31xx_dma_chan(chan);
++	struct lpc31xx_dma_desc *desc, *d;
++	unsigned long flags;
++	LIST_HEAD(list);
++
++	printk("jds - lpc31xx_dma_free_chan_resources\n");
++	BUG_ON(!list_empty(&edmac->active));
++	BUG_ON(!list_empty(&edmac->queue));
++
++	spin_lock_irqsave(&driver_lock, flags);
++	m2p_hw_shutdown(edmac);
++	edmac->runtime_addr = 0;
++	edmac->runtime_ctrl = 0;
++	edmac->buffer = 0;
++	list_splice_init(&edmac->free_list, &list);
++	spin_unlock_irqrestore(&driver_lock, flags);
++
++	list_for_each_entry_safe(desc, d, &list, node)
++		kfree(desc);
++
++	lpc31xx_dma_decrement_usage();
++}
++
++/**
++ * lpc31xx_dma_prep_dma_memcpy - prepare a memcpy DMA operation
++ * @chan: channel
++ * @dest: destination bus address
++ * @src: source bus address
++ * @len: size of the transaction
++ * @flags: flags for the descriptor
++ *
++ * Returns a valid DMA descriptor or %NULL in case of failure.
++ */
++static struct dma_async_tx_descriptor *
++lpc31xx_dma_prep_dma_memcpy(struct dma_chan *chan, dma_addr_t dest,
++			   dma_addr_t src, size_t len, unsigned long flags)
++{
++	struct lpc31xx_dma_chan *edmac = to_lpc31xx_dma_chan(chan);
++	struct lpc31xx_dma_desc *desc, *first;
++	size_t bytes, offset;
++
++	printk("jds - lpc31xx_dma_prep_dma_memcpy\n");
++	first = NULL;
++	for (offset = 0; offset < len; offset += bytes) {
++		desc = lpc31xx_dma_desc_get(edmac);
++		if (!desc) {
++			dev_warn(chan2dev(edmac), "couln't get descriptor\n");
++			goto fail;
++		}
++
++		bytes = min_t(size_t, len - offset, DMA_MAX_TRANSFERS + 1);
++
++		desc->src_addr = src + offset;
++		desc->dst_addr = dest + offset;
++		desc->size = bytes;
++
++		if (!first)
++			first = desc;
++		else
++			list_add_tail(&desc->node, &first->tx_list);
++	}
++
++	first->txd.cookie = -EBUSY;
++	first->txd.flags = flags;
++
++	return &first->txd;
++fail:
++	lpc31xx_dma_desc_put(edmac, first);
++	return NULL;
++}
++
++/**
++ * lpc31xx_dma_prep_slave_sg - prepare a slave DMA operation
++ * @chan: channel
++ * @sgl: list of buffers to transfer
++ * @sg_len: number of entries in @sgl
++ * @dir: direction of tha DMA transfer
++ * @flags: flags for the descriptor
++ *
++ * Returns a valid DMA descriptor or %NULL in case of failure.
++ */
++static struct dma_async_tx_descriptor *
++lpc31xx_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl,
++			 unsigned int sg_len, enum dma_transfer_direction dir,
++			 unsigned long flags)
++{
++	struct lpc31xx_dma_chan *edmac = to_lpc31xx_dma_chan(chan);
++	struct lpc31xx_dma_desc *desc, *first;
++	struct scatterlist *sg;
++	int i;
++
++	printk("jds - lpc31xx_dma_prep_slave_sg\n");
++#if 0
++	if (!edmac->edma->m2m && dir != lpc31xx_dma_chan_direction(chan)) {
++		dev_warn(chan2dev(edmac),
++			 "channel was configured with different direction\n");
++		return NULL;
++	}
++#endif
++	if (test_bit(LPC31xx_DMA_IS_CYCLIC, &edmac->flags)) {
++		dev_warn(chan2dev(edmac),
++			 "channel is already used for cyclic transfers\n");
++		return NULL;
++	}
++
++	first = NULL;
++	for_each_sg(sgl, sg, sg_len, i) {
++		size_t sg_len = sg_dma_len(sg);
++
++		if (sg_len > DMA_MAX_TRANSFERS) {
++			dev_warn(chan2dev(edmac), "too big transfer size %d\n",
++				 sg_len);
++			goto fail;
++		}
++
++		desc = lpc31xx_dma_desc_get(edmac);
++		if (!desc) {
++			dev_warn(chan2dev(edmac), "couln't get descriptor\n");
++			goto fail;
++		}
++
++		if (dir == DMA_MEM_TO_DEV) {
++			desc->src_addr = sg_dma_address(sg);
++			desc->dst_addr = edmac->runtime_addr;
++		} else {
++			desc->src_addr = edmac->runtime_addr;
++			desc->dst_addr = sg_dma_address(sg);
++		}
++		desc->size = sg_len;
++
++		if (!first)
++			first = desc;
++		else
++			list_add_tail(&desc->node, &first->tx_list);
++	}
++
++	first->txd.cookie = -EBUSY;
++	first->txd.flags = flags;
++
++	return &first->txd;
++
++fail:
++	lpc31xx_dma_desc_put(edmac, first);
++	return NULL;
++}
++
++/**
++ * lpc31xx_dma_prep_dma_cyclic - prepare a cyclic DMA operation
++ * @chan: channel
++ * @dma_addr: DMA mapped address of the buffer
++ * @buf_len: length of the buffer (in bytes)
++ * @period_len: lenght of a single period
++ * @dir: direction of the operation
++ *
++ * Prepares a descriptor for cyclic DMA operation. This means that once the
++ * descriptor is submitted, we will be submitting in a @period_len sized
++ * buffers and calling callback once the period has been elapsed. Transfer
++ * terminates only when client calls dmaengine_terminate_all() for this
++ * channel.
++ *
++ * Returns a valid DMA descriptor or %NULL in case of failure.
++ */
++static struct dma_async_tx_descriptor *
++lpc31xx_dma_prep_dma_cyclic(struct dma_chan *chan, dma_addr_t dma_addr,
++			   size_t buf_len, size_t period_len,
++			   enum dma_transfer_direction dir)
++{
++	struct lpc31xx_dma_chan *edmac = to_lpc31xx_dma_chan(chan);
++	struct lpc31xx_dma_desc *desc, *first;
++	size_t offset = 0;
++
++	printk("jds - lpc31xx_dma_prep_dma_cyclic\n");
++#if 0
++	if (!edmac->edma->m2m && dir != lpc31xx_dma_chan_direction(chan)) {
++		dev_warn(chan2dev(edmac),
++			 "channel was configured with different direction\n");
++		return NULL;
++	}
++#endif
++	if (test_and_set_bit(LPC31xx_DMA_IS_CYCLIC, &edmac->flags)) {
++		dev_warn(chan2dev(edmac),
++			 "channel is already used for cyclic transfers\n");
++		return NULL;
++	}
++
++	if (period_len > DMA_MAX_TRANSFERS + 1) {
++		dev_warn(chan2dev(edmac), "too big period length %d\n",
++			 period_len);
++		return NULL;
++	}
++
++	/* Split the buffer into period size chunks */
++	first = NULL;
++	for (offset = 0; offset < buf_len; offset += period_len) {
++		desc = lpc31xx_dma_desc_get(edmac);
++		if (!desc) {
++			dev_warn(chan2dev(edmac), "couln't get descriptor\n");
++			goto fail;
++		}
++
++		if (dir == DMA_MEM_TO_DEV) {
++			desc->src_addr = dma_addr + offset;
++			desc->dst_addr = edmac->runtime_addr;
++		} else {
++			desc->src_addr = edmac->runtime_addr;
++			desc->dst_addr = dma_addr + offset;
++		}
++
++		desc->size = period_len;
++
++		if (!first)
++			first = desc;
++		else
++			list_add_tail(&desc->node, &first->tx_list);
++	}
++
++	first->txd.cookie = -EBUSY;
++
++	return &first->txd;
++
++fail:
++	lpc31xx_dma_desc_put(edmac, first);
++	return NULL;
++}
++
++/**
++ * lpc31xx_dma_terminate_all - terminate all transactions
++ * @edmac: channel
++ *
++ * Stops all DMA transactions. All descriptors are put back to the
++ * @edmac->free_list and callbacks are _not_ called.
++ */
++static int lpc31xx_dma_terminate_all(struct lpc31xx_dma_chan *edmac)
++{
++	struct lpc31xx_dma_desc *desc, *_d;
++	unsigned long flags;
++	LIST_HEAD(list);
++
++	printk("jds - lpc31xx_dma_terminate_all\n");
++	spin_lock_irqsave(&driver_lock, flags);
++	/* First we disable and flush the DMA channel */
++	m2p_hw_shutdown(edmac);
++	clear_bit(LPC31xx_DMA_IS_CYCLIC, &edmac->flags);
++	list_splice_init(&edmac->active, &list);
++	list_splice_init(&edmac->queue, &list);
++	/*
++	 * We then re-enable the channel. This way we can continue submitting
++	 * the descriptors by just calling m2p_hw_submit() again.
++	 */
++	m2p_hw_setup(edmac);
++	spin_unlock_irqrestore(&driver_lock, flags);
++
++	list_for_each_entry_safe(desc, _d, &list, node)
++		lpc31xx_dma_desc_put(edmac, desc);
++
++	return 0;
++}
++
++static int lpc31xx_dma_slave_config(struct lpc31xx_dma_chan *edmac,
++				   struct dma_slave_config *config)
++{
++	enum dma_slave_buswidth width;
++	unsigned long flags;
++	uint32_t addr, ctrl;
++
++	printk("jds - lpc31xx_dma_slave_config\n");
++	switch (config->direction) {
++	case DMA_DEV_TO_MEM:
++		width = config->src_addr_width;
++		addr = config->src_addr;
++		break;
++
++	case DMA_MEM_TO_DEV:
++		width = config->dst_addr_width;
++		addr = config->dst_addr;
++		break;
++
++	default:
++		return -EINVAL;
++	}
++
++	switch (width) {
++#if 0
++	case DMA_SLAVE_BUSWIDTH_1_BYTE:
++		ctrl = 0;
++		break;
++	case DMA_SLAVE_BUSWIDTH_2_BYTES:
++		ctrl = M2M_CONTROL_PW_16;
++		break;
++	case DMA_SLAVE_BUSWIDTH_4_BYTES:
++		ctrl = M2M_CONTROL_PW_32;
++		break;
++#endif
++	default:
++		return -EINVAL;
++	}
++
++	spin_lock_irqsave(&driver_lock, flags);
++	edmac->runtime_addr = addr;
++	edmac->runtime_ctrl = ctrl;
++	spin_unlock_irqrestore(&driver_lock, flags);
++
++	return 0;
++}
++
++/**
++ * lpc31xx_dma_control - manipulate all pending operations on a channel
++ * @chan: channel
++ * @cmd: control command to perform
++ * @arg: optional argument
++ *
++ * Controls the channel. Function returns %0 in case of success or negative
++ * error in case of failure.
++ */
++static int lpc31xx_dma_control(struct dma_chan *chan, enum dma_ctrl_cmd cmd,
++			      unsigned long arg)
++{
++	struct lpc31xx_dma_chan *edmac = to_lpc31xx_dma_chan(chan);
++	struct dma_slave_config *config;
++
++	printk("jds - lpc31xx_dma_control\n");
++	switch (cmd) {
++	case DMA_TERMINATE_ALL:
++		return lpc31xx_dma_terminate_all(edmac);
++
++	case DMA_SLAVE_CONFIG:
++		config = (struct dma_slave_config *)arg;
++		return lpc31xx_dma_slave_config(edmac, config);
++
++	default:
++		break;
++	}
++
++	return -ENOSYS;
++}
++
++/**
++ * lpc31xx_dma_tx_status - check if a transaction is completed
++ * @chan: channel
++ * @cookie: transaction specific cookie
++ * @state: state of the transaction is stored here if given
++ *
++ * This function can be used to query state of a given transaction.
++ */
++static enum dma_status lpc31xx_dma_tx_status(struct dma_chan *chan,
++					    dma_cookie_t cookie,
++					    struct dma_tx_state *state)
++{
++	struct lpc31xx_dma_chan *edmac = to_lpc31xx_dma_chan(chan);
++	dma_cookie_t last_used, last_completed;
++	enum dma_status ret;
++	unsigned long flags;
++
++	printk("jds - lpc31xx_dma_tx_status\n");
++	spin_lock_irqsave(&driver_lock, flags);
++	last_used = chan->cookie;
++	last_completed = edmac->last_completed;
++	spin_unlock_irqrestore(&driver_lock, flags);
++
++	ret = dma_async_is_complete(cookie, last_completed, last_used);
++	dma_set_tx_state(state, last_completed, last_used, 0);
++
++	return ret;
++}
++
++/**
++ * lpc31xx_dma_issue_pending - push pending transactions to the hardware
++ * @chan: channel
++ *
++ * When this function is called, all pending transactions are pushed to the
++ * hardware and executed.
++ */
++static void lpc31xx_dma_issue_pending(struct dma_chan *chan)
++{
++	printk("jds - lpc31xx_dma_issue_pending\n");
++	lpc31xx_dma_advance_work(to_lpc31xx_dma_chan(chan));
++}
++
++static int __init lpc31xx_dma_probe(struct platform_device *pdev)
++{
++	struct lpc31xx_dma_engine *edma;
++	int ret, i;
++
++	printk("JDS - lpc31xx_dma_probe 1\n");
++	spin_lock_init(&driver_lock);
++
++	edma = kzalloc(sizeof(*edma), GFP_KERNEL);
++	if (!edma)
++		return -ENOMEM;
++
++	INIT_LIST_HEAD(&edma->dma_dev.channels);
++
++	/* Initialize channel parameters */
++	for (i = 0; i < DMA_MAX_CHANNELS; i++) {
++		struct lpc31xx_dma_chan *edmac = &edma->channels[i];
++
++		edmac->chan.device = &edma->dma_dev;
++		edmac->edma = edma;
++		edmac->number = i;
++
++		INIT_LIST_HEAD(&edmac->active);
++		INIT_LIST_HEAD(&edmac->queue);
++		INIT_LIST_HEAD(&edmac->free_list);
++
++		tasklet_init(&edmac->tasklet, lpc31xx_dma_tasklet,
++			     (unsigned long)edmac);
++
++		/* Add the channel to the DMAC list */
++		list_add_tail(&edmac->chan.device_node, &edma->dma_dev.channels);
++	}
++
++	dma_cap_zero(edma->dma_dev.cap_mask);
++	dma_cap_set(DMA_MEMCPY, edma->dma_dev.cap_mask);
++	dma_cap_set(DMA_SLAVE, edma->dma_dev.cap_mask);
++	dma_cap_set(DMA_CYCLIC, edma->dma_dev.cap_mask);
++
++	edma->dma_dev.dev = &pdev->dev;
++	edma->dma_dev.device_alloc_chan_resources = lpc31xx_dma_alloc_chan_resources;
++	edma->dma_dev.device_free_chan_resources = lpc31xx_dma_free_chan_resources;
++	edma->dma_dev.device_tx_status = lpc31xx_dma_tx_status;
++	edma->dma_dev.device_prep_slave_sg = lpc31xx_dma_prep_slave_sg;
++	edma->dma_dev.device_prep_dma_cyclic = lpc31xx_dma_prep_dma_cyclic;
++	edma->dma_dev.device_prep_dma_memcpy = lpc31xx_dma_prep_dma_memcpy;
++	edma->dma_dev.device_control = lpc31xx_dma_control;
++	edma->dma_dev.device_issue_pending = lpc31xx_dma_issue_pending;
++
++	platform_set_drvdata(pdev, edma);
++
++	ret = dma_async_device_register(&edma->dma_dev);
++	if (ret) {
++		dev_err(&pdev->dev, "unable to register\n");
++		goto err_init;
++	}
++
++	dma_irq_mask = 0xFFFFFFFF;
++	DMACH_IRQ_MASK = dma_irq_mask;
++	ret = request_irq (IRQ_DMA, lpc31xx_dma_irq_handler, 0, "DMAC", edma);
++	if (ret)
++		printk (KERN_ERR "request_irq() returned error %d\n", ret);
++
++	printk("JDS - lpc31xx_dma_probe 2\n");
++	return 0;
++
++err_init:
++	kfree(edma);
++	printk("JDS - lpc31xx_dma_probe err %d\n", ret);
++	return ret;
++}
++
++static int __exit lpc31xx_dma_remove(struct platform_device *pdev)
++{
++	struct lpc31xx_dma_engine *edma = platform_get_drvdata(pdev);
++
++	dma_async_device_unregister(&edma->dma_dev);
++	kfree(edma);
++	return 0;
++}
++
++#if defined(CONFIG_OF)
++static const struct of_device_id lpc313x_dma_of_match[] = {
++	{ .compatible = "nxp,lpc31xx-dma" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, lpc313x_dma_of_match);
++#endif
++
++static struct platform_driver lpc31xx_dma_driver = {
++	.driver = {
++			.name	= "lpc31xx-dma",
++			.owner = THIS_MODULE,
++#ifdef CONFIG_OF
++			.of_match_table = lpc313x_dma_of_match,
++#endif
++	},
++	.remove		= __exit_p(lpc31xx_dma_remove),
++};
++
++static int __init lpc31xx_dma_module_init(void)
++{
++	printk("JDS - lpc31xx_dma_module_init\n");
++	return platform_driver_probe(&lpc31xx_dma_driver, lpc31xx_dma_probe);
++}
++subsys_initcall(lpc31xx_dma_module_init);
++
++MODULE_AUTHOR("Jon Smirl <jonsmirl@gmail.com>");
++MODULE_DESCRIPTION("lpc31xx dma driver");
++MODULE_LICENSE("GPL");
+diff --git a/drivers/spi/spi-lpc313x.c b/drivers/spi/spi-lpc313x.c
+index 0157806..9139289 100644
+--- a/drivers/spi/spi-lpc313x.c
++++ b/drivers/spi/spi-lpc313x.c
+@@ -1,4 +1,1425 @@
+ /*
++ * Driver for NXP LPC31xx SPI controller.
++ *
++ * Copyright (C) 2012 Jon Smirl <jonsmirl@gmail.com>
++ *
++ * Derived off from the lpc31xx SPI driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ */
++
++#include <linux/io.h>
++#include <linux/clk.h>
++#include <linux/err.h>
++#include <linux/delay.h>
++#include <linux/device.h>
++#include <linux/dmaengine.h>
++#include <linux/bitops.h>
++#include <linux/interrupt.h>
++#include <linux/module.h>
++#include <linux/platform_device.h>
++#include <linux/workqueue.h>
++#include <linux/sched.h>
++#include <linux/scatterlist.h>
++#include <linux/spi/spi.h>
++#include <linux/dma-mapping.h>
++#include <linux/of_gpio.h>
++
++#include <mach/dma.h>
++
++/***********************************************************************
++ * SPI register definitions
++ **********************************************************************/
++#define SPI_CONFIG_REG    0x00
++#define SPI_SLV_ENAB_REG  0x04
++#define SPI_TXF_FLUSH_REG 0x08
++#define SPI_FIFO_DATA_REG 0x0C
++#define SPI_NHP_POP_REG   0x10
++#define SPI_NHP_MODE_REG  0x14
++#define SPI_DMA_SET_REG   0x18
++#define SPI_STS_REG       0x1C
++#define SPI_HWINFO_REG    0x20
++#define SPI_SLV_SET1_REG(slv) 0x24 + (8 * slv))
++#define SPI_SLV_SET2_REG(slv) 0x28 + (8 * slv))
++#define SPI_INT_TRSH_REG  0xFD4
++#define SPI_INT_CLRE_REG  0xFD8
++#define SPI_INT_SETE_REG  0xFDC
++#define SPI_INT_STS_REG   0xFE0
++#define SPI_INT_ENAB_REG  0xFE4
++#define SPI_INT_CLRS_REG  0xFE8
++#define SPI_INT_SETS_REG  0xFEC
++#define SPI_MOD_ID_REG    0xFFC
++
++/* SPI device contants */
++#define SPI_FIFO_DEPTH  64 /* 64 words (16bit) deep */
++#define SPI_NUM_SLAVES  3  /* number of slaves supported */
++#define SPI_MAX_DIV2    254
++#define SPI_MAX_DIVIDER 65024 /* = 254 * (255 + 1) */
++#define SPI_MIN_DIVIDER 2
++
++/* SPI Configuration register definitions (SPI_CONFIG_REG) */
++#define SPI_CFG_INTER_DLY(n)      _SBF(16, ((n) & 0xFFFF))
++#define SPI_CFG_INTER_DLY_GET(n)  (((n) >> 16) & 0xFFFF)
++#define SPI_CFG_UPDATE_EN         _BIT(7)
++#define SPI_CFG_SW_RESET          _BIT(6)
++#define SPI_CFG_SLAVE_DISABLE     _BIT(4)
++#define SPI_CFG_MULTI_SLAVE       _BIT(3)
++#define SPI_CFG_LOOPBACK          _BIT(2)
++#define SPI_CFG_SLAVE_MODE        _BIT(1)
++#define SPI_CFG_ENABLE            _BIT(0)
++
++/* SPI slave_enable register definitions (SPI_SLV_ENAB_REG) */
++#define SPI_SLV_EN(n)             _SBF(((n) << 1), 0x1)
++#define SPI_SLV_SUSPEND(n)        _SBF(((n) << 1), 0x3)
++
++/* SPI tx_fifo_flush register definitions (SPI_TXF_FLUSH_REG) */
++#define SPI_TXFF_FLUSH            _BIT(1)
++
++/* SPI dma_settings register definitions (SPI_DMA_SET_REG) */
++#define SPI_DMA_TX_EN             _BIT(1)
++#define SPI_DMA_RX_EN             _BIT(0)
++
++/* SPI status register definitions (SPI_STS_REG) */
++#define SPI_ST_SMS_BUSY           _BIT(5)
++#define SPI_ST_BUSY               _BIT(4)
++#define SPI_ST_RX_FF              _BIT(3)
++#define SPI_ST_RX_EMPTY           _BIT(2)
++#define SPI_ST_TX_FF              _BIT(1)
++#define SPI_ST_TX_EMPTY           _BIT(0)
++
++/* SPI slv_setting registers definitions (SPI_SLV_SET1_REG) */
++#define SPI_SLV1_INTER_TX_DLY(n)  _SBF(24, ((n) & 0xFF))
++#define SPI_SLV1_NUM_WORDS(n)     _SBF(16, ((n) & 0xFF))
++#define SPI_SLV1_CLK_PS(n)        _SBF(8, ((n) & 0xFF))
++#define SPI_SLV1_CLK_PS_GET(n)    (((n) >> 8) & 0xFF)
++#define SPI_SLV1_CLK_DIV1(n)      ((n) & 0xFF)
++#define SPI_SLV1_CLK_DIV1_GET(n)  ((n) & 0xFF)
++
++/* SPI slv_setting registers definitions (SPI_SLV_SET2_REG) */
++#define SPI_SLV2_PPCS_DLY(n)      _SBF(9, ((n) & 0xFF))
++#define SPI_SLV2_CS_HIGH          _BIT(8)
++#define SPI_SLV2_SSI_MODE         _BIT(7)
++#define SPI_SLV2_SPO              _BIT(6)
++#define SPI_SLV2_SPH              _BIT(5)
++#define SPI_SLV2_WD_SZ(n)         ((n) & 0x1F)
++
++/* SPI int_threshold registers definitions (SPI_INT_TRSH_REG) */
++#define SPI_INT_TSHLD_TX(n)       _SBF(8, ((n) & 0xFF))
++#define SPI_INT_TSHLD_RX(n)       ((n) & 0xFF)
++
++/* SPI intterrupt registers definitions ( SPI_INT_xxx) */
++#define SPI_SMS_INT               _BIT(4)
++#define SPI_TX_INT                _BIT(3)
++#define SPI_RX_INT                _BIT(2)
++#define SPI_TO_INT                _BIT(1)
++#define SPI_OVR_INT               _BIT(0)
++#define SPI_ALL_INTS              (SPI_SMS_INT | SPI_TX_INT | SPI_RX_INT | SPI_TO_INT | SPI_OVR_INT)
++
++/* timeout in milliseconds */
++#define SPI_TIMEOUT		5
++/* maximum depth of RX/TX FIFO */
++#define SPI_FIFO_SIZE		8
++
++
++/**
++ * struct lpc31xx_spi - LPC31xx SPI controller structure
++ * @lock: spinlock that protects concurrent accesses to fields @running,
++ *        @current_msg and @msg_queue
++ * @pdev: pointer to platform device
++ * @clk: clock for the controller
++ * @regs_base: pointer to ioremap()'d registers
++ * @sspdr_phys: physical address of the SSPDR register
++ * @irq: IRQ number used by the driver
++ * @min_rate: minimum clock rate (in Hz) supported by the controller
++ * @max_rate: maximum clock rate (in Hz) supported by the controller
++ * @running: is the queue running
++ * @wq: workqueue used by the driver
++ * @msg_work: work that is queued for the driver
++ * @wait: wait here until given transfer is completed
++ * @msg_queue: queue for the messages
++ * @current_msg: message that is currently processed (or %NULL if none)
++ * @tx: current byte in transfer to transmit
++ * @rx: current byte in transfer to receive
++ * @fifo_level: how full is FIFO (%0..%SPI_FIFO_SIZE - %1). Receiving one
++ *              frame decreases this level and sending one frame increases it.
++ * @dma_rx: RX DMA channel
++ * @dma_tx: TX DMA channel
++ * @dma_rx_data: RX parameters passed to the DMA engine
++ * @dma_tx_data: TX parameters passed to the DMA engine
++ * @rx_sgt: sg table for RX transfers
++ * @tx_sgt: sg table for TX transfers
++ * @zeropage: dummy page used as RX buffer when only TX buffer is passed in by
++ *            the client
++ *
++ * This structure holds LPC31xx SPI controller specific information. When
++ * @running is %true, driver accepts transfer requests from protocol drivers.
++ * @current_msg is used to hold pointer to the message that is currently
++ * processed. If @current_msg is %NULL, it means that no processing is going
++ * on.
++ *
++ * Most of the fields are only written once and they can be accessed without
++ * taking the @lock. Fields that are accessed concurrently are: @current_msg,
++ * @running, and @msg_queue.
++ */
++struct lpc31xx_spi {
++	spinlock_t			lock;
++	const struct platform_device	*pdev;
++	struct clk			*clk;
++	void __iomem			*regs_base;
++	unsigned long			sspdr_phys;
++	int				irq;
++	unsigned long			min_rate;
++	unsigned long			max_rate;
++	bool				running;
++	struct workqueue_struct		*wq;
++	struct work_struct		msg_work;
++	struct completion		wait;
++	struct list_head		msg_queue;
++	struct spi_message		*current_msg;
++	size_t				tx;
++	size_t				rx;
++	size_t				fifo_level;
++	struct dma_chan			*dma_rx;
++	struct dma_chan			*dma_tx;
++	struct lpc31xx_dma_data		dma_rx_data;
++	struct lpc31xx_dma_data		dma_tx_data;
++	struct sg_table			rx_sgt;
++	struct sg_table			tx_sgt;
++	void				*zeropage;
++};
++
++/**
++ * struct lpc31xx_spi_chip - SPI device hardware settings
++ * @spi: back pointer to the SPI device
++ * @rate: max rate in hz this chip supports
++ * @div_cpsr: cpsr (pre-scaler) divider
++ * @div_scr: scr divider
++ * @dss: bits per word (4 - 16 bits)
++ * @ops: private chip operations
++ *
++ * This structure is used to store hardware register specific settings for each
++ * SPI device. Settings are written to hardware by function
++ * lpc31xx_spi_chip_setup().
++ */
++struct lpc31xx_spi_chip {
++	const struct spi_device		*spi;
++	unsigned long			rate;
++	uint8_t				div_cpsr;
++	uint8_t				div_scr;
++	uint8_t				dss;
++	int 				gpio;
++	uint32_t			alow;
++};
++
++static inline void
++lpc31xx_spi_write(const struct lpc31xx_spi *espi, uint32_t reg, uint32_t value)
++{
++	printk("JDS - lpc31xx_spi_write %p value %x\n", espi->regs_base + reg, value);
++	__raw_writel(value, espi->regs_base + reg);
++	printk("JDS - lpc31xx_spi_write done\n");
++}
++
++static inline uint32_t
++lpc31xx_spi_read(const struct lpc31xx_spi *espi, uint32_t reg)
++{
++	uint32_t value;
++	value = __raw_readl(espi->regs_base + reg);
++	printk("JDS - lpc31xx_spi_read %p value %x\n", espi->regs_base + reg, value);
++	return value;
++}
++
++/*
++ * Enable or disable the SPI clocks
++ */
++static void lpc31xx_spi_clks_enable(void)
++{
++	struct clk *clk;
++	int ret;
++
++	clk = clk_get(NULL, "spi_pclk");
++	ret = clk_enable(clk);
++	clk_put(clk);
++	clk = clk_get(NULL, "spi_pclk_gated");
++	ret = clk_enable(clk);
++	clk_put(clk);
++	clk = clk_get(NULL, "spi_clk");
++	ret = clk_enable(clk);
++	clk_put(clk);
++	clk = clk_get(NULL, "spi_clk_gated");
++	ret = clk_enable(clk);
++	clk_put(clk);
++}
++
++static void lpc31xx_spi_clks_disable(void)
++{
++	struct clk *clk;
++
++	clk = clk_get(NULL, "spi_pclk");
++	clk_disable(clk);
++	clk_put(clk);
++	clk = clk_get(NULL, "spi_pclk_gated");
++	clk_disable(clk);
++	clk_put(clk);
++	clk = clk_get(NULL, "spi_clk");
++	clk_disable(clk);
++	clk_put(clk);
++	clk = clk_get(NULL, "spi_clk_gated");
++	clk_disable(clk);
++	clk_put(clk);
++}
++
++static int lpc31xx_spi_enable(const struct lpc31xx_spi *espi)
++{
++	u8 regval;
++	int err;
++
++	printk("JDS - lpc31xx_spi_enable\n");
++	lpc31xx_spi_clks_enable();
++
++#if 0
++	err = clk_enable(espi->clk);
++	if (err)
++		return err;
++	regval = lpc31xx_spi_read_u8(espi, SSPCR1);
++	regval |= SSPCR1_SSE;
++	lpc31xx_spi_write_u8(espi, SSPCR1, regval);
++#endif
++	return 0;
++}
++
++static void lpc31xx_spi_disable(const struct lpc31xx_spi *espi)
++{
++	u8 regval;
++	printk("JDS - lpc31xx_spi_disable\n");
++	lpc31xx_spi_clks_disable();
++#if 0
++	regval = lpc31xx_spi_read_u8(espi, SSPCR1);
++	regval &= ~SSPCR1_SSE;
++	lpc31xx_spi_write_u8(espi, SSPCR1, regval);
++
++	clk_disable(espi->clk);
++#endif
++}
++
++static void lpc31xx_spi_enable_interrupts(const struct lpc31xx_spi *espi)
++{
++	u8 regval;
++	printk("JDS - lpc31xx_spi_enable_interrupts\n");
++#if 0
++	regval = lpc31xx_spi_read_u8(espi, SSPCR1);
++	regval |= (SSPCR1_RORIE | SSPCR1_TIE | SSPCR1_RIE);
++	lpc31xx_spi_write_u8(espi, SSPCR1, regval);
++#endif
++}
++
++static void lpc31xx_spi_disable_interrupts(const struct lpc31xx_spi *espi)
++{
++	u8 regval;
++	printk("JDS - lpc31xx_spi_disable_interrupts\n");
++#if 0
++	regval = lpc31xx_spi_read_u8(espi, SSPCR1);
++	regval &= ~(SSPCR1_RORIE | SSPCR1_TIE | SSPCR1_RIE);
++	lpc31xx_spi_write_u8(espi, SSPCR1, regval);
++#endif
++}
++
++/**
++ * lpc31xx_spi_calc_divisors() - calculates SPI clock divisors
++ * @espi: lpc31xx SPI controller struct
++ * @chip: divisors are calculated for this chip
++ * @rate: desired SPI output clock rate
++ *
++ * Function calculates cpsr (clock pre-scaler) and scr divisors based on
++ * given @rate and places them to @chip->div_cpsr and @chip->div_scr. If,
++ * for some reason, divisors cannot be calculated nothing is stored and
++ * %-EINVAL is returned.
++ */
++static int lpc31xx_spi_calc_divisors(const struct lpc31xx_spi *espi,
++				    struct lpc31xx_spi_chip *chip,
++				    unsigned long rate)
++{
++	unsigned long spi_clk_rate = clk_get_rate(espi->clk);
++	int cpsr, scr;
++
++	printk("JDS - lpc31xx_spi_calc_divisors min %ld max %ld req %ld\n", espi->min_rate, espi->max_rate, rate);
++	/*
++	 * Make sure that max value is between values supported by the
++	 * controller. Note that minimum value is already checked in
++	 * lpc31xx_spi_transfer().
++	 */
++	rate = clamp(rate, espi->min_rate, espi->max_rate);
++
++	/*
++	 * Calculate divisors so that we can get speed according the
++	 * following formula:
++	 *	rate = spi_clock_rate / (cpsr * (1 + scr))
++	 *
++	 * cpsr must be even number and starts from 2, scr can be any number
++	 * between 0 and 255.
++	 */
++	for (cpsr = 2; cpsr <= 254; cpsr += 2) {
++		for (scr = 0; scr <= 255; scr++) {
++			if ((spi_clk_rate / (cpsr * (scr + 1))) <= rate) {
++				chip->div_scr = (u8)scr;
++				chip->div_cpsr = (u8)cpsr;
++				return 0;
++			}
++		}
++	}
++	return -EINVAL;
++}
++
++static void lpc31xx_spi_cs_control(struct spi_device *spi, bool control)
++{
++	struct lpc31xx_spi_chip *chip = spi_get_ctldata(spi);
++	int value = (spi->mode & SPI_CS_HIGH) ? control : !control;
++
++	printk("JDS - lpc31xx_spi_cs_control %d value %d\n", chip->gpio, value);
++	if (!gpio_is_valid(chip->gpio))
++		return;
++	gpio_set_value(chip->gpio, value);
++}
++
++/**
++ * lpc31xx_spi_setup() - setup an SPI device
++ * @spi: SPI device to setup
++ *
++ * This function sets up SPI device mode, speed etc. Can be called multiple
++ * times for a single device. Returns 0 in case of success, negative error in
++ * case of failure. When this function returns success, the device is
++ * deselected.
++ */
++static int lpc31xx_spi_setup(struct spi_device *spi)
++{
++	struct lpc31xx_spi *espi = spi_master_get_devdata(spi->master);
++	struct lpc31xx_spi_chip *chip;
++	enum of_gpio_flags flags;
++	int ret, gpio;
++
++	printk("JDS - lpc31xx_spi_setup\n");
++	if (spi->bits_per_word < 4 || spi->bits_per_word > 16) {
++		dev_err(&espi->pdev->dev, "invalid bits per word %d\n",
++			spi->bits_per_word);
++		return -EINVAL;
++	}
++
++	chip = spi_get_ctldata(spi);
++	if (!chip) {
++		dev_dbg(&espi->pdev->dev, "initial setup for %s\n",
++			spi->modalias);
++
++		chip = kzalloc(sizeof(*chip), GFP_KERNEL);
++		if (!chip)
++			return -ENOMEM;
++
++		chip->spi = spi;
++		spi_set_ctldata(spi, chip);
++	}
++	if (spi->max_speed_hz != chip->rate) {
++		int err;
++
++		err = lpc31xx_spi_calc_divisors(espi, chip, spi->max_speed_hz);
++		if (err != 0) {
++error_out:
++			spi_set_ctldata(spi, NULL);
++			kfree(chip);
++			return err;
++		}
++		chip->rate = spi->max_speed_hz;
++	}
++
++	chip->gpio = -EINVAL;
++	gpio = of_get_named_gpio_flags(spi->dev.of_node, "gpio-cs", 0, &flags);
++	if (!gpio_is_valid(gpio))
++		return 0;
++
++	ret = gpio_request(gpio, dev_name(&spi->dev));
++	if (ret) {
++		dev_err(&spi->dev, "can't request gpio-cs #%d: %d\n", gpio, ret);
++		goto error_out;
++	}
++	chip->gpio = gpio;
++	chip->alow = flags & OF_GPIO_ACTIVE_LOW;
++	ret = gpio_direction_output(chip->gpio, chip->alow);
++	if (ret) {
++		dev_err(&spi->dev, "can't set output direction for gpio-cs #%d: %d\n", gpio, ret);
++		goto error_out;
++	}
++	lpc31xx_spi_cs_control(spi, false);
++	return 0;
++}
++
++/**
++ * lpc31xx_spi_transfer() - queue message to be transferred
++ * @spi: target SPI device
++ * @msg: message to be transferred
++ *
++ * This function is called by SPI device drivers when they are going to transfer
++ * a new message. It simply puts the message in the queue and schedules
++ * workqueue to perform the actual transfer later on.
++ *
++ * Returns %0 on success and negative error in case of failure.
++ */
++static int lpc31xx_spi_transfer(struct spi_device *spi, struct spi_message *msg)
++{
++	struct lpc31xx_spi *espi = spi_master_get_devdata(spi->master);
++	struct spi_transfer *t;
++	unsigned long flags;
++
++	printk("JDS - lpc31xx_spi_transfer\n");
++	if (!msg || !msg->complete)
++		return -EINVAL;
++
++	/* first validate each transfer */
++	list_for_each_entry(t, &msg->transfers, transfer_list) {
++		if (t->bits_per_word) {
++			if (t->bits_per_word < 4 || t->bits_per_word > 16)
++				return -EINVAL;
++		}
++		if (t->speed_hz && t->speed_hz < espi->min_rate)
++				return -EINVAL;
++	}
++
++	/*
++	 * Now that we own the message, let's initialize it so that it is
++	 * suitable for us. We use @msg->status to signal whether there was
++	 * error in transfer and @msg->state is used to hold pointer to the
++	 * current transfer (or %NULL if no active current transfer).
++	 */
++	msg->state = NULL;
++	msg->status = 0;
++	msg->actual_length = 0;
++
++	spin_lock_irqsave(&espi->lock, flags);
++	if (!espi->running) {
++		spin_unlock_irqrestore(&espi->lock, flags);
++		return -ESHUTDOWN;
++	}
++	list_add_tail(&msg->queue, &espi->msg_queue);
++	queue_work(espi->wq, &espi->msg_work);
++	spin_unlock_irqrestore(&espi->lock, flags);
++
++	return 0;
++}
++
++/**
++ * lpc31xx_spi_cleanup() - cleans up master controller specific state
++ * @spi: SPI device to cleanup
++ *
++ * This function releases master controller specific state for given @spi
++ * device.
++ */
++static void lpc31xx_spi_cleanup(struct spi_device *spi)
++{
++	struct lpc31xx_spi_chip *chip;
++	printk("JDS - lpc31xx_spi_cleanup\n");
++#if 0
++	chip = spi_get_ctldata(spi);
++	if (chip) {
++		if (chip->ops && chip->ops->cleanup)
++			chip->ops->cleanup(spi);
++		spi_set_ctldata(spi, NULL);
++		kfree(chip);
++	}
++#endif
++}
++
++/**
++ * lpc31xx_spi_chip_setup() - configures hardware according to given @chip
++ * @espi: lpc31xx SPI controller struct
++ * @chip: chip specific settings
++ *
++ * This function sets up the actual hardware registers with settings given in
++ * @chip. Note that no validation is done so make sure that callers validate
++ * settings before calling this.
++ */
++static void lpc31xx_spi_chip_setup(const struct lpc31xx_spi *espi,
++				  const struct lpc31xx_spi_chip *chip)
++{
++	printk("JDS - lpc31xx_spi_chip_setup\n");
++#if 0
++	u16 cr0;
++
++	cr0 = chip->div_scr << SSPCR0_SCR_SHIFT;
++	cr0 |= (chip->spi->mode & (SPI_CPHA|SPI_CPOL)) << SSPCR0_MODE_SHIFT;
++	cr0 |= chip->dss;
++
++	dev_dbg(&espi->pdev->dev, "setup: mode %d, cpsr %d, scr %d, dss %d\n",
++		chip->spi->mode, chip->div_cpsr, chip->div_scr, chip->dss);
++	dev_dbg(&espi->pdev->dev, "setup: cr0 %#x", cr0);
++
++	lpc31xx_spi_write_u8(espi, SSPCPSR, chip->div_cpsr);
++	lpc31xx_spi_write_u16(espi, SSPCR0, cr0);
++#endif
++}
++
++static inline int bits_per_word(const struct lpc31xx_spi *espi)
++{
++	struct spi_message *msg = espi->current_msg;
++	struct spi_transfer *t = msg->state;
++
++	return t->bits_per_word ? t->bits_per_word : msg->spi->bits_per_word;
++}
++
++static void lpc31xx_do_write(struct lpc31xx_spi *espi, struct spi_transfer *t)
++{
++	printk("JDS - lpc31xx_do_write\n");
++#if 0
++	if (bits_per_word(espi) > 8) {
++		u16 tx_val = 0;
++
++		if (t->tx_buf)
++			tx_val = ((u16 *)t->tx_buf)[espi->tx];
++		lpc31xx_spi_write_u16(espi, SSPDR, tx_val);
++		espi->tx += sizeof(tx_val);
++	} else {
++		u8 tx_val = 0;
++
++		if (t->tx_buf)
++			tx_val = ((u8 *)t->tx_buf)[espi->tx];
++		lpc31xx_spi_write_u8(espi, SSPDR, tx_val);
++		espi->tx += sizeof(tx_val);
++	}
++#endif
++}
++
++static void lpc31xx_do_read(struct lpc31xx_spi *espi, struct spi_transfer *t)
++{
++	printk("JDS - lpc31xx_do_read\n");
++#if 0
++	if (bits_per_word(espi) > 8) {
++		u16 rx_val;
++
++		rx_val = lpc31xx_spi_read_u16(espi, SSPDR);
++		if (t->rx_buf)
++			((u16 *)t->rx_buf)[espi->rx] = rx_val;
++		espi->rx += sizeof(rx_val);
++	} else {
++		u8 rx_val;
++
++		rx_val = lpc31xx_spi_read_u8(espi, SSPDR);
++		if (t->rx_buf)
++			((u8 *)t->rx_buf)[espi->rx] = rx_val;
++		espi->rx += sizeof(rx_val);
++	}
++#endif
++}
++
++/**
++ * lpc31xx_spi_read_write() - perform next RX/TX transfer
++ * @espi: lpc31xx SPI controller struct
++ *
++ * This function transfers next bytes (or half-words) to/from RX/TX FIFOs. If
++ * called several times, the whole transfer will be completed. Returns
++ * %-EINPROGRESS when current transfer was not yet completed otherwise %0.
++ *
++ * When this function is finished, RX FIFO should be empty and TX FIFO should be
++ * full.
++ */
++static int lpc31xx_spi_read_write(struct lpc31xx_spi *espi)
++{
++	struct spi_message *msg = espi->current_msg;
++	struct spi_transfer *t = msg->state;
++
++	printk("JDS - lpc31xx_spi_read_write\n");
++	/* read as long as RX FIFO has frames in it */
++#if 0
++	while ((lpc31xx_spi_read_u8(espi, SSPSR) & SSPSR_RNE)) {
++		lpc31xx_do_read(espi, t);
++		espi->fifo_level--;
++	}
++#endif
++
++	/* write as long as TX FIFO has room */
++	while (espi->fifo_level < SPI_FIFO_SIZE && espi->tx < t->len) {
++		lpc31xx_do_write(espi, t);
++		espi->fifo_level++;
++	}
++
++	if (espi->rx == t->len)
++		return 0;
++
++	return -EINPROGRESS;
++}
++
++static void lpc31xx_spi_pio_transfer(struct lpc31xx_spi *espi)
++{
++	/*
++	 * Now everything is set up for the current transfer. We prime the TX
++	 * FIFO, enable interrupts, and wait for the transfer to complete.
++	 */
++	printk("JDS - lpc31xx_spi_pio_transfer\n");
++	if (lpc31xx_spi_read_write(espi)) {
++		lpc31xx_spi_enable_interrupts(espi);
++		wait_for_completion(&espi->wait);
++	}
++}
++
++/**
++ * lpc31xx_spi_dma_prepare() - prepares a DMA transfer
++ * @espi: lpc31xx SPI controller struct
++ * @dir: DMA transfer direction
++ *
++ * Function configures the DMA, maps the buffer and prepares the DMA
++ * descriptor. Returns a valid DMA descriptor in case of success and ERR_PTR
++ * in case of failure.
++ */
++static struct dma_async_tx_descriptor *
++lpc31xx_spi_dma_prepare(struct lpc31xx_spi *espi, enum dma_data_direction dir)
++{
++	struct spi_transfer *t = espi->current_msg->state;
++	struct dma_async_tx_descriptor *txd;
++	enum dma_slave_buswidth buswidth;
++	struct dma_slave_config conf;
++	enum dma_transfer_direction slave_dirn;
++	struct scatterlist *sg;
++	struct sg_table *sgt;
++	struct dma_chan *chan;
++	const void *buf, *pbuf;
++	size_t len = t->len;
++	int i, ret, nents;
++
++	printk("JDS - lpc31xx_spi_dma_prepare\n");
++	if (bits_per_word(espi) > 8)
++		buswidth = DMA_SLAVE_BUSWIDTH_2_BYTES;
++	else
++		buswidth = DMA_SLAVE_BUSWIDTH_1_BYTE;
++
++	memset(&conf, 0, sizeof(conf));
++	conf.direction = dir;
++
++	if (dir == DMA_FROM_DEVICE) {
++		chan = espi->dma_rx;
++		buf = t->rx_buf;
++		sgt = &espi->rx_sgt;
++
++		conf.src_addr = espi->sspdr_phys;
++		conf.src_addr_width = buswidth;
++		slave_dirn = DMA_DEV_TO_MEM;
++	} else {
++		chan = espi->dma_tx;
++		buf = t->tx_buf;
++		sgt = &espi->tx_sgt;
++
++		conf.dst_addr = espi->sspdr_phys;
++		conf.dst_addr_width = buswidth;
++		slave_dirn = DMA_MEM_TO_DEV;
++	}
++
++	ret = dmaengine_slave_config(chan, &conf);
++	if (ret)
++		return ERR_PTR(ret);
++
++	/*
++	 * We need to split the transfer into PAGE_SIZE'd chunks. This is
++	 * because we are using @espi->zeropage to provide a zero RX buffer
++	 * for the TX transfers and we have only allocated one page for that.
++	 *
++	 * For performance reasons we allocate a new sg_table only when
++	 * needed. Otherwise we will re-use the current one. Eventually the
++	 * last sg_table is released in lpc31xx_spi_release_dma().
++	 */
++
++	nents = DIV_ROUND_UP(len, PAGE_SIZE);
++	if (nents != sgt->nents) {
++		sg_free_table(sgt);
++
++		ret = sg_alloc_table(sgt, nents, GFP_KERNEL);
++		if (ret)
++			return ERR_PTR(ret);
++	}
++
++	pbuf = buf;
++	for_each_sg(sgt->sgl, sg, sgt->nents, i) {
++		size_t bytes = min_t(size_t, len, PAGE_SIZE);
++
++		if (buf) {
++			sg_set_page(sg, virt_to_page(pbuf), bytes,
++				    offset_in_page(pbuf));
++		} else {
++			sg_set_page(sg, virt_to_page(espi->zeropage),
++				    bytes, 0);
++		}
++
++		pbuf += bytes;
++		len -= bytes;
++	}
++
++	if (WARN_ON(len)) {
++		dev_warn(&espi->pdev->dev, "len = %d expected 0!", len);
++		return ERR_PTR(-EINVAL);
++	}
++
++	nents = dma_map_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
++	if (!nents)
++		return ERR_PTR(-ENOMEM);
++
++	txd = chan->device->device_prep_slave_sg(chan, sgt->sgl, nents,
++						 slave_dirn, DMA_CTRL_ACK);
++	if (!txd) {
++		dma_unmap_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
++		return ERR_PTR(-ENOMEM);
++	}
++	return txd;
++}
++
++/**
++ * lpc31xx_spi_dma_finish() - finishes with a DMA transfer
++ * @espi: lpc31xx SPI controller struct
++ * @dir: DMA transfer direction
++ *
++ * Function finishes with the DMA transfer. After this, the DMA buffer is
++ * unmapped.
++ */
++static void lpc31xx_spi_dma_finish(struct lpc31xx_spi *espi,
++				  enum dma_transfer_direction dir)
++{
++	struct dma_chan *chan;
++	struct sg_table *sgt;
++
++	printk("JDS - lpc31xx_spi_dma_finish\n");
++	if (dir == DMA_DEV_TO_MEM) {
++		chan = espi->dma_rx;
++		sgt = &espi->rx_sgt;
++	} else {
++		chan = espi->dma_tx;
++		sgt = &espi->tx_sgt;
++	}
++
++	dma_unmap_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
++}
++
++static void lpc31xx_spi_dma_callback(void *callback_param)
++{
++	printk("JDS - lpc31xx_spi_dma_callback\n");
++	complete(callback_param);
++}
++
++static void lpc31xx_spi_dma_transfer(struct lpc31xx_spi *espi)
++{
++	struct spi_message *msg = espi->current_msg;
++	struct dma_async_tx_descriptor *rxd, *txd;
++
++	printk("JDS - lpc31xx_spi_dma_transfer\n");
++	rxd = lpc31xx_spi_dma_prepare(espi, DMA_DEV_TO_MEM);
++	if (IS_ERR(rxd)) {
++		dev_err(&espi->pdev->dev, "DMA RX failed: %ld\n", PTR_ERR(rxd));
++		msg->status = PTR_ERR(rxd);
++		return;
++	}
++
++	txd = lpc31xx_spi_dma_prepare(espi, DMA_MEM_TO_DEV);
++	if (IS_ERR(txd)) {
++		lpc31xx_spi_dma_finish(espi, DMA_MEM_TO_DEV);
++		dev_err(&espi->pdev->dev, "DMA TX failed: %ld\n", PTR_ERR(rxd));
++		msg->status = PTR_ERR(txd);
++		return;
++	}
++
++	/* We are ready when RX is done */
++	rxd->callback = lpc31xx_spi_dma_callback;
++	rxd->callback_param = &espi->wait;
++
++	/* Now submit both descriptors and wait while they finish */
++	dmaengine_submit(rxd);
++	dmaengine_submit(txd);
++
++	dma_async_issue_pending(espi->dma_rx);
++	dma_async_issue_pending(espi->dma_tx);
++
++	wait_for_completion(&espi->wait);
++
++	lpc31xx_spi_dma_finish(espi, DMA_MEM_TO_DEV);
++	lpc31xx_spi_dma_finish(espi, DMA_DEV_TO_MEM);
++}
++
++/**
++ * lpc31xx_spi_process_transfer() - processes one SPI transfer
++ * @espi: lpc31xx SPI controller struct
++ * @msg: current message
++ * @t: transfer to process
++ *
++ * This function processes one SPI transfer given in @t. Function waits until
++ * transfer is complete (may sleep) and updates @msg->status based on whether
++ * transfer was successfully processed or not.
++ */
++static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
++					struct spi_message *msg,
++					struct spi_transfer *t)
++{
++	struct lpc31xx_spi_chip *chip = spi_get_ctldata(msg->spi);
++
++	printk("JDS - lpc31xx_spi_process_transfer\n");
++	msg->state = t;
++
++	/*
++	 * Handle any transfer specific settings if needed. We use
++	 * temporary chip settings here and restore original later when
++	 * the transfer is finished.
++	 */
++	if (t->speed_hz || t->bits_per_word) {
++		struct lpc31xx_spi_chip tmp_chip = *chip;
++
++		if (t->speed_hz) {
++			int err;
++
++			err = lpc31xx_spi_calc_divisors(espi, &tmp_chip,
++						       t->speed_hz);
++			if (err) {
++				dev_err(&espi->pdev->dev,
++					"failed to adjust speed\n");
++				msg->status = err;
++				return;
++			}
++		}
++#if 0
++		if (t->bits_per_word)
++			tmp_chip.dss = bits_per_word_to_dss(t->bits_per_word);
++#endif
++		/*
++		 * Set up temporary new hw settings for this transfer.
++		 */
++		lpc31xx_spi_chip_setup(espi, &tmp_chip);
++	}
++
++	espi->rx = 0;
++	espi->tx = 0;
++
++	/*
++	 * There is no point of setting up DMA for the transfers which will
++	 * fit into the FIFO and can be transferred with a single interrupt.
++	 * So in these cases we will be using PIO and don't bother for DMA.
++	 */
++	if (espi->dma_rx && t->len > SPI_FIFO_SIZE)
++		lpc31xx_spi_dma_transfer(espi);
++	else
++		lpc31xx_spi_pio_transfer(espi);
++
++	/*
++	 * In case of error during transmit, we bail out from processing
++	 * the message.
++	 */
++	if (msg->status)
++		return;
++
++	msg->actual_length += t->len;
++
++	/*
++	 * After this transfer is finished, perform any possible
++	 * post-transfer actions requested by the protocol driver.
++	 */
++	if (t->delay_usecs) {
++		set_current_state(TASK_UNINTERRUPTIBLE);
++		schedule_timeout(usecs_to_jiffies(t->delay_usecs));
++	}
++	if (t->cs_change) {
++		if (!list_is_last(&t->transfer_list, &msg->transfers)) {
++			/*
++			 * In case protocol driver is asking us to drop the
++			 * chip select briefly, we let the scheduler to handle
++			 * any "delay" here.
++			 */
++			lpc31xx_spi_cs_control(msg->spi, false);
++			cond_resched();
++			lpc31xx_spi_cs_control(msg->spi, true);
++		}
++	}
++
++	if (t->speed_hz || t->bits_per_word)
++		lpc31xx_spi_chip_setup(espi, chip);
++}
++
++/*
++ * Flush the TX and RX FIFOs
++ */
++static int lpc313x_fifo_flush(struct lpc31xx_spi *espi)
++{
++	unsigned long timeout;
++	volatile uint32_t tmp;
++
++	printk("JDS - lpc313x_fifo_flush\n");
++	/* Clear TX FIFO first */
++	lpc31xx_spi_write(espi, SPI_TXF_FLUSH_REG, SPI_TXFF_FLUSH);
++
++	/* Clear RX FIFO */
++	timeout = jiffies + msecs_to_jiffies(SPI_TIMEOUT);
++	while (!(lpc31xx_spi_read(espi, SPI_STS_REG) & SPI_ST_RX_EMPTY)) {
++		printk("JDS - lpc313x_fifo_flush %ld\n", jiffies);
++		if (time_after(jiffies, timeout)) {
++			dev_warn(&espi->pdev->dev,
++				 "timeout while flushing RX FIFO\n");
++			return -ETIMEDOUT;
++		}
++		tmp = lpc31xx_spi_read(espi, SPI_FIFO_DATA_REG);
++	}
++	return 0;
++}
++
++/*
++ * lpc31xx_spi_process_message() - process one SPI message
++ * @espi: lpc31xx SPI controller struct
++ * @msg: message to process
++ *
++ * This function processes a single SPI message. We go through all transfers in
++ * the message and pass them to lpc31xx_spi_process_transfer(). Chipselect is
++ * asserted during the whole message (unless per transfer cs_change is set).
++ *
++ * @msg->status contains %0 in case of success or negative error code in case of
++ * failure.
++ */
++static void lpc31xx_spi_process_message(struct lpc31xx_spi *espi,
++				       struct spi_message *msg)
++{
++	struct spi_transfer *t;
++	int err;
++
++	printk("JDS - lpc31xx_spi_process_message 1\n");
++	/*
++	 * Enable the SPI controller and its clock.
++	 */
++	err = lpc31xx_spi_enable(espi);
++	if (err) {
++		dev_err(&espi->pdev->dev, "failed to enable SPI controller\n");
++		msg->status = err;
++		return;
++	}
++	err = lpc313x_fifo_flush(espi);
++	if (err)
++		return;
++	printk("JDS - lpc31xx_spi_process_message 2\n");
++
++	/*
++	 * We explicitly handle FIFO level. This way we don't have to check TX
++	 * FIFO status using %SSPSR_TNF bit which may cause RX FIFO overruns.
++	 */
++	espi->fifo_level = 0;
++
++	/*
++	 * Update SPI controller registers according to SPI device and assert
++	 * the chip select.
++	 */
++	lpc31xx_spi_chip_setup(espi, spi_get_ctldata(msg->spi));
++	lpc31xx_spi_cs_control(msg->spi, true);
++
++	list_for_each_entry(t, &msg->transfers, transfer_list) {
++		lpc31xx_spi_process_transfer(espi, msg, t);
++		if (msg->status)
++			break;
++	}
++
++	/*
++	 * Now the whole message is transferred (or failed for some reason). We
++	 * deselect the device and disable the SPI controller.
++	 */
++	lpc31xx_spi_cs_control(msg->spi, false);
++	lpc31xx_spi_disable(espi);
++}
++
++#define work_to_espi(work) (container_of((work), struct lpc31xx_spi, msg_work))
++
++/**
++ * lpc31xx_spi_work() - LPC31xx SPI workqueue worker function
++ * @work: work struct
++ *
++ * Workqueue worker function. This function is called when there are new
++ * SPI messages to be processed. Message is taken out from the queue and then
++ * passed to lpc31xx_spi_process_message().
++ *
++ * After message is transferred, protocol driver is notified by calling
++ * @msg->complete(). In case of error, @msg->status is set to negative error
++ * number, otherwise it contains zero (and @msg->actual_length is updated).
++ */
++static void lpc31xx_spi_work(struct work_struct *work)
++{
++	struct lpc31xx_spi *espi = work_to_espi(work);
++	struct spi_message *msg;
++
++	printk("JDS - lpc31xx_spi_work\n");
++	spin_lock_irq(&espi->lock);
++	if (!espi->running || espi->current_msg ||
++		list_empty(&espi->msg_queue)) {
++		spin_unlock_irq(&espi->lock);
++		return;
++	}
++	msg = list_first_entry(&espi->msg_queue, struct spi_message, queue);
++	list_del_init(&msg->queue);
++	espi->current_msg = msg;
++	spin_unlock_irq(&espi->lock);
++
++	lpc31xx_spi_process_message(espi, msg);
++
++	/*
++	 * Update the current message and re-schedule ourselves if there are
++	 * more messages in the queue.
++	 */
++	spin_lock_irq(&espi->lock);
++	espi->current_msg = NULL;
++	if (espi->running && !list_empty(&espi->msg_queue))
++		queue_work(espi->wq, &espi->msg_work);
++	spin_unlock_irq(&espi->lock);
++
++	/* notify the protocol driver that we are done with this message */
++	msg->complete(msg->context);
++}
++
++static irqreturn_t lpc31xx_spi_interrupt(int irq, void *dev_id)
++{
++	struct lpc31xx_spi *espi = dev_id;
++	printk("JDS - lpc31xx_spi_interrupt\n");
++#if 0
++	u8 irq_status = lpc31xx_spi_read_u8(espi, SSPIIR);
++
++	/*
++	 * If we got ROR (receive overrun) interrupt we know that something is
++	 * wrong. Just abort the message.
++	 */
++	if (unlikely(irq_status & SSPIIR_RORIS)) {
++		/* clear the overrun interrupt */
++		lpc31xx_spi_write_u8(espi, SSPICR, 0);
++		dev_warn(&espi->pdev->dev,
++			 "receive overrun, aborting the message\n");
++		espi->current_msg->status = -EIO;
++	} else
++#endif
++	{
++		/*
++		 * Interrupt is either RX (RIS) or TX (TIS). For both cases we
++		 * simply execute next data transfer.
++		 */
++		if (lpc31xx_spi_read_write(espi)) {
++			/*
++			 * In normal case, there still is some processing left
++			 * for current transfer. Let's wait for the next
++			 * interrupt then.
++			 */
++			return IRQ_HANDLED;
++		}
++	}
++
++	/*
++	 * Current transfer is finished, either with error or with success. In
++	 * any case we disable interrupts and notify the worker to handle
++	 * any post-processing of the message.
++	 */
++	lpc31xx_spi_disable_interrupts(espi);
++	complete(&espi->wait);
++	return IRQ_HANDLED;
++}
++
++static bool lpc31xx_spi_dma_filter(struct dma_chan *chan, void *filter_param)
++{
++	chan->private = filter_param;
++	return true;
++}
++
++static int lpc31xx_spi_setup_dma(struct lpc31xx_spi *espi)
++{
++	dma_cap_mask_t mask;
++	int ret;
++
++	printk("JDS - lpc31xx_spi_setup_dma\n");
++	espi->zeropage = (void *)get_zeroed_page(GFP_KERNEL);
++	if (!espi->zeropage)
++		return -ENOMEM;
++
++	dma_cap_zero(mask);
++	dma_cap_set(DMA_SLAVE, mask);
++
++#if 0
++	espi->dma_rx_data.port = EP93XX_DMA_SSP;
++#endif
++	espi->dma_rx_data.direction = DMA_DEV_TO_MEM;
++	espi->dma_rx_data.name = "lpc31xx-spi-rx";
++
++	espi->dma_rx = dma_request_channel(mask, lpc31xx_spi_dma_filter,
++					   &espi->dma_rx_data);
++	if (!espi->dma_rx) {
++		ret = -ENODEV;
++		goto fail_free_page;
++	}
++
++#if 0
++	espi->dma_tx_data.port = EP93XX_DMA_SSP;
++#endif
++	espi->dma_tx_data.direction = DMA_MEM_TO_DEV;
++	espi->dma_tx_data.name = "lpc31xx-spi-tx";
++
++	espi->dma_tx = dma_request_channel(mask, lpc31xx_spi_dma_filter,
++					   &espi->dma_tx_data);
++	if (!espi->dma_tx) {
++		ret = -ENODEV;
++		goto fail_release_rx;
++	}
++
++	return 0;
++
++fail_release_rx:
++	dma_release_channel(espi->dma_rx);
++	espi->dma_rx = NULL;
++fail_free_page:
++	free_page((unsigned long)espi->zeropage);
++
++	return ret;
++}
++
++static void lpc31xx_spi_release_dma(struct lpc31xx_spi *espi)
++{
++	printk("JDS - lpc31xx_spi_release_dma\n");
++	if (espi->dma_rx) {
++		dma_release_channel(espi->dma_rx);
++		sg_free_table(&espi->rx_sgt);
++	}
++	if (espi->dma_tx) {
++		dma_release_channel(espi->dma_tx);
++		sg_free_table(&espi->tx_sgt);
++	}
++
++	if (espi->zeropage)
++		free_page((unsigned long)espi->zeropage);
++}
++
++static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
++{
++	struct spi_master *master;
++	struct lpc31xx_spi *espi;
++	struct resource *res;
++	int error;
++
++	printk("JDS - lpc31xx_spi_probe\n");
++
++	master = spi_alloc_master(&pdev->dev, sizeof(*espi));
++	if (!master) {
++		dev_err(&pdev->dev, "failed to allocate spi master\n");
++		return -ENOMEM;
++	}
++	master->setup = lpc31xx_spi_setup;
++	master->transfer = lpc31xx_spi_transfer;
++	master->cleanup = lpc31xx_spi_cleanup;
++	master->bus_num = pdev->id;
++	master->num_chipselect = SPI_NUM_SLAVES;
++	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH;
++	master->dev.of_node = of_node_get(pdev->dev.of_node);
++
++	platform_set_drvdata(pdev, master);
++
++	espi = spi_master_get_devdata(master);
++
++	/* Enable clocks */
++	lpc31xx_spi_clks_enable();
++	cgu_soft_reset_module(SPI_PNRES_APB_SOFT);
++	cgu_soft_reset_module(SPI_PNRES_IP_SOFT);
++
++	espi->clk = clk_get(NULL, "spi_clk");
++	if (IS_ERR(espi->clk)) {
++		dev_err(&pdev->dev, "unable to get spi clock\n");
++		error = PTR_ERR(espi->clk);
++		goto fail_release_master;
++	}
++	/* Keep SPI clocks off until a transfer is performed to save power */
++	lpc31xx_spi_clks_disable();
++
++	spin_lock_init(&espi->lock);
++	init_completion(&espi->wait);
++
++	/*
++	 * Calculate maximum and minimum supported clock rates
++	 * for the controller.
++	 */
++	espi->max_rate = clk_get_rate(espi->clk) / 2;
++	espi->min_rate = clk_get_rate(espi->clk) / (254 * 256);
++	espi->pdev = pdev;
++
++	espi->irq = platform_get_irq(pdev, 4);
++	if (espi->irq < 0) {
++		error = -EBUSY;
++		dev_err(&pdev->dev, "failed to get irq resources\n");
++		goto fail_put_clock;
++	}
++
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	if (!res) {
++		dev_err(&pdev->dev, "unable to get iomem resource\n");
++		error = -ENODEV;
++		goto fail_put_clock;
++	}
++
++	res = request_mem_region(res->start, resource_size(res), pdev->name);
++	if (!res) {
++		dev_err(&pdev->dev, "unable to request iomem resources\n");
++		error = -EBUSY;
++		goto fail_put_clock;
++	}
++
++	espi->sspdr_phys = res->start;
++	espi->regs_base = ioremap(res->start, resource_size(res));
++	printk("JDS base %p phys %x\n", espi->regs_base , res->start);
++	if (!espi->regs_base) {
++		dev_err(&pdev->dev, "failed to map resources\n");
++		error = -ENODEV;
++		goto fail_free_mem;
++	}
++
++	error = request_irq(espi->irq, lpc31xx_spi_interrupt, 0,
++			    "lpc31xx-spi", espi);
++	if (error) {
++		dev_err(&pdev->dev, "failed to request irq\n");
++		goto fail_unmap_regs;
++	}
++
++	if (lpc31xx_spi_setup_dma(espi))
++		dev_warn(&pdev->dev, "DMA setup failed. Falling back to PIO\n");
++
++	espi->wq = create_singlethread_workqueue("lpc31xx_spid");
++	if (!espi->wq) {
++		dev_err(&pdev->dev, "unable to create workqueue\n");
++		goto fail_free_dma;
++	}
++	INIT_WORK(&espi->msg_work, lpc31xx_spi_work);
++	INIT_LIST_HEAD(&espi->msg_queue);
++	espi->running = true;
++
++	/* make sure that the hardware is disabled */
++#if 0
++	lpc31xx_spi_write_u8(espi, SSPCR1, 0);
++#endif
++
++	error = spi_register_master(master);
++	if (error) {
++		dev_err(&pdev->dev, "failed to register SPI master\n");
++		goto fail_free_queue;
++	}
++
++	dev_info(&pdev->dev, "LPC31xx SPI Controller at 0x%08lx irq %d\n",
++		 (unsigned long)res->start, espi->irq);
++
++	return 0;
++
++fail_free_queue:
++	destroy_workqueue(espi->wq);
++fail_free_dma:
++	lpc31xx_spi_release_dma(espi);
++	free_irq(espi->irq, espi);
++fail_unmap_regs:
++	iounmap(espi->regs_base);
++fail_free_mem:
++	release_mem_region(res->start, resource_size(res));
++fail_put_clock:
++	clk_put(espi->clk);
++fail_release_master:
++	spi_master_put(master);
++	platform_set_drvdata(pdev, NULL);
++
++	return error;
++}
++
++static int __devexit lpc31xx_spi_remove(struct platform_device *pdev)
++{
++	struct spi_master *master = platform_get_drvdata(pdev);
++	struct lpc31xx_spi *espi = spi_master_get_devdata(master);
++	struct resource *res;
++
++	printk("JDS - lpc31xx_spi_remove\n");
++	spin_lock_irq(&espi->lock);
++	espi->running = false;
++	spin_unlock_irq(&espi->lock);
++
++	destroy_workqueue(espi->wq);
++
++	/*
++	 * Complete remaining messages with %-ESHUTDOWN status.
++	 */
++	spin_lock_irq(&espi->lock);
++	while (!list_empty(&espi->msg_queue)) {
++		struct spi_message *msg;
++
++		msg = list_first_entry(&espi->msg_queue,
++				       struct spi_message, queue);
++		list_del_init(&msg->queue);
++		msg->status = -ESHUTDOWN;
++		spin_unlock_irq(&espi->lock);
++		msg->complete(msg->context);
++		spin_lock_irq(&espi->lock);
++	}
++	spin_unlock_irq(&espi->lock);
++
++	lpc31xx_spi_release_dma(espi);
++	free_irq(espi->irq, espi);
++	iounmap(espi->regs_base);
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	release_mem_region(res->start, resource_size(res));
++	clk_put(espi->clk);
++	platform_set_drvdata(pdev, NULL);
++
++	spi_unregister_master(master);
++	return 0;
++}
++
++/**
++ * Suspend SPI by switching off the IP clocks
++ **/
++static int lpc31xx_spi_suspend(struct platform_device *pdev, pm_message_t state)
++{
++#ifdef CONFIG_PM
++	struct spi_master *master = platform_get_drvdata(pdev);
++	struct lpc31xx_spi *espi = spi_master_get_devdata(master);
++
++	/* Check if SPI is idle before we pull off the clock */
++	if (unlikely(!list_empty(&espi->msg_queue)))
++		return 0;
++
++	/* Pull the clocks off */
++	lpc31xx_spi_clks_disable();
++#endif
++	return 0;
++}
++
++/**
++ * Resume SPI by switching on the IP clocks
++ **/
++static int lpc31xx_spi_resume(struct platform_device *pdev)
++{
++#ifdef CONFIG_PM
++	//struct spi_master *master = spi_master_get(platform_get_drvdata(pdev));
++	//struct lpc313xspi *spidat = spi_master_get_devdata(master);
++
++	/* Switch on the clocks */
++	lpc31xx_spi_clks_enable();
++#endif
++	return 0;
++}
++
++#if defined(CONFIG_OF)
++static const struct of_device_id lpc313x_spi_of_match[] = {
++	{ .compatible = "nxp,lpc31xx-spi" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, lpc313x_spi_of_match);
++#endif
++
++static struct platform_driver lpc31xx_spi_driver = {
++	.probe		= lpc31xx_spi_probe,
++	.remove		= __devexit_p(lpc31xx_spi_remove),
++	.suspend	= lpc31xx_spi_suspend,
++	.resume		= lpc31xx_spi_resume,
++	.driver		= {
++		.name	= "spi_lpc313x",
++		.owner	= THIS_MODULE,
++#ifdef CONFIG_OF
++		.of_match_table = lpc313x_spi_of_match,
++#endif
++	},
++};
++module_platform_driver(lpc31xx_spi_driver);
++
++MODULE_DESCRIPTION("LPC31xx SPI Controller driver");
++MODULE_AUTHOR("Jon Smirl <jonsmirl@gmail.com>");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:lpc31xx-spi");
++
++#ifdef OLD_SPI
++/*
+  * drivers/spi/spi_lpc313x.c
+  *
+  * Copyright (C) 2009 NXP Semiconductors
+@@ -44,6 +1465,9 @@
+ 
+ #include <mach/registers.h>
+ #include <mach/dma.h>
++#ifndef OLD_DMA
++#include <linux/dmaengine.h>
++#endif
+ #include <mach/board.h>
+ #include <mach/gpio.h>
+ 
+@@ -62,20 +1486,25 @@ struct lpc313xspi
+ 	struct spi_master *master;
+ 	int irq;
+ 	int id;
+-	u32 spi_base_clock;
++	uint32_t spi_base_clock;
+ 	struct lpc313x_spi_cfg *psppcfg;
+-	u32 current_speed_hz [3]; /* Per CS */
++	uint32_t current_speed_hz [3]; /* Per CS */
+ 	u8 current_bits_wd [3]; /* Per CS */
+ 
+ 	/* DMA allocated regions */
+-	u32 dma_base_v;
++	uint32_t dma_base_v;
+ 	dma_addr_t dma_base_p;
+ 
+ 	/* DMA TX and RX physical and mapped spaces */
+-	u32 dma_tx_base_v, dma_rx_base_v, dma_tx_base_p, dma_rx_base_p;
++	uint32_t dma_tx_base_v, dma_rx_base_v, dma_tx_base_p, dma_rx_base_p;
+ 
+ 	/* Allocated DMA channels */
++#ifdef OLD_DMA
+ 	int tx_dma_ch, rx_dma_ch;
++#else
++	struct dma_chan *tx_dma_ch, *rx_dma_ch;
++	struct lpc31xx_dma_data tx_dma_data, rx_dma_data;
++#endif
+ 
+ 	/* DMA event flah */
+ 	volatile int rxdmaevent;
+@@ -126,7 +1555,7 @@ static void lpc313x_spi_clks_disable(void)
+  */
+ static void lpc313x_fifo_flush(struct lpc313xspi *spidat)
+ {
+-	volatile u32 tmp;
++	volatile uint32_t tmp;
+ 
+ 	/* Clear TX FIFO first */
+ 	spi_writel(TXF_FLUSH_REG, SPI_TXFF_FLUSH);
+@@ -141,7 +1570,7 @@ static void lpc313x_fifo_flush(struct lpc313xspi *spidat)
+ /*
+  * Clear a latched SPI interrupt
+  */
+-static inline void lpc313x_int_clr(struct lpc313xspi *spidat, u32 ints)
++static inline void lpc313x_int_clr(struct lpc313xspi *spidat, uint32_t ints)
+ {
+ 	spi_writel(INT_CLRS_REG, ints);
+ }
+@@ -149,7 +1578,7 @@ static inline void lpc313x_int_clr(struct lpc313xspi *spidat, u32 ints)
+ /*
+  * Disable a SPI interrupt
+  */
+-static inline void lpc313x_int_dis(struct lpc313xspi *spidat, u32 ints)
++static inline void lpc313x_int_dis(struct lpc313xspi *spidat, uint32_t ints)
+ {
+ 	spi_writel(INT_CLRE_REG, ints);
+ }
+@@ -157,7 +1586,7 @@ static inline void lpc313x_int_dis(struct lpc313xspi *spidat, u32 ints)
+ /*
+  * Enable a SPI interrupt
+  */
+-static inline void lpc313x_int_en(struct lpc313xspi *spidat, u32 ints)
++static inline void lpc313x_int_en(struct lpc313xspi *spidat, uint32_t ints)
+ {
+ 	spi_writel(INT_SETE_REG, ints);
+ }
+@@ -177,9 +1606,9 @@ static void lpc313x_set_cs_data_bits(struct lpc313xspi *spidat, u8 cs, u8 data_w
+ {
+ 	if (spidat->current_bits_wd[cs] != data_width)
+ 	{
+-		u32 tmp = spi_readl(SLV_SET2_REG(0));
++		uint32_t tmp = spi_readl(SLV_SET2_REG(0));
+ 		tmp &= ~SPI_SLV2_WD_SZ(0x1F);
+-		tmp |= SPI_SLV2_WD_SZ((u32) (data_width - 1));
++		tmp |= SPI_SLV2_WD_SZ((uint32_t) (data_width - 1));
+ 		spi_writel(SLV_SET2_REG(0), tmp);
+ 
+ 		spidat->current_bits_wd[cs] = data_width;
+@@ -189,9 +1618,9 @@ static void lpc313x_set_cs_data_bits(struct lpc313xspi *spidat, u8 cs, u8 data_w
+ /*
+  * Set clock rate and delays for the SPI chip select
+  */
+-static void lpc313x_set_cs_clock(struct lpc313xspi *spidat, u8 cs, u32 clockrate)
++static void lpc313x_set_cs_clock(struct lpc313xspi *spidat, u8 cs, uint32_t clockrate)
+ {
+-	u32 reg, div, ps, div1;
++	uint32_t reg, div, ps, div1;
+ 
+ 	if (clockrate != spidat->current_speed_hz[cs])
+ 	{
+@@ -219,7 +1648,7 @@ static void lpc313x_set_cs_clock(struct lpc313xspi *spidat, u8 cs, u32 clockrate
+  */
+ static void lpc313x_spi_prep(struct lpc313xspi *spidat)
+ {
+-	u32 tmp;
++	uint32_t tmp;
+ 
+ 	/* Reset SPI block */
+ 	spi_writel(CONFIG_REG, SPI_CFG_SW_RESET);
+@@ -272,7 +1701,7 @@ static int lpc313x_spi_setup(struct spi_device *spi)
+ {
+ 	unsigned int bits = spi->bits_per_word;
+ 
+-	/* There really isn't anuthing to do in this function, so verify the
++	/* There really isn't anything to do in this function, so verify the
+ 	   parameters are correct for the transfer */
+ 	if (spi->chip_select > spi->master->num_chipselect)
+ 	{
+@@ -299,7 +1728,7 @@ static int lpc313x_spi_setup(struct spi_device *spi)
+ /*
+  * Handle the SPI interrupt
+  */
+-static irqreturn_t lpc313x_spi_irq(int irq, void *dev_id)
++static irqreturn_t lpc313x_spi_irq_handler(int irq, void *dev_id)
+ {
+ 	struct lpc313xspi *spidat = dev_id;
+ 
+@@ -332,9 +1761,10 @@ static void lpc313x_dma_rx_spi_irq(int ch, dma_irq_type_t dtype, void *handle)
+ 
+ 	if (dtype == DMA_IRQ_FINISHED)
+ 	{
++#ifdef OLD_DMA
+ 		/* Disable interrupts for now */
+ 		dma_set_irq_mask(spidat->rx_dma_ch, 1, 1);
+-
++#endif
+ 		/* Flag event and wakeup */
+ 		spidat->rxdmaevent = 1;
+ 		wake_up(&spidat->waitq);
+@@ -355,9 +1785,14 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
+ {
+ 	dma_setup_t dmarx, dmatx;
+ 	int status = 0;
+-	u32 src, dest, srcmapped = 0, destmapped = 0;
++	uint32_t src, dest, srcmapped = 0, destmapped = 0;
+ 	struct device *dev = &spidat->pdev->dev;
++	static struct dma_async_tx_descriptor *txd;
++	static struct dma_async_tx_descriptor *rxd;
++	enum dma_slave_buswidth buswidth;
++	struct dma_slave_config conf;
+ 
++	printk("JDS -lpc313x_spi_dma_transfer\n");
+ 	/* Set the FIFO trip level to the transfer size */
+ 	spi_writel(INT_TRSH_REG, (SPI_INT_TSHLD_TX(16) |
+ 		SPI_INT_TSHLD_RX(1)));
+@@ -365,21 +1800,21 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
+ 	lpc313x_int_dis(spidat, SPI_ALL_INTS);
+ 	lpc313x_int_en(spidat, SPI_OVR_INT);
+ 
++#ifdef OLD_DMA
+ 	/* Setup transfer */
+-	if (bits_per_word > 8)
+-	{
+-		dmarx.cfg = DMA_CFG_TX_HWORD | DMA_CFG_RD_SLV_NR(DMA_SLV_SPI_RX) |
+-			DMA_CFG_WR_SLV_NR(0);
+-		dmatx.cfg = DMA_CFG_TX_HWORD | DMA_CFG_RD_SLV_NR(0) |
+-			DMA_CFG_WR_SLV_NR(DMA_SLV_SPI_TX);
++	if (bits_per_word > 8) {
++		dmarx.cfg = DMA_CFG_TX_HWORD | DMA_CFG_RD_SLV_NR(DMA_SLV_SPI_RX) | DMA_CFG_WR_SLV_NR(0);
++		dmatx.cfg = DMA_CFG_TX_HWORD | DMA_CFG_RD_SLV_NR(0) | DMA_CFG_WR_SLV_NR(DMA_SLV_SPI_TX);
++	} else {
++		dmarx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(DMA_SLV_SPI_RX) | DMA_CFG_WR_SLV_NR(0);
++		dmatx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(0) | DMA_CFG_WR_SLV_NR(DMA_SLV_SPI_TX);
+ 	}
++#else
++	if (bits_per_word > 8)
++		buswidth = DMA_SLAVE_BUSWIDTH_2_BYTES;
+ 	else
+-	{
+-		dmarx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(DMA_SLV_SPI_RX) |
+-			DMA_CFG_WR_SLV_NR(0);
+-		dmatx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(0) |
+-			DMA_CFG_WR_SLV_NR(DMA_SLV_SPI_TX);
+-	}
++		buswidth = DMA_SLAVE_BUSWIDTH_1_BYTE;
++#endif
+ 
+ 	/* Determine the DMA source and destination addresses. If DMA buffers weren't
+ 	   passed to this handler, they need to be mapped */
+@@ -416,7 +1851,7 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
+ 		else
+ 		{
+ 			/* Map DMA buffer */
+-			src = (u32) dma_map_single(dev, (void *) t->tx_buf,
++			src = (uint32_t) dma_map_single(dev, (void *) t->tx_buf,
+ 				t->len, DMA_TO_DEVICE);
+ 			if (dma_mapping_error(dev, src))
+ 			{
+@@ -436,7 +1871,7 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
+ 		else
+ 		{
+ 			/* Map DMA buffer */
+-			dest = (u32) dma_map_single(dev, (void *) t->rx_buf,
++			dest = (uint32_t) dma_map_single(dev, (void *) t->rx_buf,
+ 				t->len, DMA_FROM_DEVICE);
+ 			if (dma_mapping_error(dev, dest))
+ 			{
+@@ -448,6 +1883,7 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
+ 		}
+ 	}
+ 
++#ifdef OLD_DMA
+ 	/* Setup transfer data for DMA */
+ 	dmarx.trans_length = (t->len - 1);
+ 	dmarx.src_address = (SPI_PHYS + 0x0C);
+@@ -468,14 +1904,52 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
+ 	spidat->rxdmaevent = 0;
+ 	dma_start_channel(spidat->rx_dma_ch);
+ 	dma_start_channel(spidat->tx_dma_ch);
++#else
++	memset(&conf, 0, sizeof(conf));
++	conf.src_addr = (SPI_PHYS + 0x0C);
++	conf.src_addr_width = buswidth;
++	conf.dst_addr = dest;
++	conf.dst_addr_width = buswidth;
++	conf.direction = DMA_DEV_TO_MEM;
++	ret = dmaengine_slave_config(spidat->rx_dma_ch, &conf);
++
++	memset(&conf, 0, sizeof(conf));
++	conf.src_addr = src;
++	conf.src_addr_width = buswidth;
++	conf.dst_addr = (SPI_PHYS + 0x0C);
++	conf.dst_addr_width = buswidth;
++	conf.direction = DMA_DEV_TO_MEM;
++	ret = dmaengine_slave_config(spidat->tx_dma_ch, &conf);
++
++
++	} else {
++		chan = spidat->dma_tx_ch;
++		buf = t->tx_buf;
++
++		conf.dst_addr = dst;
++		conf.dst_addr_width = buswidth;
++		slave_dirn = DMA_MEM_TO_DEV;
++	}
++
++	ret = dmaengine_slave_config(chan, &conf);
++	if (ret)
++		return ERR_PTR(ret);
+ 
++
++	if (WARN_ON(len)) {
++		dev_warn(&spidat->pdev->dev, "len = %d expected 0!", len);
++		return ERR_PTR(-EINVAL);
++	}
++	txd = chan->device->lpc31xx_dma_prep_dma_memcpy(chan, dest, src, len, DMA_CTRL_ACK);
++#endif
+ 	/* Wait for DMA to complete */
+ 	wait_event_interruptible(spidat->waitq, spidat->rxdmaevent);
+ 
+ exit:
++#ifdef OLD_DMA
+ 	dma_stop_channel(spidat->tx_dma_ch);
+ 	dma_stop_channel(spidat->rx_dma_ch);
+-
++#endif
+ 	/* Unmap buffers */
+ 	if (srcmapped != 0)
+ 	{
+@@ -500,7 +1974,7 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
+ 	unsigned int wsize, cs_change = 1;
+ 	int status = 0;
+ 	unsigned long flags;
+-	u32 tmp;
++	uint32_t tmp;
+ 
+ 	/* Enable SPI clock and interrupts */
+ 	spin_lock_irqsave(&spidat->lock, flags);
+@@ -515,9 +1989,9 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
+ 	list_for_each_entry (t, &m->transfers, transfer_list) {
+ 		const void *txbuf = t->tx_buf;
+ 		void *rxbuf = t->rx_buf;
+-		u32 data;
++		uint32_t data;
+ 		unsigned int rlen, tlen = t->len;
+-		u32 speed_hz = t->speed_hz ? : spi->max_speed_hz;
++		uint32_t speed_hz = t->speed_hz ? : spi->max_speed_hz;
+ 		u8 bits_per_word = t->bits_per_word ? : spi->bits_per_word;
+ 
+ 		/* Bits per word, data transfer size, and transfer counter */
+@@ -797,6 +2271,61 @@ struct lpc313x_spi_cfg lpc313x_spidata =
+ };
+ #endif
+ 
++static bool lpc313x_spi_dma_filter(struct dma_chan *chan, void *filter_param)
++{
++	chan->private = filter_param;
++	return true;
++}
++
++static void spi_set_cs0_state(int cs_num, int state)
++{
++	(void) cs_num;
++	lpc313x_gpio_set_value(GPIO_SPI_CS_OUT0, state);
++}
++
++static void spi_set_cs1_state(int cs_num, int state)
++{
++	(void) cs_num;
++printk("cs1 state %d\n", state);
++	lpc313x_gpio_set_value(GPIO_MUART_CTS_N, state);
++}
++
++static void spi_set_cs2_state(int cs_num, int state)
++{
++printk("cs2 state %d\n", state);
++	(void) cs_num;
++	lpc313x_gpio_set_value(GPIO_MUART_RTS_N, state);
++}
++
++struct lpc313x_spics_cfg lpc313x_stdspics_cfg[] =
++{
++	/* SPI CS0 */
++	[0] =
++	{
++		.spi_spo	= 0, /* Low clock between transfers */
++		.spi_sph	= 0, /* Data capture on first clock edge (high edge with spi_spo=0) */
++		.spi_cs_set	= spi_set_cs0_state,
++	},
++	[1] =
++	{
++		.spi_spo	= 0, /* Low clock between transfers */
++		.spi_sph	= 0, /* Data capture on first clock edge (high edge with spi_spo=0) */
++		.spi_cs_set	= spi_set_cs1_state,
++	},
++	[2] =
++	{
++		.spi_spo	= 0, /* Low clock between transfers */
++		.spi_sph	= 1, /* Data capture on first clock edge (high edge with spi_spo=0) */
++		.spi_cs_set	= spi_set_cs2_state,
++	},
++};
++
++struct lpc313x_spi_cfg lpc313x_spidata =
++{
++	.num_cs			= ARRAY_SIZE(lpc313x_stdspics_cfg),
++	.spics_cfg		= lpc313x_stdspics_cfg,
++};
++
+ /*
+  * SPI driver probe
+  */
+@@ -807,20 +2336,20 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
+ 	struct clk *clk;
+ 	int ret, irq, i;
+ 	dma_addr_t dma_handle;
++	dma_cap_mask_t mask;
+ 
+-	/* Get required resources */
+-	irq = platform_get_irq(pdev, 0);
+-	if ((irq < 0) | (irq >= NR_IRQS))
+-	{
++	/* Get required resources, last IRQ is general one */
++	irq = platform_get_irq(pdev, 4);
++	if ((irq < 0) | (irq >= NR_IRQS)) {
+ 		return -EBUSY;
+ 	}
+ 
+ 	master = spi_alloc_master(&pdev->dev, sizeof(struct lpc313xspi));
+-	if (!master)
+-	{
++	if (!master) {
+ 		return -ENODEV;
+ 	}
+ 	spidat = spi_master_get_devdata(master);
++
+ 	platform_set_drvdata(pdev, master);
+ 
+ 	/* Is a board specific configuration available? */
+@@ -828,22 +2357,18 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
+ #ifdef CONFIG_OF
+ 	spidat->psppcfg = &lpc313x_spidata;
+ #endif
+-	if (spidat->psppcfg == NULL)
+-	{
++	if (spidat->psppcfg == NULL) {
+ 		/* No platform data, exit */
+ 		ret = -ENODEV;
+ 		goto errout;
+ 	}
+-	if (spidat->psppcfg->num_cs < 1)
+-	{
++	if (spidat->psppcfg->num_cs < 1) {
+ 		/* No chip selects supported in board structure, exit */
+ 		ret = -ENODEV;
+ 		goto errout;
+ 	}
+-	for (i = 0; i < spidat->psppcfg->num_cs; i++)
+-	{
+-		if (spidat->psppcfg->spics_cfg[i].spi_cs_set == NULL)
+-		{
++	for (i = 0; i < spidat->psppcfg->num_cs; i++) {
++		if (spidat->psppcfg->spics_cfg[i].spi_cs_set == NULL) {
+ 			/* Missing hardware CS control callback, exit */
+ 			ret = -ENODEV;
+ 			goto errout;
+@@ -860,25 +2385,17 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
+ 	INIT_LIST_HEAD(&spidat->queue);
+ 	init_waitqueue_head(&spidat->waitq);
+ 	spidat->workqueue = create_singlethread_workqueue(dev_name(master->dev.parent));	//***MOD:Fix from JPP to compile to latest versions of Linux
+-	if (!spidat->workqueue)
+-	{
++	if (!spidat->workqueue) {
+ 		ret = -ENOMEM;
+ 		goto errout;
+ 	}
+ 
+-	/* Enable clocks */
+-	lpc313x_spi_clks_enable();
+-	cgu_soft_reset_module(SPI_PNRES_APB_SOFT);
+-	cgu_soft_reset_module(SPI_PNRES_IP_SOFT);
+-
+-	ret = request_irq(spidat->irq, lpc313x_spi_irq,
+-		IRQF_DISABLED, "spiirq", spidat);
+-	if (ret)
+-	{
++	ret = request_irq(irq, lpc313x_spi_irq_handler, IRQF_DISABLED, "spi", spidat);
++	if (ret) {
+ 		ret = -EBUSY;
+ 		goto errout2;
+ 	}
+-	disable_irq(spidat->irq);
++	disable_irq(irq);
+ 
+ 	master->bus_num = spidat->id;
+ 	master->setup = lpc313x_spi_setup;
+@@ -888,24 +2405,28 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
+ 	/* Setup several work DMA buffers for dummy TX and RX data. These buffers just
+ 	   hold the temporary TX or RX data for the unused half of the transfer and have
+ 	   a size of 4K (the maximum size of a transfer) */
+-	spidat->dma_base_v = (u32) dma_alloc_coherent(&pdev->dev, (4096 << 1),
++	spidat->dma_base_v = (uint32_t) dma_alloc_coherent(&pdev->dev, (4096 << 1),
+ 		&dma_handle, GFP_KERNEL);
+-	if (spidat->dma_base_v == (u32) NULL)
+-	{
++	if (spidat->dma_base_v == (uint32_t) NULL) {
+ 		dev_err(&pdev->dev, "error getting DMA region.\n");
+ 		ret = -ENOMEM;
+ 		goto errout3;
+ 	}
+ 	spidat->dma_base_p = dma_handle;;
+ 
+-	spidat->dma_tx_base_p = (u32) spidat->dma_base_p;
++	spidat->dma_tx_base_p = (uint32_t) spidat->dma_base_p;
+ 	spidat->dma_tx_base_v = spidat->dma_base_v;
+-	spidat->dma_rx_base_p = (u32) spidat->dma_base_p + 4096;
++	spidat->dma_rx_base_p = (uint32_t) spidat->dma_base_p + 4096;
+ 	spidat->dma_rx_base_v = spidat->dma_base_v + 4096;
+ 
+ 	/* Fill dummy TX buffer with 0 */
+ 	memset((void *) spidat->dma_tx_base_v, 0, 4096);
+ 
++	/* Enable clocks */
++	lpc313x_spi_clks_enable();
++	cgu_soft_reset_module(SPI_PNRES_APB_SOFT);
++	cgu_soft_reset_module(SPI_PNRES_IP_SOFT);
++
+ 	/* Initial setup of SPI */
+ 	clk = clk_get(NULL, "spi_clk");
+ 	spidat->spi_base_clock = clk->get_rate(clk);
+@@ -915,47 +2436,79 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
+ 	/* Keep SPI clocks off until a transfer is performed to save power */
+ 	lpc313x_spi_clks_disable();
+ 
++#ifdef OLD_DMA
+ 	/* Request RX and TX DMA channels */
+ 	spidat->tx_dma_ch = spidat->rx_dma_ch = -1;
+-	spidat->tx_dma_ch = dma_request_channel("spi_tx", lpc313x_dma_tx_spi_irq, spidat);
+-	if (spidat->tx_dma_ch < 0)
+-	{
++	spidat->tx_dma_ch = dma_request_channel_x("spi_tx", lpc313x_dma_tx_spi_irq, spidat);
++	if (spidat->tx_dma_ch < 0) {
+ 		dev_err(&pdev->dev, "error getting TX DMA channel.\n");
+ 		ret = -EBUSY;
+ 		goto errout4;
+ 	}
+-	spidat->rx_dma_ch = dma_request_channel("spi_rx", lpc313x_dma_rx_spi_irq, spidat);
+-	if (spidat->rx_dma_ch < 0)
+-	{
++	spidat->rx_dma_ch = dma_request_channel_x("spi_rx", lpc313x_dma_rx_spi_irq, spidat);
++	if (spidat->rx_dma_ch < 0) {
++		dev_err(&pdev->dev, "error getting RX DMA channel.\n");
++		ret = -EBUSY;
++		goto errout4;
++	}
++#else
++	/* Try to acquire a generic DMA engine slave channel */
++	dma_cap_zero(mask);
++	dma_cap_set(DMA_SLAVE, mask);
++
++	spidat->tx_dma_ch = spidat->rx_dma_ch = NULL;
++
++	spidat->tx_dma_data.port = DMA_CFG_RD_SLV_NR(DMA_SLV_SPI_TX);
++	spidat->tx_dma_data.direction = DMA_MEM_TO_DEV;
++	spidat->tx_dma_data.name = "spi-tx";
++	spidat->tx_dma_ch = dma_request_channel(mask, lpc313x_spi_dma_filter,
++								&spidat->tx_dma_data.port);
++	if (!spidat->tx_dma_ch) {
++		dev_err(&pdev->dev, "error getting TX DMA channel.\n");
++		ret = -EBUSY;
++		goto errout4;
++	}
++	spidat->rx_dma_data.port = DMA_CFG_WR_SLV_NR(DMA_SLV_SPI_RX);
++	spidat->rx_dma_data.direction = DMA_DEV_TO_MEM;
++	spidat->rx_dma_data.name = "spi-rx";
++	spidat->rx_dma_ch = dma_request_channel(mask, lpc313x_spi_dma_filter,
++								&spidat->rx_dma_data.port);
++	if (!spidat->rx_dma_ch) {
+ 		dev_err(&pdev->dev, "error getting RX DMA channel.\n");
+ 		ret = -EBUSY;
+ 		goto errout4;
+ 	}
++#endif
++
+ #ifdef CONFIG_OF
+ 	master->dev.of_node = of_node_get(pdev->dev.of_node);
+ #endif
+ 
+ 	ret = spi_register_master(master);
+ 	if (ret)
+-	{
+ 		goto errout4;
+-	}
+ 
+ 	dev_info(&pdev->dev, "LPC313x SPI driver\n");
+ 
+ 	return 0;
+ 
+ errout4:
++#ifdef OLD_DMA
+ 	if (spidat->tx_dma_ch != -1)
+-		dma_release_channel(spidat->tx_dma_ch);
++		dma_release_channel_x(spidat->tx_dma_ch);
+ 	if (spidat->rx_dma_ch != -1)
++		dma_release_channel_x(spidat->rx_dma_ch);
++#else
++	if (spidat->tx_dma_ch)
++		dma_release_channel(spidat->tx_dma_ch);
++	if (spidat->tx_dma_ch)
+ 		dma_release_channel(spidat->rx_dma_ch);
++#endif
+ 	dma_free_coherent(&pdev->dev, (4096 << 1), (void *) spidat->dma_base_v,
+ 		spidat->dma_base_p);
+ errout3:
+-	free_irq(spidat->irq, pdev);
++	free_irq(spidat->irq, spidat);
+ errout2:
+-	lpc313x_spi_clks_disable();
+ 	destroy_workqueue(spidat->workqueue);
+ errout:
+ 	platform_set_drvdata(pdev, NULL);
+@@ -972,6 +2525,7 @@ static int __devexit lpc313x_spi_remove(struct platform_device *pdev)
+ 	struct spi_master *master = spi_master_get(platform_get_drvdata(pdev));
+ 	struct lpc313xspi *spidat = spi_master_get_devdata(master);
+ 
++	printk("JDS - lpc313x_spi_remove\n");
+ 	/* Disable SPI interface */
+ 	spi_writel(CONFIG_REG, (spi_readl(CONFIG_REG) & ~SPI_CFG_ENABLE));
+ 	lpc313x_spi_clks_disable();
+@@ -979,10 +2533,15 @@ static int __devexit lpc313x_spi_remove(struct platform_device *pdev)
+ 	spi_unregister_master(master);
+ 	platform_set_drvdata(pdev, NULL);
+ 
++#ifdef OLD_DMA
+ 	if (spidat->tx_dma_ch != -1)
+-		dma_release_channel(spidat->tx_dma_ch);
++		dma_release_channel_x(spidat->tx_dma_ch);
+ 	if (spidat->rx_dma_ch != -1)
+-		dma_release_channel(spidat->rx_dma_ch);
++		dma_release_channel_x(spidat->rx_dma_ch);
++#else
++	dma_release_channel(spidat->tx_dma_ch);
++	dma_release_channel(spidat->rx_dma_ch);
++#endif
+ 
+ 	dma_free_coherent(&pdev->dev, (4096 << 1), (void *) spidat->dma_base_v,
+ 		spidat->dma_base_p);
+@@ -1021,8 +2580,8 @@ static int lpc313x_spi_suspend(struct platform_device *pdev, pm_message_t state)
+ static int lpc313x_spi_resume(struct platform_device *pdev)
+ {
+ #ifdef CONFIG_PM
+-	struct spi_master *master = spi_master_get(platform_get_drvdata(pdev));
+-	struct lpc313xspi *spidat = spi_master_get_devdata(master);
++	//struct spi_master *master = spi_master_get(platform_get_drvdata(pdev));
++	//struct lpc313xspi *spidat = spi_master_get_devdata(master);
+ 
+ 	/* Switch on the clocks */
+ 	lpc313x_spi_clks_enable();
+@@ -1068,3 +2627,4 @@ module_exit(lpc313x_spi_exit);
+ MODULE_AUTHOR("Kevin Wells <kevin.wells@nxp.com");
+ MODULE_DESCRIPTION("LPC313X SPI Driver");
+ MODULE_LICENSE("GPL");
++#endif
