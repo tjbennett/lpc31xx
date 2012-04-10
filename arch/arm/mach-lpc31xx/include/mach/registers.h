@@ -126,6 +126,7 @@
 #define UART_ICR_REG      __REG (UART_PHYS + 0x24)
 #define UART_FDR_REG      __REG (UART_PHYS + 0x28)
 
+#if 0
 /***********************************************************************
  * SPI register definitions
  **********************************************************************/
@@ -213,6 +214,7 @@
 #define SPI_TO_INT                _BIT(1)
 #define SPI_OVR_INT               _BIT(0)
 #define SPI_ALL_INTS              (SPI_SMS_INT | SPI_TX_INT | SPI_RX_INT | SPI_TO_INT | SPI_OVR_INT)
+#endif
 
 /***********************************************************************
 * Audio Subsystem (ADSS) register definitions
