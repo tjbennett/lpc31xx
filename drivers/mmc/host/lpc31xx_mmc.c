@@ -1558,7 +1558,10 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 	SYS_MUX_GPIO_MCI = 1;
 
 	/* set the pins as driven by IP in IOCONF */
+#if 0
+	/* fixme */
 	GPIO_DRV_IP(IOCONF_EBI_MCI, 0xF0000003);
+#endif
 
 	/* set delay gates */
 	SYS_SDMMC_DELAYMODES = 0x1B;
