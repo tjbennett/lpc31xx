@@ -52,15 +52,15 @@
 
 
 /*
- * DM9000 ethernet device
+ * DM9000 Ethernet device
  */
 
-/* ARM MPMC contoller as part of low power design doesn't de-assert nCS and nOE for consecutive
+/* ARM MPMC controller as part of low power design doesn't de-assert nCS and nOE for consecutive
 reads but just changes address. But DM9000 requires nCS and nOE change between address. So access
 other chip select area (nCS0) to force de-assertion of nCS1 and nOE1. Or else wait for long time
 such as 80 usecs.
 LPC313x has external logic outside of MPMC IP to toggle nOE to split consecutive reads.
-The latest Apex bootloader pacth makes use of this feture.
+The latest Apex bootloader patch makes use of this feature.
 For this to work SYS_MPMC_WTD_DEL0 & SYS_MPMC_WTD_DEL1 should be programmed with MPMC_STWTRD0
 & MPMC_STWTRD1 values. The logic only deactivates the nOE for one clock cycle which is
 11nsec but DM9000 needs 80nsec between nOEs. So lets add some dummy instructions such as
