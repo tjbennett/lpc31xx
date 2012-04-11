@@ -1,0 +1,701 @@
+Bottom: 0240b5fa8905398a859ec36fa3a96ecc053e8ccc
+Top:    cd48276438ae42eb021129a7a214bbc62ee5400c
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-10 21:54:13 -0400
+
+Refresh of dma
+
+---
+
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+index a8ff332..1616649 100644
+--- a/arch/arm/boot/dts/ea3131.dts
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -35,7 +35,7 @@
+ 	spi@15002000 {
+ 		s25sl032a@0 {
+ 			compatible = "code,s25sl032a";
+-			spi-max-frequency = <1000000>;
++			spi-max-frequency = <3000000>;
+ 			reg = <0>;
+ 		};
+ 		ads7846@1 {
+diff --git a/drivers/spi/spi-lpc313x.c b/drivers/spi/spi-lpc313x.c
+index 9139289..bce770b 100644
+--- a/drivers/spi/spi-lpc313x.c
++++ b/drivers/spi/spi-lpc313x.c
+@@ -41,8 +41,8 @@
+ #define SPI_DMA_SET_REG   0x18
+ #define SPI_STS_REG       0x1C
+ #define SPI_HWINFO_REG    0x20
+-#define SPI_SLV_SET1_REG(slv) 0x24 + (8 * slv))
+-#define SPI_SLV_SET2_REG(slv) 0x28 + (8 * slv))
++#define SPI_SLV_SET1_REG(slv) (0x24 + (8 * slv))
++#define SPI_SLV_SET2_REG(slv) (0x28 + (8 * slv))
+ #define SPI_INT_TRSH_REG  0xFD4
+ #define SPI_INT_CLRE_REG  0xFD8
+ #define SPI_INT_SETE_REG  0xFDC
+@@ -75,7 +75,7 @@
+ #define SPI_SLV_SUSPEND(n)        _SBF(((n) << 1), 0x3)
+ 
+ /* SPI tx_fifo_flush register definitions (SPI_TXF_FLUSH_REG) */
+-#define SPI_TXFF_FLUSH            _BIT(1)
++#define SPI_TXFF_FLUSH            _BIT(0)
+ 
+ /* SPI dma_settings register definitions (SPI_DMA_SET_REG) */
+ #define SPI_DMA_TX_EN             _BIT(1)
+@@ -119,8 +119,6 @@
+ 
+ /* timeout in milliseconds */
+ #define SPI_TIMEOUT		5
+-/* maximum depth of RX/TX FIFO */
+-#define SPI_FIFO_SIZE		8
+ 
+ 
+ /**
+@@ -188,6 +186,9 @@ struct lpc31xx_spi {
+ 	struct sg_table			rx_sgt;
+ 	struct sg_table			tx_sgt;
+ 	void				*zeropage;
++
++	uint32_t current_speed_hz [3]; /* Per CS */
++	uint8_t current_bits_wd [3]; /* Per CS */
+ };
+ 
+ /**
+@@ -218,7 +219,6 @@ lpc31xx_spi_write(const struct lpc31xx_spi *espi, uint32_t reg, uint32_t value)
+ {
+ 	printk("JDS - lpc31xx_spi_write %p value %x\n", espi->regs_base + reg, value);
+ 	__raw_writel(value, espi->regs_base + reg);
+-	printk("JDS - lpc31xx_spi_write done\n");
+ }
+ 
+ static inline uint32_t
+@@ -231,6 +231,69 @@ lpc31xx_spi_read(const struct lpc31xx_spi *espi, uint32_t reg)
+ }
+ 
+ /*
++ * Clear a latched SPI interrupt
++ */
++static inline void lpc31xx_int_clr(struct lpc31xx_spi *espi, uint32_t ints)
++{
++	lpc31xx_spi_write(espi, SPI_INT_CLRS_REG, ints);
++}
++
++/*
++ * Disable a SPI interrupt
++ */
++static inline void lpc31xx_int_dis(struct lpc31xx_spi *espi, uint32_t ints)
++{
++	lpc31xx_spi_write(espi, SPI_INT_CLRE_REG, ints);
++}
++
++/*
++ * Set data width for the SPI chip select
++ */
++static void lpc31xx_set_cs_data_bits(struct lpc31xx_spi *espi, uint8_t cs, uint8_t data_width)
++{
++	printk("JDS - lpc31xx_set_cs_data_bits, width %x\n", data_width);
++	if (espi->current_bits_wd[cs] != data_width)
++	{
++		uint32_t tmp = lpc31xx_spi_read(espi, SPI_SLV_SET2_REG(0));
++		tmp &= ~SPI_SLV2_WD_SZ(0x1F);
++		tmp |= SPI_SLV2_WD_SZ((uint32_t) (data_width - 1));
++		lpc31xx_spi_write(espi, SPI_SLV_SET2_REG(0), tmp);
++
++		espi->current_bits_wd[cs] = data_width;
++	}
++}
++
++/*
++ * Set clock rate and delays for the SPI chip select
++ */
++static void lpc31xx_set_cs_clock(struct lpc31xx_spi *espi, uint8_t cs, uint32_t clockrate)
++{
++	uint32_t reg, div, ps, div1;
++
++	printk("JDS - lpc31xx_set_cs_clock\n");
++	if (clockrate != espi->current_speed_hz[cs])
++	{
++		printk("setting clock - lpc31xx_set_cs_clock\n");
++		reg = lpc31xx_spi_read(espi, SPI_SLV_SET1_REG(0));
++		reg &= ~0xFFFF;
++
++		div = ((espi->max_rate * 2)  + clockrate / 2) / clockrate;
++		if (div > SPI_MAX_DIVIDER)
++			div = SPI_MAX_DIVIDER;
++		if (div < SPI_MIN_DIVIDER)
++			div = SPI_MIN_DIVIDER;
++
++		ps = (((div - 1) / 512) + 1) * 2;
++		div1 = (((div + ps / 2) / ps) - 1);
++
++		lpc31xx_spi_write(espi, SPI_SLV_SET1_REG(0),
++			(reg | SPI_SLV1_CLK_PS(ps) | SPI_SLV1_CLK_DIV1(div1)));
++
++		espi->current_speed_hz[cs] = clockrate;
++	}
++}
++
++/*
+  * Enable or disable the SPI clocks
+  */
+ static void lpc31xx_spi_clks_enable(void)
+@@ -238,6 +301,7 @@ static void lpc31xx_spi_clks_enable(void)
+ 	struct clk *clk;
+ 	int ret;
+ 
++	printk("----clocks on-----------\n");
+ 	clk = clk_get(NULL, "spi_pclk");
+ 	ret = clk_enable(clk);
+ 	clk_put(clk);
+@@ -256,6 +320,7 @@ static void lpc31xx_spi_clks_disable(void)
+ {
+ 	struct clk *clk;
+ 
++	printk("----clocks off-----------\n");
+ 	clk = clk_get(NULL, "spi_pclk");
+ 	clk_disable(clk);
+ 	clk_put(clk);
+@@ -272,57 +337,32 @@ static void lpc31xx_spi_clks_disable(void)
+ 
+ static int lpc31xx_spi_enable(const struct lpc31xx_spi *espi)
+ {
+-	u8 regval;
+-	int err;
+-
+ 	printk("JDS - lpc31xx_spi_enable\n");
+ 	lpc31xx_spi_clks_enable();
+ 
+-#if 0
+-	err = clk_enable(espi->clk);
+-	if (err)
+-		return err;
+-	regval = lpc31xx_spi_read_u8(espi, SSPCR1);
+-	regval |= SSPCR1_SSE;
+-	lpc31xx_spi_write_u8(espi, SSPCR1, regval);
+-#endif
+ 	return 0;
+ }
+ 
+ static void lpc31xx_spi_disable(const struct lpc31xx_spi *espi)
+ {
+-	u8 regval;
+ 	printk("JDS - lpc31xx_spi_disable\n");
+ 	lpc31xx_spi_clks_disable();
+-#if 0
+-	regval = lpc31xx_spi_read_u8(espi, SSPCR1);
+-	regval &= ~SSPCR1_SSE;
+-	lpc31xx_spi_write_u8(espi, SSPCR1, regval);
+-
+-	clk_disable(espi->clk);
+-#endif
+ }
+ 
+ static void lpc31xx_spi_enable_interrupts(const struct lpc31xx_spi *espi)
+ {
+-	u8 regval;
+ 	printk("JDS - lpc31xx_spi_enable_interrupts\n");
+-#if 0
+-	regval = lpc31xx_spi_read_u8(espi, SSPCR1);
+-	regval |= (SSPCR1_RORIE | SSPCR1_TIE | SSPCR1_RIE);
+-	lpc31xx_spi_write_u8(espi, SSPCR1, regval);
+-#endif
++	lpc31xx_spi_write(espi, SPI_INT_SETE_REG, (SPI_TX_INT | SPI_RX_INT | SPI_TO_INT | SPI_OVR_INT));
++	enable_irq(espi->irq);
++
++
++	printk("int status %x\n", lpc31xx_spi_read(espi, SPI_INT_STS_REG));
+ }
+ 
+ static void lpc31xx_spi_disable_interrupts(const struct lpc31xx_spi *espi)
+ {
+-	u8 regval;
+ 	printk("JDS - lpc31xx_spi_disable_interrupts\n");
+-#if 0
+-	regval = lpc31xx_spi_read_u8(espi, SSPCR1);
+-	regval &= ~(SSPCR1_RORIE | SSPCR1_TIE | SSPCR1_RIE);
+-	lpc31xx_spi_write_u8(espi, SSPCR1, regval);
+-#endif
++	disable_irq(espi->irq);
+ }
+ 
+ /**
+@@ -362,8 +402,8 @@ static int lpc31xx_spi_calc_divisors(const struct lpc31xx_spi *espi,
+ 	for (cpsr = 2; cpsr <= 254; cpsr += 2) {
+ 		for (scr = 0; scr <= 255; scr++) {
+ 			if ((spi_clk_rate / (cpsr * (scr + 1))) <= rate) {
+-				chip->div_scr = (u8)scr;
+-				chip->div_cpsr = (u8)cpsr;
++				chip->div_scr = (uint8_t)scr;
++				chip->div_cpsr = (uint8_t)cpsr;
+ 				return 0;
+ 			}
+ 		}
+@@ -376,9 +416,9 @@ static void lpc31xx_spi_cs_control(struct spi_device *spi, bool control)
+ 	struct lpc31xx_spi_chip *chip = spi_get_ctldata(spi);
+ 	int value = (spi->mode & SPI_CS_HIGH) ? control : !control;
+ 
+-	printk("JDS - lpc31xx_spi_cs_control %d value %d\n", chip->gpio, value);
+ 	if (!gpio_is_valid(chip->gpio))
+ 		return;
++	printk("JDS - lpc31xx_spi_cs_control %d value %d\n", chip->gpio, value);
+ 	gpio_set_value(chip->gpio, value);
+ }
+ 
+@@ -550,7 +590,7 @@ static void lpc31xx_spi_chip_setup(const struct lpc31xx_spi *espi,
+ 		chip->spi->mode, chip->div_cpsr, chip->div_scr, chip->dss);
+ 	dev_dbg(&espi->pdev->dev, "setup: cr0 %#x", cr0);
+ 
+-	lpc31xx_spi_write_u8(espi, SSPCPSR, chip->div_cpsr);
++	lpc31xx_spi_write_uint8_t(espi, SSPCPSR, chip->div_cpsr);
+ 	lpc31xx_spi_write_u16(espi, SSPCR0, cr0);
+ #endif
+ }
+@@ -565,46 +605,41 @@ static inline int bits_per_word(const struct lpc31xx_spi *espi)
+ 
+ static void lpc31xx_do_write(struct lpc31xx_spi *espi, struct spi_transfer *t)
+ {
+-	printk("JDS - lpc31xx_do_write\n");
+-#if 0
+-	if (bits_per_word(espi) > 8) {
+-		u16 tx_val = 0;
++	uint32_t data;
+ 
+-		if (t->tx_buf)
+-			tx_val = ((u16 *)t->tx_buf)[espi->tx];
+-		lpc31xx_spi_write_u16(espi, SSPDR, tx_val);
+-		espi->tx += sizeof(tx_val);
++	if (t->tx_buf) {
++		if (bits_per_word(espi) > 8) {
++			data = ((uint16_t *)t->tx_buf)[espi->tx];
++			espi->tx += sizeof(uint16_t);
++		} else {
++			data = ((uint8_t *)t->tx_buf)[espi->tx];
++			espi->tx += sizeof(uint8_t);
++		}
+ 	} else {
+-		u8 tx_val = 0;
+-
+-		if (t->tx_buf)
+-			tx_val = ((u8 *)t->tx_buf)[espi->tx];
+-		lpc31xx_spi_write_u8(espi, SSPDR, tx_val);
+-		espi->tx += sizeof(tx_val);
++		/* Send dummy data */
++		data = 0xFFFF;
+ 	}
+-#endif
++	lpc31xx_spi_write(espi, SPI_FIFO_DATA_REG, data);
++	printk("JDS - lpc31xx_do_write data %x\n", data);
+ }
+ 
+ static void lpc31xx_do_read(struct lpc31xx_spi *espi, struct spi_transfer *t)
+ {
+-	printk("JDS - lpc31xx_do_read\n");
+-#if 0
+-	if (bits_per_word(espi) > 8) {
+-		u16 rx_val;
++	uint32_t data;
+ 
+-		rx_val = lpc31xx_spi_read_u16(espi, SSPDR);
+-		if (t->rx_buf)
+-			((u16 *)t->rx_buf)[espi->rx] = rx_val;
+-		espi->rx += sizeof(rx_val);
+-	} else {
+-		u8 rx_val;
+ 
+-		rx_val = lpc31xx_spi_read_u8(espi, SSPDR);
+-		if (t->rx_buf)
+-			((u8 *)t->rx_buf)[espi->rx] = rx_val;
+-		espi->rx += sizeof(rx_val);
++	data = lpc31xx_spi_read(espi, SPI_FIFO_DATA_REG);
++	printk("JDS - lpc31xx_do_read data %x\n", data);
++	/* The data can be tossed if there is no RX buffer */
++	if (t->rx_buf) {
++		if (bits_per_word(espi) > 8) {
++			((uint16_t *)t->rx_buf)[espi->rx] = data;
++			espi->rx += sizeof(uint16_t);
++		} else {
++			((uint8_t *)t->rx_buf)[espi->rx] = data;
++			espi->rx += sizeof(uint8_t);
++		}
+ 	}
+-#endif
+ }
+ 
+ /**
+@@ -623,17 +658,16 @@ static int lpc31xx_spi_read_write(struct lpc31xx_spi *espi)
+ 	struct spi_message *msg = espi->current_msg;
+ 	struct spi_transfer *t = msg->state;
+ 
+-	printk("JDS - lpc31xx_spi_read_write\n");
++	printk("JDS - lpc31xx_spi_read_write, length %d\n", t->len);
++
+ 	/* read as long as RX FIFO has frames in it */
+-#if 0
+-	while ((lpc31xx_spi_read_u8(espi, SSPSR) & SSPSR_RNE)) {
++	while (!(lpc31xx_spi_read(espi, SPI_STS_REG) & SPI_ST_RX_EMPTY)) {
+ 		lpc31xx_do_read(espi, t);
+ 		espi->fifo_level--;
+ 	}
+-#endif
+ 
+ 	/* write as long as TX FIFO has room */
+-	while (espi->fifo_level < SPI_FIFO_SIZE && espi->tx < t->len) {
++	while ((espi->fifo_level < SPI_FIFO_DEPTH) && (espi->tx < t->len)) {
+ 		lpc31xx_do_write(espi, t);
+ 		espi->fifo_level++;
+ 	}
+@@ -641,6 +675,11 @@ static int lpc31xx_spi_read_write(struct lpc31xx_spi *espi)
+ 	if (espi->rx == t->len)
+ 		return 0;
+ 
++	/* Set the FIFO trip level to the transfer size */
++	lpc31xx_spi_write(espi, SPI_INT_TRSH_REG, (SPI_INT_TSHLD_TX(0) |
++		SPI_INT_TSHLD_RX(t->len - 1)));
++	lpc31xx_spi_write(espi, SPI_DMA_SET_REG, 0);
++
+ 	return -EINPROGRESS;
+ }
+ 
+@@ -851,7 +890,7 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
+ {
+ 	struct lpc31xx_spi_chip *chip = spi_get_ctldata(msg->spi);
+ 
+-	printk("JDS - lpc31xx_spi_process_transfer\n");
++	printk("JDS - lpc31xx_spi_process_transfer, bus width %d, %d\n", t->bits_per_word, msg->spi->bits_per_word);
+ 	msg->state = t;
+ 
+ 	/*
+@@ -874,9 +913,37 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
+ 				return;
+ 			}
+ 		}
++		lpc31xx_set_cs_data_bits(espi, 0, t->bits_per_word);
++		lpc31xx_set_cs_clock(espi, 0, t->speed_hz);
++
+ #if 0
+-		if (t->bits_per_word)
+-			tmp_chip.dss = bits_per_word_to_dss(t->bits_per_word);
++		/* Setup timing and levels before initial chip select */
++		tmp = spi_readl(SLV_SET2_REG(0)) & ~(SPI_SLV2_SPO | SPI_SLV2_SPH);
++		if (espi->psppcfg->spics_cfg[spi->chip_select].spi_spo != 0)
++		{
++			/* Clock high between transfers */
++			tmp |= SPI_SLV2_SPO;
++		}
++		if (spidat->psppcfg->spics_cfg[spi->chip_select].spi_sph != 0)
++		{
++			/* Data captured on 2nd clock edge */
++			tmp |= SPI_SLV2_SPH;
++		}
++		spi_writel(SLV_SET2_REG(0), tmp);
++#endif
++		lpc31xx_int_clr(espi, SPI_ALL_INTS);  /****fix from JPP*** */
++
++		/* Make sure FIFO is flushed, clear pending interrupts, DMA
++		   initially disabled, and then enable SPI interface */
++		lpc31xx_spi_write(espi, SPI_CONFIG_REG, (lpc31xx_spi_read(espi, SPI_CONFIG_REG) | SPI_CFG_ENABLE));
++#if 0
++		/* Assert selected chip select */
++		if (cs_change)
++		{
++			/* Force CS assertion */
++			spi_force_cs(spidat, spi->chip_select, 0);
++		}
++		cs_change = t->cs_change;
+ #endif
+ 		/*
+ 		 * Set up temporary new hw settings for this transfer.
+@@ -892,7 +959,7 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
+ 	 * fit into the FIFO and can be transferred with a single interrupt.
+ 	 * So in these cases we will be using PIO and don't bother for DMA.
+ 	 */
+-	if (espi->dma_rx && t->len > SPI_FIFO_SIZE)
++	if (espi->dma_rx && t->len > SPI_FIFO_DEPTH)
+ 		lpc31xx_spi_dma_transfer(espi);
+ 	else
+ 		lpc31xx_spi_pio_transfer(espi);
+@@ -939,14 +1006,12 @@ static int lpc313x_fifo_flush(struct lpc31xx_spi *espi)
+ 	unsigned long timeout;
+ 	volatile uint32_t tmp;
+ 
+-	printk("JDS - lpc313x_fifo_flush\n");
+ 	/* Clear TX FIFO first */
+ 	lpc31xx_spi_write(espi, SPI_TXF_FLUSH_REG, SPI_TXFF_FLUSH);
+ 
+ 	/* Clear RX FIFO */
+ 	timeout = jiffies + msecs_to_jiffies(SPI_TIMEOUT);
+ 	while (!(lpc31xx_spi_read(espi, SPI_STS_REG) & SPI_ST_RX_EMPTY)) {
+-		printk("JDS - lpc313x_fifo_flush %ld\n", jiffies);
+ 		if (time_after(jiffies, timeout)) {
+ 			dev_warn(&espi->pdev->dev,
+ 				 "timeout while flushing RX FIFO\n");
+@@ -975,7 +1040,7 @@ static void lpc31xx_spi_process_message(struct lpc31xx_spi *espi,
+ 	struct spi_transfer *t;
+ 	int err;
+ 
+-	printk("JDS - lpc31xx_spi_process_message 1\n");
++	printk("JDS - lpc31xx_spi_process_message\n");
+ 	/*
+ 	 * Enable the SPI controller and its clock.
+ 	 */
+@@ -988,8 +1053,6 @@ static void lpc31xx_spi_process_message(struct lpc31xx_spi *espi,
+ 	err = lpc313x_fifo_flush(espi);
+ 	if (err)
+ 		return;
+-	printk("JDS - lpc31xx_spi_process_message 2\n");
+-
+ 	/*
+ 	 * We explicitly handle FIFO level. This way we don't have to check TX
+ 	 * FIFO status using %SSPSR_TNF bit which may cause RX FIFO overruns.
+@@ -1069,7 +1132,7 @@ static irqreturn_t lpc31xx_spi_interrupt(int irq, void *dev_id)
+ 	struct lpc31xx_spi *espi = dev_id;
+ 	printk("JDS - lpc31xx_spi_interrupt\n");
+ #if 0
+-	u8 irq_status = lpc31xx_spi_read_u8(espi, SSPIIR);
++	uint8_t irq_status = lpc31xx_spi_read_uint8_t(espi, SSPIIR);
+ 
+ 	/*
+ 	 * If we got ROR (receive overrun) interrupt we know that something is
+@@ -1077,7 +1140,7 @@ static irqreturn_t lpc31xx_spi_interrupt(int irq, void *dev_id)
+ 	 */
+ 	if (unlikely(irq_status & SSPIIR_RORIS)) {
+ 		/* clear the overrun interrupt */
+-		lpc31xx_spi_write_u8(espi, SSPICR, 0);
++		lpc31xx_spi_write_uint8_t(espi, SSPICR, 0);
+ 		dev_warn(&espi->pdev->dev,
+ 			 "receive overrun, aborting the message\n");
+ 		espi->current_msg->status = -EIO;
+@@ -1180,6 +1243,58 @@ static void lpc31xx_spi_release_dma(struct lpc31xx_spi *espi)
+ 		free_page((unsigned long)espi->zeropage);
+ }
+ 
++/*
++ * Setup the initial state of the SPI interface
++ */
++static void lpc31xx_spi_prep(struct lpc31xx_spi *espi)
++{
++	uint32_t tmp;
++
++	printk("JDS - lpc313x_spi_prep\n");
++	/* Reset SPI block */
++	lpc31xx_spi_write(espi, SPI_CONFIG_REG, SPI_CFG_SW_RESET);
++
++	/* Clear FIFOs */
++	lpc313x_fifo_flush(espi);
++
++	/* Clear latched interrupts */
++	lpc31xx_int_dis(espi, SPI_ALL_INTS);
++	lpc31xx_int_clr(espi, SPI_ALL_INTS);
++
++	/* Setup master mode, normal transmit mode, and interslave delay */
++	lpc31xx_spi_write(espi, SPI_CONFIG_REG, SPI_CFG_INTER_DLY(1));
++
++	/* Make sure all 3 chip selects are initially disabled */
++	lpc31xx_spi_write(espi, SPI_SLV_ENAB_REG, 0);
++	lpc31xx_spi_write(espi, SPI_CONFIG_REG, (lpc31xx_spi_read(espi, SPI_CONFIG_REG) | SPI_CFG_UPDATE_EN));
++
++	/* FIFO trip points at 50% */
++	lpc31xx_spi_write(espi, SPI_INT_TRSH_REG, (SPI_INT_TSHLD_TX(0x20) | SPI_INT_TSHLD_RX(0x20)));
++
++	/* Only chip select 0 is used in this driver. However, the timings for this
++	   chip select effect transfer speed and need to be adjusted for each GPIO
++	   based chip select. Use a default value to start with for now. */
++	/* Inter-transfer delay is 0 (not used) */
++	tmp = lpc31xx_spi_read(espi, SPI_SLV_SET1_REG(0));
++	tmp &= ~SPI_SLV1_INTER_TX_DLY(0xFF);
++	lpc31xx_spi_write(espi, SPI_SLV_SET1_REG(0), (tmp | SPI_SLV1_INTER_TX_DLY(0)));
++
++	/* Configure enabled chip select slave setting 2 */
++	tmp = SPI_SLV2_PPCS_DLY(0) | SPI_SLV2_CS_HIGH | SPI_SLV2_SPO;
++	lpc31xx_spi_write(espi, SPI_SLV_SET2_REG(0), tmp);
++
++	/* Use a default of 8 data bits and a 100K clock for now */
++	lpc31xx_set_cs_data_bits(espi, 0, 8);
++	lpc31xx_set_cs_clock(espi, 0, 100000);
++
++	/* We'll always use CS0 for this driver. Since the chip select is generated
++	   by a GPO, it doesn't matter which one we use */
++	lpc31xx_spi_write(espi, SPI_SLV_ENAB_REG, SPI_SLV_EN(0));
++	lpc31xx_spi_write(espi, SPI_CONFIG_REG, (lpc31xx_spi_read(espi, SPI_CONFIG_REG) | SPI_CFG_UPDATE_EN));
++
++	/* Controller stays disabled until a transfer occurs */
++}
++
+ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
+ {
+ 	struct spi_master *master;
+@@ -1206,31 +1321,6 @@ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
+ 
+ 	espi = spi_master_get_devdata(master);
+ 
+-	/* Enable clocks */
+-	lpc31xx_spi_clks_enable();
+-	cgu_soft_reset_module(SPI_PNRES_APB_SOFT);
+-	cgu_soft_reset_module(SPI_PNRES_IP_SOFT);
+-
+-	espi->clk = clk_get(NULL, "spi_clk");
+-	if (IS_ERR(espi->clk)) {
+-		dev_err(&pdev->dev, "unable to get spi clock\n");
+-		error = PTR_ERR(espi->clk);
+-		goto fail_release_master;
+-	}
+-	/* Keep SPI clocks off until a transfer is performed to save power */
+-	lpc31xx_spi_clks_disable();
+-
+-	spin_lock_init(&espi->lock);
+-	init_completion(&espi->wait);
+-
+-	/*
+-	 * Calculate maximum and minimum supported clock rates
+-	 * for the controller.
+-	 */
+-	espi->max_rate = clk_get_rate(espi->clk) / 2;
+-	espi->min_rate = clk_get_rate(espi->clk) / (254 * 256);
+-	espi->pdev = pdev;
+-
+ 	espi->irq = platform_get_irq(pdev, 4);
+ 	if (espi->irq < 0) {
+ 		error = -EBUSY;
+@@ -1254,19 +1344,19 @@ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
+ 
+ 	espi->sspdr_phys = res->start;
+ 	espi->regs_base = ioremap(res->start, resource_size(res));
+-	printk("JDS base %p phys %x\n", espi->regs_base , res->start);
++	printk("JDS - base %p phys %x\n", espi->regs_base , res->start);
+ 	if (!espi->regs_base) {
+ 		dev_err(&pdev->dev, "failed to map resources\n");
+ 		error = -ENODEV;
+ 		goto fail_free_mem;
+ 	}
+ 
+-	error = request_irq(espi->irq, lpc31xx_spi_interrupt, 0,
+-			    "lpc31xx-spi", espi);
++	error = request_irq(espi->irq, lpc31xx_spi_interrupt, 0, "lpc31xx-spi", espi);
+ 	if (error) {
+ 		dev_err(&pdev->dev, "failed to request irq\n");
+ 		goto fail_unmap_regs;
+ 	}
++	disable_irq(espi->irq);
+ 
+ 	if (lpc31xx_spi_setup_dma(espi))
+ 		dev_warn(&pdev->dev, "DMA setup failed. Falling back to PIO\n");
+@@ -1280,10 +1370,32 @@ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
+ 	INIT_LIST_HEAD(&espi->msg_queue);
+ 	espi->running = true;
+ 
+-	/* make sure that the hardware is disabled */
+-#if 0
+-	lpc31xx_spi_write_u8(espi, SSPCR1, 0);
+-#endif
++	/* Enable clocks */
++	lpc31xx_spi_clks_enable();
++	cgu_soft_reset_module(SPI_PNRES_APB_SOFT);
++	cgu_soft_reset_module(SPI_PNRES_IP_SOFT);
++
++	espi->clk = clk_get(NULL, "spi_clk");
++	if (IS_ERR(espi->clk)) {
++		dev_err(&pdev->dev, "unable to get spi clock\n");
++		error = PTR_ERR(espi->clk);
++		goto fail_release_master;
++	}
++	/*
++	 * Calculate maximum and minimum supported clock rates
++	 * for the controller.
++	 */
++	espi->max_rate = clk_get_rate(espi->clk) / 2;
++	espi->min_rate = clk_get_rate(espi->clk) / (254 * 256);
++	espi->pdev = pdev;
++
++	lpc31xx_spi_prep(espi);
++
++	/* Keep SPI clocks off until a transfer is performed to save power */
++	lpc31xx_spi_clks_disable();
++
++	spin_lock_init(&espi->lock);
++	init_completion(&espi->wait);
+ 
+ 	error = spi_register_master(master);
+ 	if (error) {
+@@ -1489,7 +1601,7 @@ struct lpc313xspi
+ 	uint32_t spi_base_clock;
+ 	struct lpc313x_spi_cfg *psppcfg;
+ 	uint32_t current_speed_hz [3]; /* Per CS */
+-	u8 current_bits_wd [3]; /* Per CS */
++	uint8_t current_bits_wd [3]; /* Per CS */
+ 
+ 	/* DMA allocated regions */
+ 	uint32_t dma_base_v;
+@@ -1594,7 +1706,7 @@ static inline void lpc313x_int_en(struct lpc313xspi *spidat, uint32_t ints)
+ /*
+  * Set a SPI chip select state
+  */
+-static inline void spi_force_cs(struct lpc313xspi *spidat, u8 cs, uint cs_state)
++static inline void spi_force_cs(struct lpc313xspi *spidat, uint8_t cs, uint cs_state)
+ {
+ 	spidat->psppcfg->spics_cfg[cs].spi_cs_set((int) cs, (int) cs_state);
+ }
+@@ -1602,7 +1714,7 @@ static inline void spi_force_cs(struct lpc313xspi *spidat, u8 cs, uint cs_state)
+ /*
+  * Set data width for the SPI chip select
+  */
+-static void lpc313x_set_cs_data_bits(struct lpc313xspi *spidat, u8 cs, u8 data_width)
++static void lpc313x_set_cs_data_bits(struct lpc313xspi *spidat, uint8_t cs, uint8_t data_width)
+ {
+ 	if (spidat->current_bits_wd[cs] != data_width)
+ 	{
+@@ -1618,7 +1730,7 @@ static void lpc313x_set_cs_data_bits(struct lpc313xspi *spidat, u8 cs, u8 data_w
+ /*
+  * Set clock rate and delays for the SPI chip select
+  */
+-static void lpc313x_set_cs_clock(struct lpc313xspi *spidat, u8 cs, uint32_t clockrate)
++static void lpc313x_set_cs_clock(struct lpc313xspi *spidat, uint8_t cs, uint32_t clockrate)
+ {
+ 	uint32_t reg, div, ps, div1;
+ 
+@@ -1781,7 +1893,7 @@ static void lpc313x_dma_rx_spi_irq(int ch, dma_irq_type_t dtype, void *handle)
+  * Handle a DMA transfer
+  */
+ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transfer *t,
+-					u8 bits_per_word, int dmamapped)
++					uint8_t bits_per_word, int dmamapped)
+ {
+ 	dma_setup_t dmarx, dmatx;
+ 	int status = 0;
+@@ -1992,7 +2104,7 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
+ 		uint32_t data;
+ 		unsigned int rlen, tlen = t->len;
+ 		uint32_t speed_hz = t->speed_hz ? : spi->max_speed_hz;
+-		u8 bits_per_word = t->bits_per_word ? : spi->bits_per_word;
++		uint8_t bits_per_word = t->bits_per_word ? : spi->bits_per_word;
+ 
+ 		/* Bits per word, data transfer size, and transfer counter */
+ 		bits_per_word = bits_per_word ? : 8;
+@@ -2062,7 +2174,7 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
+ 				if (txbuf)
+ 			{
+ 					data = (wsize == 1)
+-						? *(const u8 *) txbuf
++						? *(const uint8_t *) txbuf
+ 						: *(const u16 *) txbuf;
+ 					spi_writel(FIFO_DATA_REG, data);
+ 					txbuf += wsize;
+@@ -2101,7 +2213,7 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
+ 				{
+ 					if (wsize == 1)
+ 					{
+-						*(u8 *)rxbuf = (u8) data;
++						*(uint8_t *)rxbuf = (uint8_t) data;
+ 					}
+ 					else
+ 					{
+@@ -2194,7 +2306,7 @@ static int lpc313x_spi_transfer(struct spi_device *spi, struct spi_message *m)
+ 	/* check each transfer's parameters */
+ 	list_for_each_entry (t, &m->transfers, transfer_list)
+ 	{
+-		u8 bits_per_word = t->bits_per_word ? : spi->bits_per_word;
++		uint8_t bits_per_word = t->bits_per_word ? : spi->bits_per_word;
+ 
+ 		bits_per_word = bits_per_word ? : 8;
+ 		if ((!t->tx_buf) && (!t->rx_buf) && (t->len))
