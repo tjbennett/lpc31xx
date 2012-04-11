@@ -1,5 +1,5 @@
-Bottom: 7c9a76f8b5d8d63e3c5ca7b2c5a3c7014a6dd899
-Top:    cd48276438ae42eb021129a7a214bbc62ee5400c
+Bottom: 6ca3a5131e6a09a5a225906d8bf2307ebd31c174
+Top:    87144215f9fdf80d5ea6bda61122d61e7926d78f
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-10 00:01:59 -0400
 
@@ -1439,7 +1439,7 @@ index 0000000..326a03f
 +MODULE_DESCRIPTION("lpc31xx dma driver");
 +MODULE_LICENSE("GPL");
 diff --git a/drivers/spi/spi-lpc313x.c b/drivers/spi/spi-lpc313x.c
-index 0157806..bce770b 100644
+index 1c45d8f..bb23868 100644
 --- a/drivers/spi/spi-lpc313x.c
 +++ b/drivers/spi/spi-lpc313x.c
 @@ -1,4 +1,1537 @@
@@ -2990,7 +2990,7 @@ index 0157806..bce770b 100644
  #include <mach/board.h>
  #include <mach/gpio.h>
  
-@@ -62,20 +1598,25 @@ struct lpc313xspi
+@@ -76,20 +1612,25 @@ struct lpc313xspi
  	struct spi_master *master;
  	int irq;
  	int id;
@@ -3021,7 +3021,7 @@ index 0157806..bce770b 100644
  
  	/* DMA event flah */
  	volatile int rxdmaevent;
-@@ -126,7 +1667,7 @@ static void lpc313x_spi_clks_disable(void)
+@@ -140,7 +1681,7 @@ static void lpc313x_spi_clks_disable(void)
   */
  static void lpc313x_fifo_flush(struct lpc313xspi *spidat)
  {
@@ -3030,7 +3030,7 @@ index 0157806..bce770b 100644
  
  	/* Clear TX FIFO first */
  	spi_writel(TXF_FLUSH_REG, SPI_TXFF_FLUSH);
-@@ -141,7 +1682,7 @@ static void lpc313x_fifo_flush(struct lpc313xspi *spidat)
+@@ -155,7 +1696,7 @@ static void lpc313x_fifo_flush(struct lpc313xspi *spidat)
  /*
   * Clear a latched SPI interrupt
   */
@@ -3039,7 +3039,7 @@ index 0157806..bce770b 100644
  {
  	spi_writel(INT_CLRS_REG, ints);
  }
-@@ -149,7 +1690,7 @@ static inline void lpc313x_int_clr(struct lpc313xspi *spidat, u32 ints)
+@@ -163,7 +1704,7 @@ static inline void lpc313x_int_clr(struct lpc313xspi *spidat, u32 ints)
  /*
   * Disable a SPI interrupt
   */
@@ -3048,7 +3048,7 @@ index 0157806..bce770b 100644
  {
  	spi_writel(INT_CLRE_REG, ints);
  }
-@@ -157,7 +1698,7 @@ static inline void lpc313x_int_dis(struct lpc313xspi *spidat, u32 ints)
+@@ -171,7 +1712,7 @@ static inline void lpc313x_int_dis(struct lpc313xspi *spidat, u32 ints)
  /*
   * Enable a SPI interrupt
   */
@@ -3057,7 +3057,7 @@ index 0157806..bce770b 100644
  {
  	spi_writel(INT_SETE_REG, ints);
  }
-@@ -165,7 +1706,7 @@ static inline void lpc313x_int_en(struct lpc313xspi *spidat, u32 ints)
+@@ -179,7 +1720,7 @@ static inline void lpc313x_int_en(struct lpc313xspi *spidat, u32 ints)
  /*
   * Set a SPI chip select state
   */
@@ -3066,7 +3066,7 @@ index 0157806..bce770b 100644
  {
  	spidat->psppcfg->spics_cfg[cs].spi_cs_set((int) cs, (int) cs_state);
  }
-@@ -173,13 +1714,13 @@ static inline void spi_force_cs(struct lpc313xspi *spidat, u8 cs, uint cs_state)
+@@ -187,13 +1728,13 @@ static inline void spi_force_cs(struct lpc313xspi *spidat, u8 cs, uint cs_state)
  /*
   * Set data width for the SPI chip select
   */
@@ -3083,7 +3083,7 @@ index 0157806..bce770b 100644
  		spi_writel(SLV_SET2_REG(0), tmp);
  
  		spidat->current_bits_wd[cs] = data_width;
-@@ -189,9 +1730,9 @@ static void lpc313x_set_cs_data_bits(struct lpc313xspi *spidat, u8 cs, u8 data_w
+@@ -203,9 +1744,9 @@ static void lpc313x_set_cs_data_bits(struct lpc313xspi *spidat, u8 cs, u8 data_w
  /*
   * Set clock rate and delays for the SPI chip select
   */
@@ -3095,7 +3095,7 @@ index 0157806..bce770b 100644
  
  	if (clockrate != spidat->current_speed_hz[cs])
  	{
-@@ -219,7 +1760,7 @@ static void lpc313x_set_cs_clock(struct lpc313xspi *spidat, u8 cs, u32 clockrate
+@@ -233,7 +1774,7 @@ static void lpc313x_set_cs_clock(struct lpc313xspi *spidat, u8 cs, u32 clockrate
   */
  static void lpc313x_spi_prep(struct lpc313xspi *spidat)
  {
@@ -3104,7 +3104,7 @@ index 0157806..bce770b 100644
  
  	/* Reset SPI block */
  	spi_writel(CONFIG_REG, SPI_CFG_SW_RESET);
-@@ -272,7 +1813,7 @@ static int lpc313x_spi_setup(struct spi_device *spi)
+@@ -286,7 +1827,7 @@ static int lpc313x_spi_setup(struct spi_device *spi)
  {
  	unsigned int bits = spi->bits_per_word;
  
@@ -3113,7 +3113,7 @@ index 0157806..bce770b 100644
  	   parameters are correct for the transfer */
  	if (spi->chip_select > spi->master->num_chipselect)
  	{
-@@ -299,7 +1840,7 @@ static int lpc313x_spi_setup(struct spi_device *spi)
+@@ -313,7 +1854,7 @@ static int lpc313x_spi_setup(struct spi_device *spi)
  /*
   * Handle the SPI interrupt
   */
@@ -3122,7 +3122,7 @@ index 0157806..bce770b 100644
  {
  	struct lpc313xspi *spidat = dev_id;
  
-@@ -332,9 +1873,10 @@ static void lpc313x_dma_rx_spi_irq(int ch, dma_irq_type_t dtype, void *handle)
+@@ -346,9 +1887,10 @@ static void lpc313x_dma_rx_spi_irq(int ch, dma_irq_type_t dtype, void *handle)
  
  	if (dtype == DMA_IRQ_FINISHED)
  	{
@@ -3134,7 +3134,7 @@ index 0157806..bce770b 100644
  		/* Flag event and wakeup */
  		spidat->rxdmaevent = 1;
  		wake_up(&spidat->waitq);
-@@ -351,13 +1893,18 @@ static void lpc313x_dma_rx_spi_irq(int ch, dma_irq_type_t dtype, void *handle)
+@@ -365,13 +1907,18 @@ static void lpc313x_dma_rx_spi_irq(int ch, dma_irq_type_t dtype, void *handle)
   * Handle a DMA transfer
   */
  static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transfer *t,
@@ -3155,7 +3155,7 @@ index 0157806..bce770b 100644
  	/* Set the FIFO trip level to the transfer size */
  	spi_writel(INT_TRSH_REG, (SPI_INT_TSHLD_TX(16) |
  		SPI_INT_TSHLD_RX(1)));
-@@ -365,21 +1912,21 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
+@@ -379,21 +1926,21 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
  	lpc313x_int_dis(spidat, SPI_ALL_INTS);
  	lpc313x_int_en(spidat, SPI_OVR_INT);
  
@@ -3189,7 +3189,7 @@ index 0157806..bce770b 100644
  
  	/* Determine the DMA source and destination addresses. If DMA buffers weren't
  	   passed to this handler, they need to be mapped */
-@@ -416,7 +1963,7 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
+@@ -430,7 +1977,7 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
  		else
  		{
  			/* Map DMA buffer */
@@ -3198,7 +3198,7 @@ index 0157806..bce770b 100644
  				t->len, DMA_TO_DEVICE);
  			if (dma_mapping_error(dev, src))
  			{
-@@ -436,7 +1983,7 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
+@@ -450,7 +1997,7 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
  		else
  		{
  			/* Map DMA buffer */
@@ -3207,7 +3207,7 @@ index 0157806..bce770b 100644
  				t->len, DMA_FROM_DEVICE);
  			if (dma_mapping_error(dev, dest))
  			{
-@@ -448,6 +1995,7 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
+@@ -462,6 +2009,7 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
  		}
  	}
  
@@ -3215,7 +3215,7 @@ index 0157806..bce770b 100644
  	/* Setup transfer data for DMA */
  	dmarx.trans_length = (t->len - 1);
  	dmarx.src_address = (SPI_PHYS + 0x0C);
-@@ -468,14 +2016,52 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
+@@ -482,14 +2030,52 @@ static int lpc313x_spi_dma_transfer(struct lpc313xspi *spidat, struct spi_transf
  	spidat->rxdmaevent = 0;
  	dma_start_channel(spidat->rx_dma_ch);
  	dma_start_channel(spidat->tx_dma_ch);
@@ -3269,7 +3269,7 @@ index 0157806..bce770b 100644
  	/* Unmap buffers */
  	if (srcmapped != 0)
  	{
-@@ -500,7 +2086,7 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
+@@ -514,7 +2100,7 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
  	unsigned int wsize, cs_change = 1;
  	int status = 0;
  	unsigned long flags;
@@ -3278,7 +3278,7 @@ index 0157806..bce770b 100644
  
  	/* Enable SPI clock and interrupts */
  	spin_lock_irqsave(&spidat->lock, flags);
-@@ -515,10 +2101,10 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
+@@ -529,10 +2115,10 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
  	list_for_each_entry (t, &m->transfers, transfer_list) {
  		const void *txbuf = t->tx_buf;
  		void *rxbuf = t->rx_buf;
@@ -3292,7 +3292,7 @@ index 0157806..bce770b 100644
  
  		/* Bits per word, data transfer size, and transfer counter */
  		bits_per_word = bits_per_word ? : 8;
-@@ -588,7 +2174,7 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
+@@ -602,7 +2188,7 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
  				if (txbuf)
  			{
  					data = (wsize == 1)
@@ -3301,7 +3301,7 @@ index 0157806..bce770b 100644
  						: *(const u16 *) txbuf;
  					spi_writel(FIFO_DATA_REG, data);
  					txbuf += wsize;
-@@ -627,7 +2213,7 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
+@@ -641,7 +2227,7 @@ static void lpc313x_work_one(struct lpc313xspi *spidat, struct spi_message *m)
  				{
  					if (wsize == 1)
  					{
@@ -3310,7 +3310,7 @@ index 0157806..bce770b 100644
  					}
  					else
  					{
-@@ -720,7 +2306,7 @@ static int lpc313x_spi_transfer(struct spi_device *spi, struct spi_message *m)
+@@ -734,7 +2320,7 @@ static int lpc313x_spi_transfer(struct spi_device *spi, struct spi_message *m)
  	/* check each transfer's parameters */
  	list_for_each_entry (t, &m->transfers, transfer_list)
  	{
@@ -3319,7 +3319,7 @@ index 0157806..bce770b 100644
  
  		bits_per_word = bits_per_word ? : 8;
  		if ((!t->tx_buf) && (!t->rx_buf) && (t->len))
-@@ -797,6 +2383,61 @@ struct lpc313x_spi_cfg lpc313x_spidata =
+@@ -811,6 +2397,61 @@ struct lpc313x_spi_cfg lpc313x_spidata =
  };
  #endif
  
@@ -3381,7 +3381,7 @@ index 0157806..bce770b 100644
  /*
   * SPI driver probe
   */
-@@ -807,20 +2448,20 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
+@@ -821,20 +2462,20 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
  	struct clk *clk;
  	int ret, irq, i;
  	dma_addr_t dma_handle;
@@ -3408,7 +3408,7 @@ index 0157806..bce770b 100644
  	platform_set_drvdata(pdev, master);
  
  	/* Is a board specific configuration available? */
-@@ -828,22 +2469,18 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
+@@ -842,22 +2483,18 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
  #ifdef CONFIG_OF
  	spidat->psppcfg = &lpc313x_spidata;
  #endif
@@ -3435,7 +3435,7 @@ index 0157806..bce770b 100644
  			/* Missing hardware CS control callback, exit */
  			ret = -ENODEV;
  			goto errout;
-@@ -860,25 +2497,17 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
+@@ -874,25 +2511,17 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
  	INIT_LIST_HEAD(&spidat->queue);
  	init_waitqueue_head(&spidat->waitq);
  	spidat->workqueue = create_singlethread_workqueue(dev_name(master->dev.parent));	//***MOD:Fix from JPP to compile to latest versions of Linux
@@ -3465,7 +3465,7 @@ index 0157806..bce770b 100644
  
  	master->bus_num = spidat->id;
  	master->setup = lpc313x_spi_setup;
-@@ -888,24 +2517,28 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
+@@ -902,24 +2531,28 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
  	/* Setup several work DMA buffers for dummy TX and RX data. These buffers just
  	   hold the temporary TX or RX data for the unused half of the transfer and have
  	   a size of 4K (the maximum size of a transfer) */
@@ -3499,7 +3499,7 @@ index 0157806..bce770b 100644
  	/* Initial setup of SPI */
  	clk = clk_get(NULL, "spi_clk");
  	spidat->spi_base_clock = clk->get_rate(clk);
-@@ -915,47 +2548,79 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
+@@ -929,47 +2562,79 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
  	/* Keep SPI clocks off until a transfer is performed to save power */
  	lpc313x_spi_clks_disable();
  
@@ -3590,7 +3590,7 @@ index 0157806..bce770b 100644
  	destroy_workqueue(spidat->workqueue);
  errout:
  	platform_set_drvdata(pdev, NULL);
-@@ -972,6 +2637,7 @@ static int __devexit lpc313x_spi_remove(struct platform_device *pdev)
+@@ -986,6 +2651,7 @@ static int __devexit lpc313x_spi_remove(struct platform_device *pdev)
  	struct spi_master *master = spi_master_get(platform_get_drvdata(pdev));
  	struct lpc313xspi *spidat = spi_master_get_devdata(master);
  
@@ -3598,7 +3598,7 @@ index 0157806..bce770b 100644
  	/* Disable SPI interface */
  	spi_writel(CONFIG_REG, (spi_readl(CONFIG_REG) & ~SPI_CFG_ENABLE));
  	lpc313x_spi_clks_disable();
-@@ -979,10 +2645,15 @@ static int __devexit lpc313x_spi_remove(struct platform_device *pdev)
+@@ -993,10 +2659,15 @@ static int __devexit lpc313x_spi_remove(struct platform_device *pdev)
  	spi_unregister_master(master);
  	platform_set_drvdata(pdev, NULL);
  
@@ -3616,7 +3616,7 @@ index 0157806..bce770b 100644
  
  	dma_free_coherent(&pdev->dev, (4096 << 1), (void *) spidat->dma_base_v,
  		spidat->dma_base_p);
-@@ -1021,8 +2692,8 @@ static int lpc313x_spi_suspend(struct platform_device *pdev, pm_message_t state)
+@@ -1035,8 +2706,8 @@ static int lpc313x_spi_suspend(struct platform_device *pdev, pm_message_t state)
  static int lpc313x_spi_resume(struct platform_device *pdev)
  {
  #ifdef CONFIG_PM
@@ -3627,7 +3627,7 @@ index 0157806..bce770b 100644
  
  	/* Switch on the clocks */
  	lpc313x_spi_clks_enable();
-@@ -1068,3 +2739,4 @@ module_exit(lpc313x_spi_exit);
+@@ -1082,3 +2753,4 @@ module_exit(lpc313x_spi_exit);
  MODULE_AUTHOR("Kevin Wells <kevin.wells@nxp.com");
  MODULE_DESCRIPTION("LPC313X SPI Driver");
  MODULE_LICENSE("GPL");
