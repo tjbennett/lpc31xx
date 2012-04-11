@@ -48,8 +48,22 @@
 #include <mach/gpio.h>
 
 /* Register access macros */
-#define spi_readl(reg) __raw_readl(&SPI_##reg)
-#define spi_writel(reg,value) __raw_writel((value),&SPI_##reg)
+#define spi_readl(reg) _spi_readl(&SPI_##reg)
+#define spi_writel(reg,value) _spi_writel((value),&SPI_##reg)
+
+static inline void _spi_writel(uint16_t value, volatile void *reg)
+{
+	printk("spi_write %p value %x\n", reg, value);
+	__raw_writew(value, reg);
+}
+
+static inline uint16_t _spi_readl(volatile void *reg)
+{
+	uint16_t value;
+	value = __raw_readw(reg);
+	printk("spi_read %p value %x\n", reg, value);
+	return value;
+}
 
 struct lpc313xspi
 {
