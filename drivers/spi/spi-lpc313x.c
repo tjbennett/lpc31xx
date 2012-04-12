@@ -10,6 +10,8 @@
  * published by the Free Software Foundation.
  */
 
+#define DEBUG
+
 #include <linux/io.h>
 #include <linux/clk.h>
 #include <linux/err.h>
@@ -233,7 +235,7 @@ lpc31xx_spi_read(const struct lpc31xx_spi *espi, uint32_t reg)
 /*
  * Clear a latched SPI interrupt
  */
-static inline void lpc31xx_int_clr(struct lpc31xx_spi *espi, uint32_t ints)
+static inline void lpc31xx_int_clr(const struct lpc31xx_spi *espi, uint32_t ints)
 {
 	lpc31xx_spi_write(espi, SPI_INT_CLRS_REG, ints);
 }
@@ -241,7 +243,7 @@ static inline void lpc31xx_int_clr(struct lpc31xx_spi *espi, uint32_t ints)
 /*
  * Disable a SPI interrupt
  */
-static inline void lpc31xx_int_dis(struct lpc31xx_spi *espi, uint32_t ints)
+static inline void lpc31xx_int_dis(const struct lpc31xx_spi *espi, uint32_t ints)
 {
 	lpc31xx_spi_write(espi, SPI_INT_CLRE_REG, ints);
 }
@@ -352,7 +354,7 @@ static void lpc31xx_spi_disable(const struct lpc31xx_spi *espi)
 static void lpc31xx_spi_enable_interrupts(const struct lpc31xx_spi *espi)
 {
 	printk("JDS - lpc31xx_spi_enable_interrupts\n");
-	lpc31xx_spi_write(espi, SPI_INT_SETE_REG, (SPI_TX_INT | SPI_RX_INT | SPI_TO_INT | SPI_OVR_INT));
+	lpc31xx_spi_write(espi, SPI_INT_SETE_REG, (SPI_RX_INT | SPI_TO_INT | SPI_OVR_INT));
 	enable_irq(espi->irq);
 
 
@@ -520,6 +522,11 @@ static int lpc31xx_spi_transfer(struct spi_device *spi, struct spi_message *msg)
 		}
 		if (t->speed_hz && t->speed_hz < espi->min_rate)
 				return -EINVAL;
+
+		dev_dbg(&spi->dev,
+			"  xfer %p: len %u tx %p/%08x rx %p/%08x DMAmapped=%d\n",
+			t, t->len, t->tx_buf, t->tx_dma,
+			t->rx_buf, t->rx_dma, msg->is_dma_mapped);
 	}
 
 	/*
@@ -605,19 +612,16 @@ static inline int bits_per_word(const struct lpc31xx_spi *espi)
 
 static void lpc31xx_do_write(struct lpc31xx_spi *espi, struct spi_transfer *t)
 {
-	uint32_t data;
+	uint32_t data = 0x5555;
 
-	if (t->tx_buf) {
-		if (bits_per_word(espi) > 8) {
+	if (bits_per_word(espi) > 8) {
+		if (t->tx_buf)
 			data = ((uint16_t *)t->tx_buf)[espi->tx];
-			espi->tx += sizeof(uint16_t);
-		} else {
-			data = ((uint8_t *)t->tx_buf)[espi->tx];
-			espi->tx += sizeof(uint8_t);
-		}
+		espi->tx += sizeof(uint16_t);
 	} else {
-		/* Send dummy data */
-		data = 0xFFFF;
+		if (t->tx_buf)
+			data = ((uint8_t *)t->tx_buf)[espi->tx];
+		espi->tx += sizeof(uint8_t);
 	}
 	lpc31xx_spi_write(espi, SPI_FIFO_DATA_REG, data);
 	printk("JDS - lpc31xx_do_write data %x\n", data);
@@ -631,14 +635,14 @@ static void lpc31xx_do_read(struct lpc31xx_spi *espi, struct spi_transfer *t)
 	data = lpc31xx_spi_read(espi, SPI_FIFO_DATA_REG);
 	printk("JDS - lpc31xx_do_read data %x\n", data);
 	/* The data can be tossed if there is no RX buffer */
-	if (t->rx_buf) {
-		if (bits_per_word(espi) > 8) {
+	if (bits_per_word(espi) > 8) {
+		if (t->rx_buf)
 			((uint16_t *)t->rx_buf)[espi->rx] = data;
-			espi->rx += sizeof(uint16_t);
-		} else {
+		espi->rx += sizeof(uint16_t);
+	} else {
+		if (t->rx_buf)
 			((uint8_t *)t->rx_buf)[espi->rx] = data;
-			espi->rx += sizeof(uint8_t);
-		}
+		espi->rx += sizeof(uint8_t);
 	}
 }
 
@@ -659,6 +663,12 @@ static int lpc31xx_spi_read_write(struct lpc31xx_spi *espi)
 	struct spi_transfer *t = msg->state;
 
 	printk("JDS - lpc31xx_spi_read_write, length %d\n", t->len);
+	printk("JDS - lpc31xx_spi_read_write, rx %d tx %d\n", espi->rx, espi->tx);
+
+	/* Set the FIFO trip level to the transfer size */
+	lpc31xx_spi_write(espi, SPI_INT_TRSH_REG, (SPI_INT_TSHLD_TX(0) |
+		SPI_INT_TSHLD_RX(t->len - 1)));
+	lpc31xx_spi_write(espi, SPI_DMA_SET_REG, 0);
 
 	/* read as long as RX FIFO has frames in it */
 	while (!(lpc31xx_spi_read(espi, SPI_STS_REG) & SPI_ST_RX_EMPTY)) {
@@ -672,13 +682,9 @@ static int lpc31xx_spi_read_write(struct lpc31xx_spi *espi)
 		espi->fifo_level++;
 	}
 
+	printk("JDS - lpc31xx_spi_read_write, rx %d tx %d tlen %d\n", espi->rx, espi->tx, t->len);
 	if (espi->rx == t->len)
 		return 0;
-
-	/* Set the FIFO trip level to the transfer size */
-	lpc31xx_spi_write(espi, SPI_INT_TRSH_REG, (SPI_INT_TSHLD_TX(0) |
-		SPI_INT_TSHLD_RX(t->len - 1)));
-	lpc31xx_spi_write(espi, SPI_DMA_SET_REG, 0);
 
 	return -EINPROGRESS;
 }
@@ -692,8 +698,11 @@ static void lpc31xx_spi_pio_transfer(struct lpc31xx_spi *espi)
 	printk("JDS - lpc31xx_spi_pio_transfer\n");
 	if (lpc31xx_spi_read_write(espi)) {
 		lpc31xx_spi_enable_interrupts(espi);
+		printk("JDS - lpc31xx_spi_pio_transfer - waiting\n");
 		wait_for_completion(&espi->wait);
+		printk("JDS - lpc31xx_spi_pio_transfer - waiting done\n");
 	}
+	printk("JDS - lpc31xx_spi_pio_transfer - exit\n");
 }
 
 /**
@@ -888,6 +897,7 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
 					struct spi_message *msg,
 					struct spi_transfer *t)
 {
+	uint32_t tmp;
 	struct lpc31xx_spi_chip *chip = spi_get_ctldata(msg->spi);
 
 	printk("JDS - lpc31xx_spi_process_transfer, bus width %d, %d\n", t->bits_per_word, msg->spi->bits_per_word);
@@ -916,26 +926,18 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
 		lpc31xx_set_cs_data_bits(espi, 0, t->bits_per_word);
 		lpc31xx_set_cs_clock(espi, 0, t->speed_hz);
 
-#if 0
 		/* Setup timing and levels before initial chip select */
-		tmp = spi_readl(SLV_SET2_REG(0)) & ~(SPI_SLV2_SPO | SPI_SLV2_SPH);
-		if (espi->psppcfg->spics_cfg[spi->chip_select].spi_spo != 0)
-		{
-			/* Clock high between transfers */
-			tmp |= SPI_SLV2_SPO;
-		}
-		if (spidat->psppcfg->spics_cfg[spi->chip_select].spi_sph != 0)
-		{
-			/* Data captured on 2nd clock edge */
-			tmp |= SPI_SLV2_SPH;
-		}
-		spi_writel(SLV_SET2_REG(0), tmp);
+		tmp = lpc31xx_spi_read(espi, SPI_SLV_SET2_REG(0)) & ~(SPI_SLV2_SPO | SPI_SLV2_SPH);
+		/* Clock high between transfers */
+#if 0
+		tmp |= SPI_SLV2_SPO;
+		/* Data captured on 2nd clock edge */
+		tmp |= SPI_SLV2_SPH;
 #endif
+		lpc31xx_spi_write(espi, SPI_SLV_SET2_REG(0), tmp);
+
 		lpc31xx_int_clr(espi, SPI_ALL_INTS);  /****fix from JPP*** */
 
-		/* Make sure FIFO is flushed, clear pending interrupts, DMA
-		   initially disabled, and then enable SPI interface */
-		lpc31xx_spi_write(espi, SPI_CONFIG_REG, (lpc31xx_spi_read(espi, SPI_CONFIG_REG) | SPI_CFG_ENABLE));
 #if 0
 		/* Assert selected chip select */
 		if (cs_change)
@@ -950,6 +952,9 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
 		 */
 		lpc31xx_spi_chip_setup(espi, &tmp_chip);
 	}
+	/* Make sure FIFO is flushed, clear pending interrupts, DMA
+	   initially disabled, and then enable SPI interface */
+	lpc31xx_spi_write(espi, SPI_CONFIG_REG, (lpc31xx_spi_read(espi, SPI_CONFIG_REG) | SPI_CFG_ENABLE));
 
 	espi->rx = 0;
 	espi->tx = 0;
@@ -964,6 +969,7 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
 	else
 		lpc31xx_spi_pio_transfer(espi);
 
+	printk("x1\n");
 	/*
 	 * In case of error during transmit, we bail out from processing
 	 * the message.
@@ -972,6 +978,7 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
 		return;
 
 	msg->actual_length += t->len;
+	printk("x2\n");
 
 	/*
 	 * After this transfer is finished, perform any possible
@@ -993,6 +1000,7 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
 			lpc31xx_spi_cs_control(msg->spi, true);
 		}
 	}
+	printk("x3\n");
 
 	if (t->speed_hz || t->bits_per_word)
 		lpc31xx_spi_chip_setup(espi, chip);
@@ -1166,7 +1174,10 @@ static irqreturn_t lpc31xx_spi_interrupt(int irq, void *dev_id)
 	 * any case we disable interrupts and notify the worker to handle
 	 * any post-processing of the message.
 	 */
-	lpc31xx_spi_disable_interrupts(espi);
+	printk("irq disable interrupt\n");
+	lpc31xx_int_dis(espi, SPI_ALL_INTS);
+	lpc31xx_int_clr(espi, SPI_ALL_INTS);
+	printk("irq completing wait\n");
 	complete(&espi->wait);
 	return IRQ_HANDLED;
 }
@@ -1288,7 +1299,7 @@ static void lpc31xx_spi_prep(struct lpc31xx_spi *espi)
 	lpc31xx_set_cs_clock(espi, 0, 100000);
 
 	/* We'll always use CS0 for this driver. Since the chip select is generated
-	   by a GPO, it doesn't matter which one we use */
+	   by a GPIO, it doesn't matter which one we use */
 	lpc31xx_spi_write(espi, SPI_SLV_ENAB_REG, SPI_SLV_EN(0));
 	lpc31xx_spi_write(espi, SPI_CONFIG_REG, (lpc31xx_spi_read(espi, SPI_CONFIG_REG) | SPI_CFG_UPDATE_EN));
 
