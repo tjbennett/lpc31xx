@@ -1,6 +1,6 @@
 Version: 1
-Previous: 34640f970ba2f8faa034b1e8a70286a714913dc5
-Head: 0671c29353b8e232afe2760c16275bbdeaddd0ba
+Previous: a9fe7c21a7071a813391232d612603fbb14eb942
+Head: 0e483bd2f749ae6accda8d4a1db441e15182026e
 Applied:
   roland-dt-1.patch: 7e6b4367ad218d2750ec048d4654f03e87097501
   base.patch: 7de39230429aaac13de0f4a672dd3054717ecd1b
@@ -9,6 +9,7 @@ Applied:
   spi.patch: 57a092771bfe2ddb27f0a7b2b3b64e3fa2d3619a
   mmc.patch: cedb80c9caeed8f381fe5cf0a4ffd3d2d771056b
   watchdog.patch: 0671c29353b8e232afe2760c16275bbdeaddd0ba
+  refresh-temp: 0e483bd2f749ae6accda8d4a1db441e15182026e
 Unapplied:
   sound.patch: ea1301a11e674ea2e076c7d009a2f64c9f3d0ea9
   usb.patch: 9f2b86fd4b1c1f7835257420295674c2f85e2e15
