@@ -1,6 +1,6 @@
 Version: 1
-Previous: 9531200861c5bc968f2fbe0908b47a857295eb97
-Head: fa9c9adb4b73b811ec858a362eb81003c4904027
+Previous: edd6ae5375debaef8d749915c4c2deed9574d838
+Head: a08c872a4a34a368b31fd0557841f4aca2d1a67f
 Applied:
   roland-dt-1.patch: 7e6b4367ad218d2750ec048d4654f03e87097501
   base.patch: 7de39230429aaac13de0f4a672dd3054717ecd1b
@@ -9,22 +9,22 @@ Applied:
   spi.patch: 57a092771bfe2ddb27f0a7b2b3b64e3fa2d3619a
   mmc.patch: cedb80c9caeed8f381fe5cf0a4ffd3d2d771056b
   watchdog.patch: fa9c9adb4b73b811ec858a362eb81003c4904027
+  sound.patch: d9228554c22c781bd336fd21b98700a7aca4a11f
+  usb.patch: 96acb38b6158e652c3ff0db9bab09668e0aeb274
+  gadget.patch: 614ebe9cd2a29ee211ab5c54ed185e88e075c4fc
+  old8250.patch: 102a5fe1809cfcc753ce6e408156b9a1131cf509
+  video.patch: 2e80da75b675582c5c77f40a970c91901f62de36
+  phys.patch: 3012a44468ec1fa48ba4d05346a439389cb2ffd2
+  mmc-stop-fix.patch: 78d9143f133fddc33ea89524470e1f7d7cd27be3
+  remove-config-noise.patch: cf2019da25eaace79b4dc246bd24afda363add80
+  NXP-DMA-fixes.patch: 6c0090e1a45b3180fd3b969b6796c90bb83f4ebd
+  NXP-uart-dma.patch: 7db17ebd103d5efb35e0a01ebcda1a4c42d3996d
+  nxp-nand-dma.patch: 99abd49b8d1c8a6fa3e6ebbf4fec2a7055b61686
+  nxp-audio-analog.patch: 0b4837342db03d20c2785af69cba944f5c411f97
+  reset.patch: 357efa2c89dd5dfefd874c390fc05cfa5dbaaaef
+  adc-registers.patch: 2d9aca2b7c051f708daeee0410d91dde10bd52ac
+  adc-pwm.patch: bb4d10a104dbb7b3a3f5dcc3367f15730794a8fa
+  device-trees.patch: a08c872a4a34a368b31fd0557841f4aca2d1a67f
 Unapplied:
-  sound.patch: ea1301a11e674ea2e076c7d009a2f64c9f3d0ea9
-  usb.patch: 9f2b86fd4b1c1f7835257420295674c2f85e2e15
-  gadget.patch: 727450239c167a289bd331c9a7969a2198db5877
-  old8250.patch: 8ceb8e1ddd382c20659990120f860565d5b85418
-  video.patch: d4efeeec48e519dc30b65b335885f4f4bb961a7d
-  phys.patch: e6a256b4ba10e16ad51186d3b57b6e096143c029
-  mmc-stop-fix.patch: 3f52c6e79e4e74e9229c90db72950c70f1728a19
-  remove-config-noise.patch: 269ea9ac7496a774ab91d5ad0358d74fcaf909a2
-  NXP-DMA-fixes.patch: 74388c528b72a430e6e795a012589cddf1b003ea
-  NXP-uart-dma.patch: b18a4277300073f2de210e9c93fbd17718a608c7
-  nxp-nand-dma.patch: 9dc6af74befbb44f6a179b236a047d3d53d71f6f
-  nxp-audio-analog.patch: 7f627d1dfb8c6e5ff0c21047dd43eaf70449c171
-  reset.patch: eb681aeb758af7940b008946c02136048c051f12
-  adc-registers.patch: 704396d3cf867c78db2f32fd9cd3d92cdb6fb380
-  adc-pwm.patch: f2d959ff308def33c2fa612a4addf8e04c4adde3
-  device-trees.patch: eea160b250a08f4f7fb9e3ff4a958337ea7a3483
   dma.patch: 1dd1f80add66534ed1936f487f1033b5590d5828
 Hidden:
