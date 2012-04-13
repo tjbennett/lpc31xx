@@ -50,29 +50,17 @@
 #include <mach/system.h>
 #include <mach/dt.h>
 
-#ifdef CONFIG_OF
-
-static void __init ea_add_device_ssd1289(void)
-{
-	MPMC_STCONFIG0 = 0x81;
-	MPMC_STWTWEN0  = 0;
-	MPMC_STWTOEN0  = 0;
-	MPMC_STWTRD0   = 31;
-	MPMC_STWTPG0   = 0;
-	MPMC_STWTWR0   = 3;
-	MPMC_STWTTURN0 = 0;
-}
 
 /*
- * DM9000 ethernet device
+ * DM9000 Ethernet device
  */
 
-/* ARM MPMC contoller as part of low power design doesn't de-assert nCS and nOE for consecutive
+/* ARM MPMC controller as part of low power design doesn't de-assert nCS and nOE for consecutive
 reads but just changes address. But DM9000 requires nCS and nOE change between address. So access
 other chip select area (nCS0) to force de-assertion of nCS1 and nOE1. Or else wait for long time
 such as 80 usecs.
 LPC313x has external logic outside of MPMC IP to toggle nOE to split consecutive reads.
-The latest Apex bootloader pacth makes use of this feture.
+The latest Apex bootloader patch makes use of this feature.
 For this to work SYS_MPMC_WTD_DEL0 & SYS_MPMC_WTD_DEL1 should be programmed with MPMC_STWTRD0
 & MPMC_STWTRD1 values. The logic only deactivates the nOE for one clock cycle which is
 11nsec but DM9000 needs 80nsec between nOEs. So lets add some dummy instructions such as
@@ -109,82 +97,6 @@ static struct dm9000_plat_data dm9000_platdata = {
 	.inblk = dm9000_inblk,
 };
 
-static void __init ea_add_device_dm9000(void)
-{
-	/*
-	 * Configure Chip-Select 2 on SMC for the DM9000.
-	 * Note: These timings were calculated for MASTER_CLOCK = 90000000
-	 *  according to the DM9000 timings.
-	 */
-	MPMC_STCONFIG1 = 0x81;
-	MPMC_STWTWEN1 = 1;
-	MPMC_STWTOEN1 = 1;
-	MPMC_STWTRD1 = 4;
-	MPMC_STWTPG1 = 1;
-	MPMC_STWTWR1 = 1;
-	MPMC_STWTTURN1 = 2;
-	/* enable oe toggle between consec reads */
-	SYS_MPMC_WTD_DEL1 = 0x24;
-
-}
-
-
-
-/* spi_board_info.controller_data for SPI slave devices,
- * copied to spi_device.platform_data ... mostly for dma tuning
- */
-struct lpc313x_spi_chip {
-	u8 tx_threshold;
-	u8 rx_threshold;
-	u8 dma_burst_size;
-	u32 timeout;
-	u8 enable_loopback;
-	int gpio_cs;
-	void (*cs_control)(u32 command);
-};
-
-static struct ads7846_platform_data ea313x_ads7846_info = {
-	.model			= 7846,
-	.vref_delay_usecs	= 100,
-	.x_plate_ohms		= 419,
-	.y_plate_ohms		= 486,
-	.gpio_pendown		= GPIO_GPIO4,
-};
-
-static struct lpc313x_spi_chip ea313x_ads7846_chip = {
-	.gpio_cs	= GPIO_MUART_CTS_N,
-};
-
-/* If both SPIDEV and MTD data flash are enabled with the same chip select, only 1 will work */
-#if defined(CONFIG_SPI_SPIDEV)
-/* SPIDEV driver registration */
-static int __init lpc313x_spidev_register(void)
-{
-	struct spi_board_info info[] = {
-	{
-		.modalias = "spidev",
-		.max_speed_hz = 1000000,
-		.bus_num = 0,
-		.chip_select = 0,
-	}, {
-		.modalias	= "ads7846",
-		.max_speed_hz	= 1200000,
-		.bus_num	= 0,
-		.chip_select	= 1,
-		.platform_data	= &ea313x_ads7846_info,
-		.controller_data= &ea313x_ads7846_chip,
-		.irq		= IRQ_PENDOWN,
-	}};
-	gpio_request(GPIO_MUART_CTS_N, "touchscreen CS");
-	gpio_direction_output(GPIO_MUART_CTS_N, 1);
-
-	return spi_register_board_info(info, 3);
-}
-arch_initcall(lpc313x_spidev_register);
-#endif
-
-
-
 #if defined(CONFIG_MACH_EA3152)
 static struct i2c_board_info ea3152_i2c1_devices[] __initdata = {
 	{
@@ -207,8 +119,6 @@ struct of_dev_auxdata ea3131_auxdata_lookup[] __initdata = {
 static void __init ea3131_dt_init(void)
 {
 	lpc31xx_dt_init_common(ea3131_auxdata_lookup);
-	ea_add_device_ssd1289();
-	ea_add_device_dm9000();
 }
 
 #if defined(CONFIG_USB_EHCI_HCD)
@@ -220,7 +130,7 @@ static int __init ea_usb_power(void)
 	//ret = gpio_direction_output(VBUS_PWR_EN, 1);
 	return ret;
 }
-late_initcall(ea_usb_power);
+//late_initcall(ea_usb_power);
 #endif
 
 static const char *ea3131_dt_match[] __initconst = {
@@ -237,5 +147,5 @@ DT_MACHINE_START(EA313X, "NXP EA3131 (Device Tree Support)")
 	.dt_compat	= ea3131_dt_match,
 	.restart	= arch_reset,
 MACHINE_END
-#endif
+
 
