@@ -1306,6 +1306,56 @@ static void lpc313x_nand_update_chip(struct lpc313x_nand_info *info,
 	chip->ecc.prepad = 0;
 }
 
+#ifdef CONFIG_OF
+#define BLK_SIZE (2048 * 64)
+static struct mtd_partition ea313x_nand0_partitions[] = {
+	/* The EA3131 board uses the following block scheme:
+	128K: Blocks 0   - 0    - LPC31xx info and bad block table
+	384K: Blocks 1   - 3    - Apex bootloader
+	256K: Blocks 4   - 5    - Apex environment
+	4M:   Blocks 6   - 37   - Kernel image
+	16M:  Blocks 38  - 165  - Ramdisk image (if used)
+	???:  Blocks 166 - end  - Root filesystem/storage */
+	{
+		.name	= "lpc313x-rootfs",
+		.offset	= (BLK_SIZE * 166),
+		.size	= MTDPART_SIZ_FULL
+	},
+};
+
+static struct lpc313x_nand_timing ea313x_nanddev_timing = {
+	.ns_trsd	= 36,
+	.ns_tals	= 36,
+	.ns_talh	= 12,
+	.ns_tcls	= 36,
+	.ns_tclh	= 12,
+	.ns_tdrd	= 36,
+	.ns_tebidel	= 12,
+	.ns_tch		= 12,
+	.ns_tcs		= 48,
+	.ns_treh	= 24,
+	.ns_trp		= 48,
+	.ns_trw		= 24,
+	.ns_twp		= 36
+};
+
+static struct lpc313x_nand_dev_info ea313x_ndev[] = {
+	{
+		.name		= "nand0",
+		.nr_partitions	= ARRAY_SIZE(ea313x_nand0_partitions),
+		.partitions	= ea313x_nand0_partitions
+	}
+};
+
+static struct lpc313x_nand_cfg ea313x_plat_nand = {
+	.nr_devices	= ARRAY_SIZE(ea313x_ndev),
+	.devices	= ea313x_ndev,
+	.timing		= &ea313x_nanddev_timing,
+	.support_16bit	= 0,
+};
+#endif
+
+
 /*
  * Called by device layer when it finds a device matching
  * one our driver can handled. This code checks to see if
@@ -1335,6 +1385,10 @@ static int lpc313x_nand_probe(struct platform_device *pdev) {
 	/* Register driver data with platform */
 	platform_set_drvdata(pdev, host);
 
+#ifdef CONFIG_OF
+	plat = &ea313x_plat_nand;
+#endif
+
 	host->dev = &pdev->dev;
 	host->platform = plat;
 	host->irq = irq;
@@ -1342,7 +1396,7 @@ static int lpc313x_nand_probe(struct platform_device *pdev) {
 
 	/* Exit if no platform data */
 	if (plat == NULL) {
-		dev_err(&pdev->dev, "No memory for flash info\n");
+		dev_err(&pdev->dev, "No platform data\n");
 		goto exit_error;
 	}
 
@@ -1543,6 +1597,15 @@ static int lpc313x_nand_suspend(struct platform_device *pdev, pm_message_t pm)
 #define lpc313x_nand_suspend NULL
 #endif
 
+#if defined(CONFIG_OF)
+static const struct of_device_id lpc313x_nand_of_match[] = {
+	{ .compatible = "nxp,lpc31xx-nand" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, lpc313x_nand_of_match);
+#endif
+
+
 static struct platform_driver lpc313x_nand_driver = {
 	.probe		= lpc313x_nand_probe,
 	.remove		= lpc313x_nand_remove,
@@ -1551,6 +1614,9 @@ static struct platform_driver lpc313x_nand_driver = {
 	.driver = {
 		.name = "lpc313x_nand",
 		.owner = THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table = lpc313x_nand_of_match,
+#endif
 	},
 };
 
