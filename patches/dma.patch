@@ -1,5 +1,5 @@
 Bottom: b0ba73f9ea4177fc5b70b5500a125fc771d29d82
-Top:    44d69ae0b48efc4db810140148958af89f3cea29
+Top:    84adb7c23c0d8aca265b38e4a57a64340f9953d9
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-10 00:01:59 -0400
 
@@ -4168,3 +4168,16 @@ index 1c45d8f..5a982c7 100644
 +MODULE_AUTHOR("Jon Smirl <jonsmirl@gmail.com>");
  MODULE_LICENSE("GPL");
 +MODULE_ALIAS("platform:lpc31xx-spi");
+diff --git a/dt_config b/dt_config
+index 5ac5df2..9a449e2 100644
+--- a/dt_config
++++ b/dt_config
+@@ -1126,7 +1126,7 @@ CONFIG_WATCHDOG=y
+ # CONFIG_SOFT_WATCHDOG is not set
+ # CONFIG_DW_WATCHDOG is not set
+ # CONFIG_MAX63XX_WATCHDOG is not set
+-CONFIG_LPC313X_WATCHDOG=y
++CONFIG_LPC31XX_WATCHDOG=y
+ 
+ #
+ # USB-based Watchdog Cards
