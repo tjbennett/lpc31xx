@@ -35,8 +35,8 @@
 	spi@15002000 {
 		gpios = <&gpio_spi 4 0 
 			 &gpio_ebi_i2stx_0 3 0>; 
-		s25sl032p@0 {
-			compatible = "code,s25sl032p";
+		s25sl032a@0 {
+			compatible = "code,s25sl032a";
 			reg = <0>;
 			spi-max-frequency = <1000000>;
 		};

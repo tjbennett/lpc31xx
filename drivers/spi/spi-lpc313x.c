@@ -11,8 +11,8 @@
  */
 
 #define DEBUG
-#define jds_printk printk
-//#define jds_printk(format, arg...) ({if (0) printk(format, ##arg);})
+//#define jds_printk printk
+#define jds_printk(format, arg...) ({if (0) printk(format, ##arg);})
 
 #include <linux/io.h>
 #include <linux/clk.h>
@@ -544,17 +544,8 @@ static int lpc31xx_spi_transfer(struct spi_device *spi, struct spi_message *msg)
  */
 static void lpc31xx_spi_cleanup(struct spi_device *spi)
 {
-	//struct lpc31xx_spi_chip *chip;
 	jds_printk("JDS - lpc31xx_spi_cleanup\n");
-#if 0
-	chip = spi_get_ctldata(spi);
-	if (chip) {
-		if (chip->ops && chip->ops->cleanup)
-			chip->ops->cleanup(spi);
-		spi_set_ctldata(spi, NULL);
-		kfree(chip);
-	}
-#endif
+	spi_set_ctldata(spi, NULL);
 }
 
 /**
