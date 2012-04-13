@@ -315,6 +315,7 @@
 /***********************************************************************
  * GPIO register definitions
  **********************************************************************/
+#if 0
 #define GPIO_STATE(port)     __REG (GPIO_PHYS + (port) + 0x00)
 #define GPIO_STATE_M0(port)  __REG (GPIO_PHYS + (port) + 0x10)
 #define GPIO_M0_SET(port)    __REG (GPIO_PHYS + (port) + 0x14)
@@ -322,6 +323,7 @@
 #define GPIO_STATE_M1(port)  __REG (GPIO_PHYS + (port) + 0x20)
 #define GPIO_M1_SET(port)    __REG (GPIO_PHYS + (port) + 0x24)
 #define GPIO_M1_RESET(port)  __REG (GPIO_PHYS + (port) + 0x28)
+#endif
 
 #define GPIO_OUT_LOW(port, pin)  do { GPIO_M1_SET(port) = pin; GPIO_M0_RESET(port) = pin;} while(0)
 #define GPIO_OUT_HIGH(port, pin) do { GPIO_M1_SET(port) = pin; GPIO_M0_SET(port) = pin;} while(0)
