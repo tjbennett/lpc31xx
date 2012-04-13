@@ -1,6 +1,6 @@
 Version: 1
-Previous: 6da91e7ef288c787d905e2b1cc78f7689e3c38dd
-Head: 1dd1f80add66534ed1936f487f1033b5590d5828
+Previous: 34640f970ba2f8faa034b1e8a70286a714913dc5
+Head: 0671c29353b8e232afe2760c16275bbdeaddd0ba
 Applied:
   roland-dt-1.patch: 7e6b4367ad218d2750ec048d4654f03e87097501
   base.patch: 7de39230429aaac13de0f4a672dd3054717ecd1b
@@ -9,6 +9,7 @@ Applied:
   spi.patch: 57a092771bfe2ddb27f0a7b2b3b64e3fa2d3619a
   mmc.patch: cedb80c9caeed8f381fe5cf0a4ffd3d2d771056b
   watchdog.patch: 0671c29353b8e232afe2760c16275bbdeaddd0ba
+Unapplied:
   sound.patch: ea1301a11e674ea2e076c7d009a2f64c9f3d0ea9
   usb.patch: 9f2b86fd4b1c1f7835257420295674c2f85e2e15
   gadget.patch: 727450239c167a289bd331c9a7969a2198db5877
@@ -26,5 +27,4 @@ Applied:
   adc-pwm.patch: f2d959ff308def33c2fa612a4addf8e04c4adde3
   device-trees.patch: eea160b250a08f4f7fb9e3ff4a958337ea7a3483
   dma.patch: 1dd1f80add66534ed1936f487f1033b5590d5828
-Unapplied:
 Hidden:
