@@ -1,5 +1,5 @@
 Bottom: b0ba73f9ea4177fc5b70b5500a125fc771d29d82
-Top:    84adb7c23c0d8aca265b38e4a57a64340f9953d9
+Top:    e85545c58a3230c674afc9daeb93393e796a0715
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-10 00:01:59 -0400
 
@@ -44,7 +44,7 @@ index a8ff332..0911d76 100644
  	};
  	sound {
 diff --git a/arch/arm/mach-lpc31xx/board-ea313x.c b/arch/arm/mach-lpc31xx/board-ea313x.c
-index 76679ce..eda8632c 100644
+index 76679ce..368f7e0 100644
 --- a/arch/arm/mach-lpc31xx/board-ea313x.c
 +++ b/arch/arm/mach-lpc31xx/board-ea313x.c
 @@ -52,15 +52,15 @@
@@ -66,6 +66,69 @@ index 76679ce..eda8632c 100644
  For this to work SYS_MPMC_WTD_DEL0 & SYS_MPMC_WTD_DEL1 should be programmed with MPMC_STWTRD0
  & MPMC_STWTRD1 values. The logic only deactivates the nOE for one clock cycle which is
  11nsec but DM9000 needs 80nsec between nOEs. So lets add some dummy instructions such as
+@@ -97,62 +97,6 @@ static struct dm9000_plat_data dm9000_platdata = {
+ 	.inblk = dm9000_inblk,
+ };
+ 
+-
+-/* spi_board_info.controller_data for SPI slave devices,
+- * copied to spi_device.platform_data ... mostly for dma tuning
+- */
+-struct lpc313x_spi_chip {
+-	u8 tx_threshold;
+-	u8 rx_threshold;
+-	u8 dma_burst_size;
+-	u32 timeout;
+-	u8 enable_loopback;
+-	int gpio_cs;
+-	void (*cs_control)(u32 command);
+-};
+-
+-static struct ads7846_platform_data ea313x_ads7846_info = {
+-	.model			= 7846,
+-	.vref_delay_usecs	= 100,
+-	.x_plate_ohms		= 419,
+-	.y_plate_ohms		= 486,
+-	.gpio_pendown		= GPIO_GPIO4,
+-};
+-
+-static struct lpc313x_spi_chip ea313x_ads7846_chip = {
+-	.gpio_cs	= GPIO_MUART_CTS_N,
+-};
+-
+-/* If both SPIDEV and MTD data flash are enabled with the same chip select, only 1 will work */
+-#if defined(CONFIG_SPI_SPIDEV)
+-/* SPIDEV driver registration */
+-static int __init lpc313x_spidev_register(void)
+-{
+-	struct spi_board_info info[] = {
+-	{
+-		.modalias = "spidev",
+-		.max_speed_hz = 1000000,
+-		.bus_num = 0,
+-		.chip_select = 0,
+-	}, {
+-		.modalias	= "ads7846",
+-		.max_speed_hz	= 1200000,
+-		.bus_num	= 0,
+-		.chip_select	= 1,
+-		.platform_data	= &ea313x_ads7846_info,
+-		.controller_data= &ea313x_ads7846_chip,
+-		.irq		= IRQ_PENDOWN,
+-	}};
+-	gpio_request(GPIO_MUART_CTS_N, "touchscreen CS");
+-	gpio_direction_output(GPIO_MUART_CTS_N, 1);
+-
+-	return spi_register_board_info(info, 3);
+-}
+-//arch_initcall(lpc313x_spidev_register);
+-#endif
+-
+-
+-
+ #if defined(CONFIG_MACH_EA3152)
+ static struct i2c_board_info ea3152_i2c1_devices[] __initdata = {
+ 	{
 diff --git a/arch/arm/mach-lpc31xx/dma.c b/arch/arm/mach-lpc31xx/dma.c
 index bf6e040..62e2ca0 100644
 --- a/arch/arm/mach-lpc31xx/dma.c
