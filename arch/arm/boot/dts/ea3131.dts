@@ -82,7 +82,7 @@
 			gpios = <
 				&gpio_ebi_mci 7 0 /* card detect */
 				0 /* write protect, no hardware */
-				&gpio_ebi_i2stx_0 5 0 /* broken hardware design */
+				&gpio_ebi_i2stx_0 5 0 /* power, broken hardware design */
 				0 /* slot select, no hardware */
 			>;
 		};
