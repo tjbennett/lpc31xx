@@ -1,5 +1,5 @@
 Bottom: b0ba73f9ea4177fc5b70b5500a125fc771d29d82
-Top:    027289ca16787c59c9f62118dfebaabcf903d46a
+Top:    2edbc737696fecf1a64ea208db16aaba57d10551
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-10 00:01:59 -0400
 
@@ -9,7 +9,7 @@ DMA rework
 ---
 
 diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
-index a8ff332..d4008f3 100644
+index a8ff332..12dfd19 100644
 --- a/arch/arm/boot/dts/ea3131.dts
 +++ b/arch/arm/boot/dts/ea3131.dts
 @@ -16,6 +16,18 @@
@@ -75,7 +75,7 @@ index a8ff332..d4008f3 100644
 +			gpios = <
 +				&gpio_ebi_mci 7 0 /* card detect */
 +				0 /* write protect, no hardware */
-+				&gpio_ebi_i2stx_0 5 0 /* broken hardware design */
++				&gpio_ebi_i2stx_0 5 0 /* power, broken hardware design */
 +				0 /* slot select, no hardware */
 +			>;
  		};
@@ -510,6 +510,36 @@ index 01f4114..0ec045a 100644
  
  #define GPIO_OUT_LOW(port, pin)  do { GPIO_M1_SET(port) = pin; GPIO_M0_RESET(port) = pin;} while(0)
  #define GPIO_OUT_HIGH(port, pin) do { GPIO_M1_SET(port) = pin; GPIO_M0_SET(port) = pin;} while(0)
+diff --git a/arch/arm/mach-lpc31xx/irq.c b/arch/arm/mach-lpc31xx/irq.c
+index 4ff6533..5dc8f90 100644
+--- a/arch/arm/mach-lpc31xx/irq.c
++++ b/arch/arm/mach-lpc31xx/irq.c
+@@ -274,7 +274,7 @@ void __init lpc313x_init_irq(void)
+ 
+ 		irq_set_chip(irq, &lpc313x_evtr_chip);
+ 		set_irq_flags(irq, IRQF_VALID);
+-		/* configure the interrupt senstivity */
++		/* configure the interrupt sensitivity */
+ 		switch (irq_2_event[irq - IRQ_EVT_START].type) {
+ 			case EVT_ACTIVE_LOW:
+ 				EVRT_APR(bank) &= ~_BIT(bit_pos);
+@@ -299,6 +299,7 @@ void __init lpc313x_init_irq(void)
+ 			case EVT_BOTH_EDGE:
+ 				EVRT_ATR(bank) |= _BIT(bit_pos);
+ 				irq_set_handler(irq, handle_edge_irq);
++				break;
+ 			default:
+ 				printk("Invalid Event type.\r\n");
+ 				break;
+@@ -345,7 +346,7 @@ void __init lpc313x_init_irq(void)
+ 	irq_set_chained_handler (IRQ_EVT_ROUTER3, router3_handler);
+ #endif
+ 
+-	/* Set the priority treshold to 0, i.e. don't mask any interrupt */
++	/* Set the priority threshold to 0, i.e. don't mask any interrupt */
+ 	/* on the basis of priority level, for both targets (IRQ/FIQ)    */
+ 	INTC_IRQ_PRI_MASK = 0;
+ 	INTC_FIQ_PRI_MASK = 0;
 diff --git a/drivers/dma/Kconfig b/drivers/dma/Kconfig
 index f1a2749..502456e 100644
 --- a/drivers/dma/Kconfig
@@ -1985,10 +2015,83 @@ index 6e523fa..19f5e42 100644
  	ret = of_mm_gpiochip_add(ofdev->dev.of_node, chip);
  	if (ret)
 diff --git a/drivers/mmc/host/lpc31xx_mmc.c b/drivers/mmc/host/lpc31xx_mmc.c
-index a9a7dfa..27b18f0 100644
+index a9a7dfa..e4190c0 100644
 --- a/drivers/mmc/host/lpc31xx_mmc.c
 +++ b/drivers/mmc/host/lpc31xx_mmc.c
-@@ -1558,7 +1558,10 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
+@@ -590,7 +590,7 @@ void lpc313x_mci_setup_bus(struct lpc313x_mci_slot *slot)
+ 
+ static void lpc313x_mci_select_slot(struct lpc313x_mci_slot *slot, int enable)
+ {
+-	if (slot->gpio_select >= 0) {
++	if (gpio_is_valid(slot->gpio_select)) {
+ 		printk("lpc313x_mci_select_slot %d\n", slot->gpio_select);
+ 		gpio_set_value(slot->gpio_select, enable);
+ 	}
+@@ -603,7 +603,7 @@ static void lpc313x_mci_set_power(struct lpc313x_mci_slot *slot, int enable)
+ 	 * power management so use the always enable power
+ 	 * jumper.
+ 	 */
+-	if (slot->gpio_power >= 0) {
++	if (gpio_is_valid(slot->gpio_power)) {
+ 		printk("lpc313x_mci_set_power %d\n", slot->gpio_power);
+ 		gpio_set_value(slot->gpio_power, enable);
+ 	}
+@@ -740,7 +740,7 @@ static int lpc313x_mci_get_wp(struct mmc_host *mmc)
+ 	int			read_only = -ENOSYS;
+ 	struct lpc313x_mci_slot	*slot = mmc_priv(mmc);
+ 
+-	if (slot->gpio_wp >= 0) {
++	if (gpio_is_valid(slot->gpio_wp)) {
+ 		read_only =  gpio_get_value(slot->gpio_wp);
+ 		dev_dbg(&mmc->class_dev, "card is %s\n",
+ 				read_only ? "read-only" : "read-write");
+@@ -753,7 +753,7 @@ static int lpc313x_mci_get_cd(struct lpc313x_mci_slot *slot)
+ {
+ 	int			present = -ENOSYS;
+ 
+-	if (slot->gpio_cd >= 0) {
++	if (gpio_is_valid(slot->gpio_cd)) {
+ 		present = !gpio_get_value(slot->gpio_cd);
+ 		dev_vdbg(&slot->mmc->class_dev, "card is %spresent\n", present ? "" : "not ");
+ 	}
+@@ -1357,6 +1357,7 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
+ 	const u32 *voltage_ranges;
+ 	const int *width;
+ 	int i, ret, num_ranges, level;
++	enum of_gpio_flags flags;
+ 
+ 	mmc = mmc_alloc_host(sizeof(struct lpc313x_mci_slot), &host->pdev->dev);
+ 
+@@ -1368,19 +1369,20 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
+ 
+ 	slot->mmc = mmc;
+ 	slot->host = host;
+-	slot->gpio_cd = of_get_named_gpio(np, "gpio-cd", 0);
+-	if (slot->gpio_cd >= 0) {
++
++	slot->gpio_cd = of_get_named_gpio_flags(np, "gpios", 0, &flags);
++	if (gpio_is_valid(slot->gpio_cd)) {
+ 		gpio_request(slot->gpio_cd, "mmc cd");
+ 		gpio_direction_input(slot->gpio_cd);
+ 	}
+-	slot->gpio_wp = of_get_named_gpio(np, "gpio-wp", 0);
+-	if (slot->gpio_wp >= 0)
++	slot->gpio_wp = of_get_named_gpio_flags(np, "gpios", 1, &flags);
++	if (gpio_is_valid(slot->gpio_wp))
+ 		gpio_request(slot->gpio_cd, "mmc wp");
+-	slot->gpio_power = of_get_named_gpio(np, "gpio-power", 0);
+-	if (slot->gpio_power >= 0)
++	slot->gpio_power = of_get_named_gpio_flags(np, "gpios", 2, &flags);
++	if (gpio_is_valid(slot->gpio_power))
+ 		gpio_request(slot->gpio_cd, "mmc power");
+-	slot->gpio_select = of_get_named_gpio(np, "gpio-select", 0);
+-	if (slot->gpio_select >= 0)
++	slot->gpio_select = of_get_named_gpio_flags(np, "gpios", 3, &flags);
++	if (gpio_is_valid(slot->gpio_select))
+ 		gpio_request(slot->gpio_select, "mmc select");
+ 
+ 	mmc->ops = &lpc313x_mci_ops;
+@@ -1558,7 +1560,10 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
  	SYS_MUX_GPIO_MCI = 1;
  
  	/* set the pins as driven by IP in IOCONF */
