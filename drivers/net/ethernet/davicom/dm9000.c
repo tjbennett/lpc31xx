@@ -35,10 +35,14 @@
 #include <linux/platform_device.h>
 #include <linux/irq.h>
 #include <linux/slab.h>
+#include <linux/of_gpio.h>
 
 #include <asm/delay.h>
 #include <asm/irq.h>
 #include <asm/io.h>
+
+#include <linux/gpio.h>
+#include <mach/gpio.h>
 
 #include "dm9000.h"
 
@@ -691,17 +695,18 @@ static void
 dm9000_release_board(struct platform_device *pdev, struct board_info *db)
 {
 	/* unmap our resources */
-
 	iounmap(db->io_addr);
 	iounmap(db->io_data);
 
 	/* release the resources */
-
-	release_resource(db->data_req);
-	kfree(db->data_req);
-
-	release_resource(db->addr_req);
-	kfree(db->addr_req);
+	if (db->data_req) {
+		release_resource(db->data_req);
+		kfree(db->data_req);
+	}
+	if (db->addr_req) {
+		release_resource(db->addr_req);
+		kfree(db->addr_req);
+	}
 }
 
 static unsigned char dm9000_type_to_char(enum dm9000_type type)
@@ -1357,6 +1362,31 @@ static const struct net_device_ops dm9000_netdev_ops = {
 #endif
 };
 
+# define DM_IO_DELAY()	do { gpio_get_value(GPIO_MNAND_RYBN3);} while(0)
+
+static void dm9000_dumpblk(void __iomem *reg, int count)
+{
+	int i;
+	int tmp;
+
+	count = (count + 1) >> 1;
+	for (i = 0; i < count; i++) {
+		DM_IO_DELAY();
+		tmp = readw(reg);
+	}
+}
+
+static void dm9000_inblk(void __iomem *reg, void *data, int count)
+{
+	int i;
+	u16* pdata = (u16*)data;
+	count = (count + 1) >> 1;
+	for (i = 0; i < count; i++) {
+		DM_IO_DELAY();
+		*pdata++ = readw(reg);
+	}
+}
+
 /*
  * Search DM9000 board, allocate space and register it
  */
@@ -1463,6 +1493,8 @@ dm9000_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto out;
 	}
+/* fixme */
+pdata->flags		= DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM | DM9000_PLATF_SIMPLE_PHY;
 
 	/* fill in parameters for net-dev structure */
 	ndev->base_addr = (unsigned long)db->io_addr;
@@ -1489,13 +1521,15 @@ dm9000_probe(struct platform_device *pdev)
 		 * over-rides */
 
 		if (pdata->inblk != NULL)
-			db->inblk = pdata->inblk;
+//			db->inblk = pdata->inblk;
+			db->inblk = dm9000_inblk;
 
 		if (pdata->outblk != NULL)
 			db->outblk = pdata->outblk;
 
 		if (pdata->dumpblk != NULL)
-			db->dumpblk = pdata->dumpblk;
+//			db->dumpblk = pdata->dumpblk;
+			db->dumpblk = dm9000_dumpblk;
 
 		db->flags = pdata->flags;
 	}
