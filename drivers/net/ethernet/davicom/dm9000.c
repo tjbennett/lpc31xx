@@ -1395,7 +1395,6 @@ of_gpio_to_irq(struct platform_device *pdev, int offset)
 
 	gpio = of_get_gpio_flags(pdev->dev.of_node, offset, &flags);
 	if (!gpio_is_valid(gpio)) {
-		dev_err(&pdev->dev, "invalid gpio #%d: %d\n", offset, gpio);
 		return gpio;
 	}
 	ret = gpio_request(gpio, dev_name(&pdev->dev));
@@ -1459,8 +1458,10 @@ dm9000_probe(struct platform_device *pdev)
 	}
 
 	irq_res  = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+	printk("dm9000 irq_res %p\n", irq_res);
 	if (irq_res) {
 		ndev->irq	= irq_res->start;
+printk("dm9000 irq %d\n", ndev->irq);
 		db->irq_flags	= irq_res->flags;
 	} else {
 #ifdef CONFIG_OF
