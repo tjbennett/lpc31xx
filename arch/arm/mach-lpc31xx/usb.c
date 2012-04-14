@@ -177,6 +177,9 @@ static void lpc313x_vbusen_timer(unsigned long data)
 	enable_irq(brd->vbus_ovrc_irq);
 }
 
+/* Macros to compute the bank based on EVENT_T */
+#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
+#define EVT_usb_atx_pll_lock	0x79
 
 /*-------------------------------------------------------------------------*/
 int __init usbotg_init(void)
@@ -245,6 +248,7 @@ int __init usbotg_init(void)
 			printk(KERN_INFO "Can't acquire vbus-over GPIO\n");
 		gpio_direction_input(over);
 #endif
+#define IRQ_EA_VBUS_OVRC  37  /* Detect VBUS over current - Host mode */
 		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_EA_VBUS_OVRC;
 
 #else
