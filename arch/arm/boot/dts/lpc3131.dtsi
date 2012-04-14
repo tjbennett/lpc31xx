@@ -29,10 +29,14 @@
 		reg = <0x11040000 0x18000>;
 		interrupts = <29>;
 	};
-	evtr@13000000 {
+	evtr: evtr@13000000 {
+		#event-cells = <3>;
 		compatible = "nxp,lpc31xx-evtr";
+		interrupt-controller;
+		#interrupt-cells = <1>;
 		reg = <0x13000000 0x800>;
-		interrupts = <1 2 3 4>;
+		interrupt-parent = <&intc>;
+		interrupts = <1 2 3 4>;  /* cascaded */
 	};
 	adc@13002000 {
 		compatible = "nxp,lpc31xx-adc";
