@@ -111,6 +111,12 @@ static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int va
 		*gpc(base, GPIO_M0_RESET) = pin;
 }
 
+static int lpc3131_gpio_to_irq(struct gpio_chip *chip, int irq)
+{
+	printk("------------- implement lpc3131_gpio_to_irq -------------\n");
+	return -ENOENT;
+}
+
 static int lpc313x_gpiochip_remove(struct platform_device *ofdev)
 {
 	return -EBUSY;
@@ -133,6 +139,7 @@ static int __devinit lpc313x_simple_gpiochip_probe(struct platform_device *ofdev
 	gc->direction_output = lpc3131_gpio_direction_output;
 	gc->get              = lpc3131_gpio_get_value;
 	gc->set              = lpc3131_gpio_set_value;
+	gc->to_irq	     = lpc3131_gpio_to_irq;
 
 	ret = of_mm_gpiochip_add(ofdev->dev.of_node, chip);
 	if (ret)
