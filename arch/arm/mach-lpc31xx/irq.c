@@ -1,9 +1,9 @@
-/*  linux/arch/arm/mach-lpc313x/irq.c
+/*  linux/arch/arm/mach-lpc31xx/irq.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- * Interrupt controller and event router driver for LPC313x & LPC315x.
+ * Interrupt controller and event router driver for LPC31xx & LPC315x.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
 #include <mach/irqs.h>
 #include <mach/clock.h>
 
-extern void __init lpc313x_init_evtr(void);
+extern void __init lpc31xx_init_evtr(void);
 
 static void intc_mask_irq(struct irq_data *data)
 {
@@ -74,7 +74,7 @@ static int intc_set_wake(struct irq_data *data, unsigned int on)
 	return 0;
 }
 
-static struct irq_chip lpc313x_internal_chip = {
+static struct irq_chip lpc31xx_internal_chip = {
 	.name = "INTC",
 	.irq_ack = intc_mask_irq,
 	.irq_mask = intc_mask_irq,
@@ -87,7 +87,7 @@ static const struct of_device_id intc_of_match[] __initconst = {
 	{},
 };
 
-void __init lpc313x_init_irq(void)
+void __init lpc31xx_init_irq(void)
 {
 	unsigned int irq;
 
@@ -103,7 +103,7 @@ void __init lpc313x_init_irq(void)
 	INTC_IRQ_VEC_BASE = 0x00000000;
 	INTC_FIQ_VEC_BASE = 0x00000000;
 
-	/* mask all interrupt by setting high priority untill init is done*/
+	/* mask all interrupt by setting high priority until init is done*/
 	INTC_IRQ_PRI_MASK = 0xFF;
 	INTC_FIQ_PRI_MASK = 0xFF;
 
@@ -121,7 +121,7 @@ void __init lpc313x_init_irq(void)
 			INTC_REQ_PRIO_LVL(1) |
 			INTC_REQ_WE_PRIO_LVL;
 
-		irq_set_chip_and_handler(irq, &lpc313x_internal_chip,
+		irq_set_chip_and_handler(irq, &lpc31xx_internal_chip,
 					 handle_level_irq);
 		set_irq_flags(irq, IRQF_VALID);
 	}
@@ -131,7 +131,7 @@ void __init lpc313x_init_irq(void)
 	INTC_IRQ_PRI_MASK = 0;
 	INTC_FIQ_PRI_MASK = 0;
 
-	lpc313x_init_evtr();
+	lpc31xx_init_evtr();
 }
 
 
