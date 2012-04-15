@@ -31,28 +31,34 @@
 #define GPIO_M1_SET	0x24
 #define GPIO_M1_RESET	0x28
 
+struct lpc31xx_gpio_chip {
+	struct of_mm_gpio_chip mmchip;
+	int index;
+};
+
 /* this table maps from gpio register bits into event router bits
  * the numbers correspond to the 128 event bits in the event router
  * look up the gpio bit in this table to get an event bit then
  * ask the event router driver to tell you which irq it is mapped to
  */
-static uint8_t ebi_mci[] = {0x38,0x35,0x08,0x05,0x03,0x15,0x4F,0x50,0x2B,0x2D,0x01,0x2C,0x12,0x02,0x13,0x11,
+static const uint8_t ebi_mci[] = {0x38,0x35,0x08,0x05,0x03,0x15,0x4F,0x50,0x2B,0x2D,0x01,0x2C,0x12,0x02,0x13,0x11,
 	0x14,0x04,0x06,0x07,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0x10,0x34,0x36,0x37,0x39};
-static uint8_t ebi_i2stx_0[] = {0x16,0x17,0x18,0x4D,0x4E,0x51,0x52,0x2E,0x2A,0x29};
-static uint8_t i2srx_0[] = {0x53,0x54,0x55};
-static uint8_t i2srx_1[] = {0x56,0x57,0x58};
-static uint8_t i2stx_1[] = {0x59,0x5A,0x5B,0x5C};
-static uint8_t ebi[] = {0x22,0x23,0x24,0x25,0x26,0x27,0x1D,0x19,0x1A,0x1B,0x1C,0x1E,0x1F,0x20,0x21,0x28};
-static uint8_t gpio[] = {0x30,0x2F,0x31,0x32,0x33,0x3A,0x3B,0x3C,0x3D,0x3E,0x3F,0x40,0x41,0x60,0x61};
-static uint8_t i2c1[] = {0x5D,0x5E};
-static uint8_t spi[] = {0x46,0x47,0x48,0x49,0x4A};
-static uint8_t nand_ctrl[] = {0x45,0x42,0x43,0x44};
-static uint8_t pwm[] = {0x5F};
-static uint8_t uart[] = {0x4B,0x4C};
+static const uint8_t ebi_i2stx_0[] = {0x16,0x17,0x18,0x4D,0x4E,0x51,0x52,0x2E,0x2A,0x29};
+static const uint8_t i2srx_0[] = {0x53,0x54,0x55};
+static const uint8_t i2srx_1[] = {0x56,0x57,0x58};
+static const uint8_t i2stx_1[] = {0x59,0x5A,0x5B,0x5C};
+static const uint8_t ebi[] = {0x22,0x23,0x24,0x25,0x26,0x27,0x1D,0x19,0x1A,0x1B,0x1C,0x1E,0x1F,0x20,0x21,0x28};
+static const uint8_t gpio[] = {0x30,0x2F,0x31,0x32,0x33,0x3A,0x3B,0x3C,0x3D,0x3E,0x3F,0x40,0x41,0x60,0x61};
+static const uint8_t i2c1[] = {0x5D,0x5E};
+static const uint8_t spi[] = {0x46,0x47,0x48,0x49,0x4A};
+static const uint8_t nand_ctrl[] = {0x45,0x42,0x43,0x44};
+static const uint8_t pwm[] = {0x5F};
+static const uint8_t uart[] = {0x4B,0x4C};
 
 static struct {
-	uint8_t *evt;
+	const uint8_t *evt;
 	int count;
+	struct lpc31xx_gpio_chip *chip;
 } gpio_evt[] = {
 	{ebi_mci, 	sizeof(ebi_mci)},
 	{ebi_i2stx_0, 	sizeof(ebi_i2stx_0)},
@@ -77,7 +83,7 @@ static struct {
  * @config: special function and pull-resistor control information.
  * @pm_save: Save information for suspend/resume support.
  *
- * This wrapper provides the necessary information for the Samsung
+ * This wrapper provides the necessary information for the NXP
  * specific gpios being registered with gpiolib.
  */
 struct lpc313x_gpio_chip {
@@ -90,11 +96,6 @@ struct lpc313x_gpio_chip {
 #endif
 };
 #endif
-
-struct lpc31xx_gpio_chip {
-	struct of_mm_gpio_chip mmchip;
-	int index;
-};
 
 static int inline *gpc(void __iomem *base, int reg)
 {
@@ -161,14 +162,19 @@ static int lpc3131_gpio_to_irq(struct gpio_chip *gc, unsigned gpio)
 {
 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(gc);
 	struct lpc31xx_gpio_chip *chip = container_of(mm_gc, struct lpc31xx_gpio_chip, mmchip);
-	int irq;
 
-	printk("------------- implement lpc3131_gpio_to_irq -------------\n");
-	printk("index %d gpio %d event %02x\n", chip->index, gpio, gpio_evt[chip->index].evt[gpio]);
-	irq = event_to_irq(gpio_evt[chip->index].evt[gpio]);
-	printk("irq %d\n", irq);
-	return irq;
+	return event_to_irq(gpio_evt[chip->index].evt[gpio]);
 }
+
+int lpc3131_reg_to_gpio(unsigned index, unsigned gpio)
+{
+	struct lpc31xx_gpio_chip *chip;
+
+	chip = gpio_evt[index].chip;
+	return chip->mmchip.gc.base + gpio;
+}
+EXPORT_SYMBOL(lpc3131_reg_to_gpio);
+
 
 static int lpc313x_gpiochip_remove(struct platform_device *ofdev)
 {
@@ -188,6 +194,7 @@ static int __devinit lpc313x_simple_gpiochip_probe(struct platform_device *pdev)
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	chip->index = (res->start >> 6) & 7;
+	gpio_evt[chip->index].chip = chip;
 
 	gc = &chip->mmchip.gc;
 	gc->ngpio            = gpio_evt[chip->index].count;

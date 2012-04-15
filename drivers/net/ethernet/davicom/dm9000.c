@@ -63,7 +63,7 @@ MODULE_PARM_DESC(watchdog, "transmit timeout in milliseconds");
 /*
  * Debug messages level
  */
-static int debug;
+static int debug = 4;
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "dm9000 debug level (0-4)");
 
@@ -662,6 +662,7 @@ dm9000_poll_work(struct work_struct *w)
 	board_info_t *db = container_of(dw, board_info_t, phy_poll);
 	struct net_device *ndev = db->ndev;
 
+printk("dm9000_poll_work\n");
 	if (db->flags & DM9000_PLATF_SIMPLE_PHY &&
 	    !(db->flags & DM9000_PLATF_EXT_PHY)) {
 		unsigned nsr = dm9000_read_locked(db, DM9000_NSR);
@@ -1070,6 +1071,7 @@ static irqreturn_t dm9000_interrupt(int irq, void *dev_id)
 	unsigned long flags;
 	u8 reg_save;
 
+	printk("dm9000_interrupt\n");
 	dm9000_dbg(db, 3, "entering %s\n", __func__);
 
 	/* A real interrupt coming */
@@ -1178,6 +1180,8 @@ dm9000_open(struct net_device *dev)
 
 	/* If there is no IRQ type specified, default to something that
 	 * may work, and tell the user that this is a problem */
+
+	irqflags |= IRQ_TYPE_LEVEL_HIGH;
 
 	if (irqflags == IRQF_TRIGGER_NONE)
 		dev_warn(db->dev, "WARNING: no IRQ resource flags set.\n");

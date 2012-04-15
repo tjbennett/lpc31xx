@@ -29,6 +29,7 @@
 #include <linux/irqdomain.h>
 #include <linux/of_platform.h>
 #include <linux/slab.h>
+#include <linux/gpio.h>
 
 #include <mach/hardware.h>
 #include <asm/irq.h>
@@ -343,6 +344,7 @@ static IRQ_EVENT_MAP_T irq_2_event[] = BOARD_IRQ_EVENT_MAP;
 
 static void evt_mask_irq(struct irq_data *data)
 {
+	printk("mask irq %d\n", data->irq);
 	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
 	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
 
@@ -351,6 +353,7 @@ static void evt_mask_irq(struct irq_data *data)
 
 static void evt_unmask_irq(struct irq_data *data)
 {
+	printk("unmask irq %d\n", data->irq);
 	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
 	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
 
@@ -370,6 +373,7 @@ static int evt_set_type(struct irq_data *data, unsigned int flow_type)
 	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
 	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
 
+	printk("set type %d %x\n", data->irq, flow_type);
 	switch (flow_type) {
 	case IRQ_TYPE_EDGE_RISING:
 		EVRT_APR(bank) |= _BIT(bit_pos);
@@ -412,6 +416,13 @@ static int evt_set_wake(struct irq_data *data, unsigned int on)
 	return 0;
 }
 
+static int set_input(unsigned irq);
+
+unsigned int evt_startup(struct irq_data *data)
+{
+	evt_unmask_irq(data);
+	return set_input(data->irq);
+}
 
 static struct irq_chip lpc31xx_evtr_chip = {
 	.name = "EVENTROUTER",
@@ -420,6 +431,7 @@ static struct irq_chip lpc31xx_evtr_chip = {
 	.irq_unmask = evt_unmask_irq,
 	.irq_set_type = evt_set_type,
 	.irq_set_wake = evt_set_wake,
+	//.irq_startup = evt_startup,
 };
 
 
@@ -430,6 +442,7 @@ static struct irq_chip lpc31xx_evtr_chip = {
 		if (IRQ_EVTR##n##_START == IRQ_EVTR##n##_END) { \
 			/* translate IRQ number */ \
 			irq = IRQ_EVTR##n##_START; \
+			printk("handle a irq %d\n", irq); \
 			generic_handle_irq(irq); \
 		} else { \
 			for (irq = IRQ_EVTR##n##_START; irq <= IRQ_EVTR##n##_END; irq++) {  \
@@ -437,8 +450,10 @@ static struct irq_chip lpc31xx_evtr_chip = {
 				bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin); \
 				bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F; \
 				status = EVRT_OUT_PEND(n, bank); \
-				if (status & _BIT(bit_pos)) \
+				if (status & _BIT(bit_pos)) { \
 					generic_handle_irq(irq); \
+					printk("handle b irq %d\n", irq); \
+				} \
 			} \
 		} \
 	}
@@ -482,7 +497,7 @@ void __init lpc31xx_init_evtr(void)
 	}
 
 	/* Now configure external/board interrupts using event router */
-	for (irq = IRQ_EVT_START; irq <= IRQ_EVT_START + NR_IRQ_CHIP_EVT + NR_IRQ_EBOARD; irq++) {
+	for (irq = IRQ_EVT_START; irq < IRQ_EVT_START + NR_IRQ_CHIP_EVT + NR_IRQ_EBOARD; irq++) {
 		/* compute bank & bit position for the event_pin */
 		bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin);
 		bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F;
@@ -571,20 +586,62 @@ void __init lpc31xx_init_evtr(void)
 #endif
 }
 
-struct event {
-	int bit;
+/* table to map from event to gpio bit */
+/* mask 0x1E0 reg, mask 0x1F bit */
+int event_to_gpioreg[] = {
+	0x000,0x00A,0x00D,0x004,0x011,0x003,0x012,0x013,
+	0x002,0x014,0x015,0x016,0x017,0x018,0x019,0x01A,
+	0x01B,0x00F,0x00C,0x00E,0x010,0x005,0x020,0x021,
+	0x022,0x0C7,0x0C8,0x0C9,0x0CA,0x0C6,0x0CB,0x0CC,
+	0x0CD,0x0CE,0x0C0,0x0C1,0x0C2,0x0C3,0x0C4,0x0C5,
+	0x0CF,0x029,0x028,0x008,0x00B,0x009,0x027,0x0E1,
+	0x0E0,0x0E2,0x0E3,0x0E4,0x01C,0x001,0x01D,0x01E,
+	0x000,0x01F,0x0E5,0x0E6,0x0E7,0x0E8,0x0E9,0x0EA,
+	0x0EB,0x0EC,0x141,0x142,0x143,0x140,0x120,0x121,
+	0x122,0x123,0x124,0x180,0x181,0x023,0x024,0x006,
+	0x007,0x025,0x026,0x060,0x061,0x062,0x080,0x081,
+	0x082,0x0A0,0x0A1,0x0A2,0x0A3,0x100,0x101,0x160,
+	0x0ED,0x0EE,0x000,0x000,0x000,0x000,0x000,0x000,
+	0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
+	0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
+	0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
+};
+
+struct event_data {
+	int event;
 	int group;
 	int edge;
 };
 
-static struct event *events;
+static struct event_data *events;
 static int num_events;
+
+extern int lpc3131_reg_to_gpio(unsigned index, unsigned gpio);
+
+/* when a gpio pin is request as an interrupt source,
+ * make sure it is input mode
+ */
+static int set_input(unsigned irq)
+{
+	int ret, reg, gpio, event;
+
+	event = events[irq - 30].event;
+	reg  = event_to_gpioreg[event];
+	if (!reg) /* not a gpio pin */
+		return 0;
+	gpio = lpc3131_reg_to_gpio(reg >> 5, reg & 0x1F);
+	printk("setting to input %d\n", gpio);
+	ret = gpio_request(gpio, "IRQ");
+	if (ret)
+		return ret;
+	return gpio_direction_input(gpio);
+}
 
 int event_to_irq(int event)
 {
 	int i;
 	for (i = 0; i < num_events; i++) {
-		if (events[i].bit == event) {
+		if (events[i].event == event) {
 			return i + 30; /* fixme */
 		}
 	}
@@ -619,9 +676,10 @@ static int __devinit lpc313x_evtr_probe(struct platform_device *pdev)
 	events = kzalloc(sizeof(*events) * num_events, GFP_KERNEL);
 	for (i = 0; i < num_events; i++) {
 		events[i].group = be32_to_cpup(ip++);
-		events[i].bit = be32_to_cpup(ip++);
+		events[i].event = be32_to_cpup(ip++);
 		events[i].edge = be32_to_cpup(ip++);
-		printk("group %d bit %02x edge %d\n", events[i].group, events[i].bit, events[i].edge);
+		printk("group %d bit %02x edge %d\n", events[i].group, events[i].event, events[i].edge);
+		//set_input(events[i].event);
 	}
 	return 0;
 }
