@@ -1,5 +1,5 @@
 Bottom: 90a898bdb089d9a24e86de57d59f2be3caa65287
-Top:    0d57ae63ae80a9efd3d2d69cf82b879e7a3caf05
+Top:    938fd572688f0713aa928117576cfaef24e7c0eb
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-14 11:58:54 -0400
 
@@ -9,29 +9,57 @@ rewrite irq drivers
 ---
 
 diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
-index 12dfd19..3413798 100644
+index 12dfd19..87746f5 100644
 --- a/arch/arm/boot/dts/ea3131.dts
 +++ b/arch/arm/boot/dts/ea3131.dts
-@@ -103,6 +103,8 @@
+@@ -60,7 +60,8 @@
+ 			vref_delay_usecs = <100>;
+ 			x-plate-ohms = <419>;
+ 			y-plate-ohms = <486>;
+-			pen-irq = <37>;
++			interrupt-parent = <&evtr>;
++			pen-irq = <7 4>;
+ 			gpio-pendown = <&gpio_gpio 4 0>;
+ 		};
+ 	};
+@@ -85,6 +86,8 @@
+ 				&gpio_ebi_i2stx_0 5 0 /* power, broken hardware design */
+ 				0 /* slot select, no hardware */
+ 			>;
++			interrupt-parent = <&evtr>;
++			interrupt = <6 8>;
+ 		};
+ 	};
+ 	usb@19000000 {
+@@ -103,6 +106,8 @@
  		dm9000@20020000 {
  			compatible = "davicom,dm9000";
  			reg = <0x20020000 0x100 0x20030000 0x100>;
 +			interrupt-parent = <&evtr>;
-+			interrupts = <4>;
++			interrupts = <4 4>;
  			gpios = <
  				&gpio_ebi_i2stx_0 2 0 /* main irq, map gpio to irq */
  				0  /* WOL irq, map gpio to irq */
 diff --git a/arch/arm/boot/dts/lpc3131.dtsi b/arch/arm/boot/dts/lpc3131.dtsi
-index 6fd9b64..c487022 100644
+index 6fd9b64..096fe21 100644
 --- a/arch/arm/boot/dts/lpc3131.dtsi
 +++ b/arch/arm/boot/dts/lpc3131.dtsi
+@@ -33,7 +33,7 @@
+ 		#event-cells = <3>;
+ 		compatible = "nxp,lpc31xx-evtr";
+ 		interrupt-controller;
+-		#interrupt-cells = <1>;
++		#interrupt-cells = <2>;
+ 		reg = <0x13000000 0x800>;
+ 		interrupt-parent = <&intc>;
+ 		interrupts = <1 2 3 4>;  /* cascaded */
 @@ -46,7 +46,8 @@
  	wdt@13002400 {
  		compatible = "nxp,lpc31xx-wdt";
  		reg = <0x13002400 0x400>;
 -		interrupts = <30>;
 +		interrupt-parent = <&evtr>;
-+		interrupts = <0>;
++		interrupts = <0 1>;
  	};
  	sys@13002800 {
  		compatible = "nxp,lpc31xx-sys";
@@ -76,10 +104,10 @@ index 5f1c703..f5749b2 100644
  	.dt_compat	= lpc31xx_dt_match,
 diff --git a/arch/arm/mach-lpc31xx/evtr.c b/arch/arm/mach-lpc31xx/evtr.c
 new file mode 100644
-index 0000000..d1f84f8
+index 0000000..3966c84
 --- /dev/null
 +++ b/arch/arm/mach-lpc31xx/evtr.c
-@@ -0,0 +1,655 @@
+@@ -0,0 +1,713 @@
 +/*  linux/arch/arm/mach-lpc31xx/irq.c
 + *
 + *  Author:	Durgesh Pattamatta
@@ -111,6 +139,7 @@ index 0000000..d1f84f8
 +#include <linux/irqdomain.h>
 +#include <linux/of_platform.h>
 +#include <linux/slab.h>
++#include <linux/gpio.h>
 +
 +#include <mach/hardware.h>
 +#include <asm/irq.h>
@@ -425,6 +454,7 @@ index 0000000..d1f84f8
 +
 +static void evt_mask_irq(struct irq_data *data)
 +{
++	printk("mask irq %d\n", data->irq);
 +	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
 +	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
 +
@@ -433,6 +463,7 @@ index 0000000..d1f84f8
 +
 +static void evt_unmask_irq(struct irq_data *data)
 +{
++	printk("unmask irq %d\n", data->irq);
 +	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
 +	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
 +
@@ -452,6 +483,7 @@ index 0000000..d1f84f8
 +	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
 +	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
 +
++	printk("set type %d %x\n", data->irq, flow_type);
 +	switch (flow_type) {
 +	case IRQ_TYPE_EDGE_RISING:
 +		EVRT_APR(bank) |= _BIT(bit_pos);
@@ -494,6 +526,13 @@ index 0000000..d1f84f8
 +	return 0;
 +}
 +
++static int set_input(unsigned irq);
++
++unsigned int evt_startup(struct irq_data *data)
++{
++	evt_unmask_irq(data);
++	return set_input(data->irq);
++}
 +
 +static struct irq_chip lpc31xx_evtr_chip = {
 +	.name = "EVENTROUTER",
@@ -502,6 +541,7 @@ index 0000000..d1f84f8
 +	.irq_unmask = evt_unmask_irq,
 +	.irq_set_type = evt_set_type,
 +	.irq_set_wake = evt_set_wake,
++	//.irq_startup = evt_startup,
 +};
 +
 +
@@ -512,6 +552,7 @@ index 0000000..d1f84f8
 +		if (IRQ_EVTR##n##_START == IRQ_EVTR##n##_END) { \
 +			/* translate IRQ number */ \
 +			irq = IRQ_EVTR##n##_START; \
++			printk("handle a irq %d\n", irq); \
 +			generic_handle_irq(irq); \
 +		} else { \
 +			for (irq = IRQ_EVTR##n##_START; irq <= IRQ_EVTR##n##_END; irq++) {  \
@@ -519,8 +560,10 @@ index 0000000..d1f84f8
 +				bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin); \
 +				bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F; \
 +				status = EVRT_OUT_PEND(n, bank); \
-+				if (status & _BIT(bit_pos)) \
++				if (status & _BIT(bit_pos)) { \
 +					generic_handle_irq(irq); \
++					printk("handle b irq %d\n", irq); \
++				} \
 +			} \
 +		} \
 +	}
@@ -564,7 +607,7 @@ index 0000000..d1f84f8
 +	}
 +
 +	/* Now configure external/board interrupts using event router */
-+	for (irq = IRQ_EVT_START; irq <= IRQ_EVT_START + NR_IRQ_CHIP_EVT + NR_IRQ_EBOARD; irq++) {
++	for (irq = IRQ_EVT_START; irq < IRQ_EVT_START + NR_IRQ_CHIP_EVT + NR_IRQ_EBOARD; irq++) {
 +		/* compute bank & bit position for the event_pin */
 +		bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin);
 +		bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F;
@@ -653,20 +696,62 @@ index 0000000..d1f84f8
 +#endif
 +}
 +
-+struct event {
-+	int bit;
++/* table to map from event to gpio bit */
++/* mask 0x1E0 reg, mask 0x1F bit */
++int event_to_gpioreg[] = {
++	0x000,0x00A,0x00D,0x004,0x011,0x003,0x012,0x013,
++	0x002,0x014,0x015,0x016,0x017,0x018,0x019,0x01A,
++	0x01B,0x00F,0x00C,0x00E,0x010,0x005,0x020,0x021,
++	0x022,0x0C7,0x0C8,0x0C9,0x0CA,0x0C6,0x0CB,0x0CC,
++	0x0CD,0x0CE,0x0C0,0x0C1,0x0C2,0x0C3,0x0C4,0x0C5,
++	0x0CF,0x029,0x028,0x008,0x00B,0x009,0x027,0x0E1,
++	0x0E0,0x0E2,0x0E3,0x0E4,0x01C,0x001,0x01D,0x01E,
++	0x000,0x01F,0x0E5,0x0E6,0x0E7,0x0E8,0x0E9,0x0EA,
++	0x0EB,0x0EC,0x141,0x142,0x143,0x140,0x120,0x121,
++	0x122,0x123,0x124,0x180,0x181,0x023,0x024,0x006,
++	0x007,0x025,0x026,0x060,0x061,0x062,0x080,0x081,
++	0x082,0x0A0,0x0A1,0x0A2,0x0A3,0x100,0x101,0x160,
++	0x0ED,0x0EE,0x000,0x000,0x000,0x000,0x000,0x000,
++	0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
++	0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
++	0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
++};
++
++struct event_data {
++	int event;
 +	int group;
 +	int edge;
 +};
 +
-+static struct event *events;
++static struct event_data *events;
 +static int num_events;
++
++extern int lpc3131_reg_to_gpio(unsigned index, unsigned gpio);
++
++/* when a gpio pin is request as an interrupt source,
++ * make sure it is input mode
++ */
++static int set_input(unsigned irq)
++{
++	int ret, reg, gpio, event;
++
++	event = events[irq - 30].event;
++	reg  = event_to_gpioreg[event];
++	if (!reg) /* not a gpio pin */
++		return 0;
++	gpio = lpc3131_reg_to_gpio(reg >> 5, reg & 0x1F);
++	printk("setting to input %d\n", gpio);
++	ret = gpio_request(gpio, "IRQ");
++	if (ret)
++		return ret;
++	return gpio_direction_input(gpio);
++}
 +
 +int event_to_irq(int event)
 +{
 +	int i;
 +	for (i = 0; i < num_events; i++) {
-+		if (events[i].bit == event) {
++		if (events[i].event == event) {
 +			return i + 30; /* fixme */
 +		}
 +	}
@@ -701,9 +786,10 @@ index 0000000..d1f84f8
 +	events = kzalloc(sizeof(*events) * num_events, GFP_KERNEL);
 +	for (i = 0; i < num_events; i++) {
 +		events[i].group = be32_to_cpup(ip++);
-+		events[i].bit = be32_to_cpup(ip++);
++		events[i].event = be32_to_cpup(ip++);
 +		events[i].edge = be32_to_cpup(ip++);
-+		printk("group %d bit %02x edge %d\n", events[i].group, events[i].bit, events[i].edge);
++		printk("group %d bit %02x edge %d\n", events[i].group, events[i].event, events[i].edge);
++		//set_input(events[i].event);
 +	}
 +	return 0;
 +}
@@ -1211,7 +1297,7 @@ index 76cfd32..274ac62 100644
  
  #endif
 diff --git a/arch/arm/mach-lpc31xx/irq.c b/arch/arm/mach-lpc31xx/irq.c
-index 5dc8f90..4d74141 100644
+index 5dc8f90..cf172f9 100644
 --- a/arch/arm/mach-lpc31xx/irq.c
 +++ b/arch/arm/mach-lpc31xx/irq.c
 @@ -1,9 +1,9 @@
@@ -1420,7 +1506,7 @@ index 5dc8f90..4d74141 100644
  					 handle_level_irq);
  		set_irq_flags(irq, IRQF_VALID);
  	}
- 
+-
 -	/* Now configure external/board interrupts using event router */
 -	for (irq = IRQ_EVT_START; irq < NR_IRQS; irq++) {
 -		/* compute bank & bit position for the event_pin */
@@ -1504,13 +1590,13 @@ index 5dc8f90..4d74141 100644
 -	/* install chain handler for IRQ_EVT_ROUTER3 */
 -	irq_set_chained_handler (IRQ_EVT_ROUTER3, router3_handler);
 -#endif
--
++	lpc31xx_init_evtr();
+ 
  	/* Set the priority threshold to 0, i.e. don't mask any interrupt */
  	/* on the basis of priority level, for both targets (IRQ/FIQ)    */
  	INTC_IRQ_PRI_MASK = 0;
  	INTC_FIQ_PRI_MASK = 0;
 +
-+	lpc31xx_init_evtr();
  }
  
  
@@ -1537,35 +1623,41 @@ index 9c1c8b0..4439b03 100644
  
  #else
 diff --git a/drivers/gpio/gpio-lpc31xx.c b/drivers/gpio/gpio-lpc31xx.c
-index 19f5e42..a5ab721 100644
+index 19f5e42..9d57e60 100644
 --- a/drivers/gpio/gpio-lpc31xx.c
 +++ b/drivers/gpio/gpio-lpc31xx.c
-@@ -31,7 +31,45 @@
+@@ -31,7 +31,51 @@
  #define GPIO_M1_SET	0x24
  #define GPIO_M1_RESET	0x28
  
++struct lpc31xx_gpio_chip {
++	struct of_mm_gpio_chip mmchip;
++	int index;
++};
++
 +/* this table maps from gpio register bits into event router bits
 + * the numbers correspond to the 128 event bits in the event router
 + * look up the gpio bit in this table to get an event bit then
 + * ask the event router driver to tell you which irq it is mapped to
 + */
-+static uint8_t ebi_mci[] = {0x38,0x35,0x08,0x05,0x03,0x15,0x4F,0x50,0x2B,0x2D,0x01,0x2C,0x12,0x02,0x13,0x11,
++static const uint8_t ebi_mci[] = {0x38,0x35,0x08,0x05,0x03,0x15,0x4F,0x50,0x2B,0x2D,0x01,0x2C,0x12,0x02,0x13,0x11,
 +	0x14,0x04,0x06,0x07,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0x10,0x34,0x36,0x37,0x39};
-+static uint8_t ebi_i2stx_0[] = {0x16,0x17,0x18,0x4D,0x4E,0x51,0x52,0x2E,0x2A,0x29};
-+static uint8_t i2srx_0[] = {0x53,0x54,0x55};
-+static uint8_t i2srx_1[] = {0x56,0x57,0x58};
-+static uint8_t i2stx_1[] = {0x59,0x5A,0x5B,0x5C};
-+static uint8_t ebi[] = {0x22,0x23,0x24,0x25,0x26,0x27,0x1D,0x19,0x1A,0x1B,0x1C,0x1E,0x1F,0x20,0x21,0x28};
-+static uint8_t gpio[] = {0x30,0x2F,0x31,0x32,0x33,0x3A,0x3B,0x3C,0x3D,0x3E,0x3F,0x40,0x41,0x60,0x61};
-+static uint8_t i2c1[] = {0x5D,0x5E};
-+static uint8_t spi[] = {0x46,0x47,0x48,0x49,0x4A};
-+static uint8_t nand_ctrl[] = {0x45,0x42,0x43,0x44};
-+static uint8_t pwm[] = {0x5F};
-+static uint8_t uart[] = {0x4B,0x4C};
++static const uint8_t ebi_i2stx_0[] = {0x16,0x17,0x18,0x4D,0x4E,0x51,0x52,0x2E,0x2A,0x29};
++static const uint8_t i2srx_0[] = {0x53,0x54,0x55};
++static const uint8_t i2srx_1[] = {0x56,0x57,0x58};
++static const uint8_t i2stx_1[] = {0x59,0x5A,0x5B,0x5C};
++static const uint8_t ebi[] = {0x22,0x23,0x24,0x25,0x26,0x27,0x1D,0x19,0x1A,0x1B,0x1C,0x1E,0x1F,0x20,0x21,0x28};
++static const uint8_t gpio[] = {0x30,0x2F,0x31,0x32,0x33,0x3A,0x3B,0x3C,0x3D,0x3E,0x3F,0x40,0x41,0x60,0x61};
++static const uint8_t i2c1[] = {0x5D,0x5E};
++static const uint8_t spi[] = {0x46,0x47,0x48,0x49,0x4A};
++static const uint8_t nand_ctrl[] = {0x45,0x42,0x43,0x44};
++static const uint8_t pwm[] = {0x5F};
++static const uint8_t uart[] = {0x4B,0x4C};
 +
 +static struct {
-+	uint8_t *evt;
++	const uint8_t *evt;
 +	int count;
++	struct lpc31xx_gpio_chip *chip;
 +} gpio_evt[] = {
 +	{ebi_mci, 	sizeof(ebi_mci)},
 +	{ebi_i2stx_0, 	sizeof(ebi_i2stx_0)},
@@ -1586,20 +1678,24 @@ index 19f5e42..a5ab721 100644
  /**
   * struct lpc313x_gpio_chip - wrapper for specific implementation of gpio
   * @chip: The chip structure to be exported via gpiolib.
-@@ -51,6 +89,12 @@ struct lpc313x_gpio_chip {
+@@ -39,7 +83,7 @@
+  * @config: special function and pull-resistor control information.
+  * @pm_save: Save information for suspend/resume support.
+  *
+- * This wrapper provides the necessary information for the Samsung
++ * This wrapper provides the necessary information for the NXP
+  * specific gpios being registered with gpiolib.
+  */
+ struct lpc313x_gpio_chip {
+@@ -51,6 +95,7 @@ struct lpc313x_gpio_chip {
  	uint32_t		pm_save[4];
  #endif
  };
 +#endif
-+
-+struct lpc31xx_gpio_chip {
-+	struct of_mm_gpio_chip mmchip;
-+	int index;
-+};
  
  static int inline *gpc(void __iomem *base, int reg)
  {
-@@ -111,10 +155,19 @@ static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int va
+@@ -111,37 +156,55 @@ static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int va
  		*gpc(base, GPIO_M0_RESET) = pin;
  }
  
@@ -1607,21 +1703,27 @@ index 19f5e42..a5ab721 100644
 +extern int event_to_irq(int event);
 +
 +static int lpc3131_gpio_to_irq(struct gpio_chip *gc, unsigned gpio)
- {
++{
 +	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(gc);
 +	struct lpc31xx_gpio_chip *chip = container_of(mm_gc, struct lpc31xx_gpio_chip, mmchip);
-+	int irq;
 +
- 	printk("------------- implement lpc3131_gpio_to_irq -------------\n");
++	return event_to_irq(gpio_evt[chip->index].evt[gpio]);
++}
++
++int lpc3131_reg_to_gpio(unsigned index, unsigned gpio)
+ {
+-	printk("------------- implement lpc3131_gpio_to_irq -------------\n");
 -	return -ENOENT;
-+	printk("index %d gpio %d event %02x\n", chip->index, gpio, gpio_evt[chip->index].evt[gpio]);
-+	irq = event_to_irq(gpio_evt[chip->index].evt[gpio]);
-+	printk("irq %d\n", irq);
-+	return irq;
++	struct lpc31xx_gpio_chip *chip;
++
++	chip = gpio_evt[index].chip;
++	return chip->mmchip.gc.base + gpio;
  }
++EXPORT_SYMBOL(lpc3131_reg_to_gpio);
++
  
  static int lpc313x_gpiochip_remove(struct platform_device *ofdev)
-@@ -122,26 +175,29 @@ static int lpc313x_gpiochip_remove(struct platform_device *ofdev)
+ {
  	return -EBUSY;
  }
  
@@ -1641,6 +1743,7 @@ index 19f5e42..a5ab721 100644
 -	gc = &chip->gc;
 +	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 +	chip->index = (res->start >> 6) & 7;
++	gpio_evt[chip->index].chip = chip;
  
 -	gc->ngpio            = 32;
 +	gc = &chip->mmchip.gc;
@@ -1657,7 +1760,7 @@ index 19f5e42..a5ab721 100644
  		return ret;
  
 diff --git a/drivers/net/ethernet/davicom/dm9000.c b/drivers/net/ethernet/davicom/dm9000.c
-index f8fd607..b1e6632 100644
+index f8fd607..761926c 100644
 --- a/drivers/net/ethernet/davicom/dm9000.c
 +++ b/drivers/net/ethernet/davicom/dm9000.c
 @@ -35,11 +35,15 @@
@@ -1676,7 +1779,24 @@ index f8fd607..b1e6632 100644
  #include "dm9000.h"
  
  /* Board/System/Debug information/definition ---------------- */
-@@ -691,17 +695,18 @@ static void
+@@ -59,7 +63,7 @@ MODULE_PARM_DESC(watchdog, "transmit timeout in milliseconds");
+ /*
+  * Debug messages level
+  */
+-static int debug;
++static int debug = 4;
+ module_param(debug, int, 0644);
+ MODULE_PARM_DESC(debug, "dm9000 debug level (0-4)");
+ 
+@@ -658,6 +662,7 @@ dm9000_poll_work(struct work_struct *w)
+ 	board_info_t *db = container_of(dw, board_info_t, phy_poll);
+ 	struct net_device *ndev = db->ndev;
+ 
++printk("dm9000_poll_work\n");
+ 	if (db->flags & DM9000_PLATF_SIMPLE_PHY &&
+ 	    !(db->flags & DM9000_PLATF_EXT_PHY)) {
+ 		unsigned nsr = dm9000_read_locked(db, DM9000_NSR);
+@@ -691,17 +696,18 @@ static void
  dm9000_release_board(struct platform_device *pdev, struct board_info *db)
  {
  	/* unmap our resources */
@@ -1702,7 +1822,24 @@ index f8fd607..b1e6632 100644
  }
  
  static unsigned char dm9000_type_to_char(enum dm9000_type type)
-@@ -1357,6 +1362,31 @@ static const struct net_device_ops dm9000_netdev_ops = {
+@@ -1065,6 +1071,7 @@ static irqreturn_t dm9000_interrupt(int irq, void *dev_id)
+ 	unsigned long flags;
+ 	u8 reg_save;
+ 
++	printk("dm9000_interrupt\n");
+ 	dm9000_dbg(db, 3, "entering %s\n", __func__);
+ 
+ 	/* A real interrupt coming */
+@@ -1174,6 +1181,8 @@ dm9000_open(struct net_device *dev)
+ 	/* If there is no IRQ type specified, default to something that
+ 	 * may work, and tell the user that this is a problem */
+ 
++	irqflags |= IRQ_TYPE_LEVEL_HIGH;
++
+ 	if (irqflags == IRQF_TRIGGER_NONE)
+ 		dev_warn(db->dev, "WARNING: no IRQ resource flags set.\n");
+ 
+@@ -1357,6 +1366,31 @@ static const struct net_device_ops dm9000_netdev_ops = {
  #endif
  };
  
@@ -1734,7 +1871,7 @@ index f8fd607..b1e6632 100644
  /*
   * Search DM9000 board, allocate space and register it
   */
-@@ -1463,6 +1493,8 @@ dm9000_probe(struct platform_device *pdev)
+@@ -1463,6 +1497,8 @@ dm9000_probe(struct platform_device *pdev)
  		ret = -EINVAL;
  		goto out;
  	}
@@ -1743,7 +1880,7 @@ index f8fd607..b1e6632 100644
  
  	/* fill in parameters for net-dev structure */
  	ndev->base_addr = (unsigned long)db->io_addr;
-@@ -1489,13 +1521,15 @@ dm9000_probe(struct platform_device *pdev)
+@@ -1489,13 +1525,15 @@ dm9000_probe(struct platform_device *pdev)
  		 * over-rides */
  
  		if (pdata->inblk != NULL)
@@ -1761,6 +1898,18 @@ index f8fd607..b1e6632 100644
  
  		db->flags = pdata->flags;
  	}
+diff --git a/drivers/of/irq.c b/drivers/of/irq.c
+index 9cf0060..bdded99 100644
+--- a/drivers/of/irq.c
++++ b/drivers/of/irq.c
+@@ -336,6 +336,7 @@ EXPORT_SYMBOL_GPL(of_irq_map_one);
+  */
+ int of_irq_to_resource(struct device_node *dev, int index, struct resource *r)
+ {
++	int type;
+ 	int irq = irq_of_parse_and_map(dev, index);
+ 
+ 	/* Only dereference the resource if both the
 diff --git a/drivers/of/platform.c b/drivers/of/platform.c
 index 63b3ec4..1996bb2 100644
 --- a/drivers/of/platform.c
