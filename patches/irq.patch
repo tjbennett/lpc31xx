@@ -1,5 +1,5 @@
 Bottom: 90a898bdb089d9a24e86de57d59f2be3caa65287
-Top:    275c2b08730bc7c9efd8b68a8f9b32e8a68011e7
+Top:    0d57ae63ae80a9efd3d2d69cf82b879e7a3caf05
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-14 11:58:54 -0400
 
@@ -1657,7 +1657,7 @@ index 19f5e42..a5ab721 100644
  		return ret;
  
 diff --git a/drivers/net/ethernet/davicom/dm9000.c b/drivers/net/ethernet/davicom/dm9000.c
-index f8fd607..8b6d5e3 100644
+index f8fd607..b1e6632 100644
 --- a/drivers/net/ethernet/davicom/dm9000.c
 +++ b/drivers/net/ethernet/davicom/dm9000.c
 @@ -35,11 +35,15 @@
@@ -1676,24 +1676,7 @@ index f8fd607..8b6d5e3 100644
  #include "dm9000.h"
  
  /* Board/System/Debug information/definition ---------------- */
-@@ -96,7 +100,7 @@ typedef struct board_info {
- 
- 	void __iomem	*io_addr;	/* Register I/O base address */
- 	void __iomem	*io_data;	/* Data I/O address */
--	u16		 irq;		/* IRQ */
-+	unsigned long	 irq_flags;
- 
- 	u16		tx_pkt_cnt;
- 	u16		queue_pkt_len;
-@@ -123,7 +127,6 @@ typedef struct board_info {
- 	struct resource *data_res;
- 	struct resource	*addr_req;   /* resources requested */
- 	struct resource *data_req;
--	struct resource *irq_res;
- 
- 	int		 irq_wake;
- 
-@@ -691,17 +694,18 @@ static void
+@@ -691,17 +695,18 @@ static void
  dm9000_release_board(struct platform_device *pdev, struct board_info *db)
  {
  	/* unmap our resources */
@@ -1719,16 +1702,7 @@ index f8fd607..8b6d5e3 100644
  }
  
  static unsigned char dm9000_type_to_char(enum dm9000_type type)
-@@ -1166,7 +1170,7 @@ static int
- dm9000_open(struct net_device *dev)
- {
- 	board_info_t *db = netdev_priv(dev);
--	unsigned long irqflags = db->irq_res->flags & IRQF_TRIGGER_MASK;
-+	unsigned long irqflags = db->irq_flags & IRQF_TRIGGER_MASK;
- 
- 	if (netif_msg_ifup(db))
- 		dev_dbg(db->dev, "enabling %s\n", dev->name);
-@@ -1357,6 +1361,31 @@ static const struct net_device_ops dm9000_netdev_ops = {
+@@ -1357,6 +1362,31 @@ static const struct net_device_ops dm9000_netdev_ops = {
  #endif
  };
  
@@ -1760,40 +1734,7 @@ index f8fd607..8b6d5e3 100644
  /*
   * Search DM9000 board, allocate space and register it
   */
-@@ -1366,6 +1395,7 @@ dm9000_probe(struct platform_device *pdev)
- 	struct dm9000_plat_data *pdata = pdev->dev.platform_data;
- 	struct board_info *db;	/* Point a board information structure */
- 	struct net_device *ndev;
-+	struct resource *irq_res;
- 	const unsigned char *mac_src;
- 	int ret = 0;
- 	int iosize;
-@@ -1396,15 +1426,20 @@ dm9000_probe(struct platform_device *pdev)
- 
- 	db->addr_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
- 	db->data_res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
--	db->irq_res  = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
--
--	if (db->addr_res == NULL || db->data_res == NULL ||
--	    db->irq_res == NULL) {
-+	if (db->addr_res == NULL || db->data_res == NULL ) {
- 		dev_err(db->dev, "insufficient resources\n");
- 		ret = -ENOENT;
- 		goto out;
- 	}
- 
-+	irq_res  = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-+	if (!irq_res) {
-+		dev_err(db->dev, "missing irq\n", ret);
-+		goto out;
-+	}
-+	ndev->irq	= irq_res->start;
-+	db->irq_flags	= irq_res->flags;
-+
- 	db->irq_wake = platform_get_irq(pdev, 1);
- 	if (db->irq_wake >= 0) {
- 		dev_dbg(db->dev, "wakeup irq %d\n", db->irq_wake);
-@@ -1463,10 +1498,11 @@ dm9000_probe(struct platform_device *pdev)
+@@ -1463,6 +1493,8 @@ dm9000_probe(struct platform_device *pdev)
  		ret = -EINVAL;
  		goto out;
  	}
@@ -1802,11 +1743,7 @@ index f8fd607..8b6d5e3 100644
  
  	/* fill in parameters for net-dev structure */
  	ndev->base_addr = (unsigned long)db->io_addr;
--	ndev->irq	= db->irq_res->start;
- 
- 	/* ensure at least we have a default set of IO routines */
- 	dm9000_set_io(db, iosize);
-@@ -1489,13 +1525,15 @@ dm9000_probe(struct platform_device *pdev)
+@@ -1489,13 +1521,15 @@ dm9000_probe(struct platform_device *pdev)
  		 * over-rides */
  
  		if (pdata->inblk != NULL)
@@ -1825,14 +1762,13 @@ index f8fd607..8b6d5e3 100644
  		db->flags = pdata->flags;
  	}
 diff --git a/drivers/of/platform.c b/drivers/of/platform.c
-index 63b3ec4..2d9d20b 100644
+index 63b3ec4..1996bb2 100644
 --- a/drivers/of/platform.c
 +++ b/drivers/of/platform.c
-@@ -11,6 +11,8 @@
+@@ -11,6 +11,7 @@
   *  2 of the License, or (at your option) any later version.
   *
   */
-+#define DEBUG
 +
  #include <linux/errno.h>
  #include <linux/module.h>
