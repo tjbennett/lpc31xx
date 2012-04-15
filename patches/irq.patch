@@ -1,5 +1,5 @@
 Bottom: a60e8eef2d6d3c0d56ad08c15257dc8d9415158c
-Top:    a60e8eef2d6d3c0d56ad08c15257dc8d9415158c
+Top:    19a597544a09e58be7944976c3684b2d4cc9d410
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-14 11:58:54 -0400
 
@@ -8,4 +8,1762 @@ rewrite irq drivers
 
 ---
 
-
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+index d1eb9d4..c6a180d 100644
+--- a/arch/arm/boot/dts/ea3131.dts
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -106,9 +106,9 @@
+ 		dm9000@20020000 {
+ 			compatible = "davicom,dm9000";
+ 			reg = <0x20020000 0x100 0x20030000 0x100>;
+-			/* interrupt-parent = <&evtr>; 
+-			interrupts = <4 4>; */
+-			interrupts = <34>;
++			/* interrupts = <34>; */
++			interrupt-parent = <&evtr>;
++			interrupts = <4 4>;
+ 			gpios = <
+ 				&gpio_ebi_i2stx_0 2 0 /* main irq, map gpio to irq */
+ 				0  /* WOL irq, map gpio to irq */
+diff --git a/arch/arm/mach-lpc31xx/Makefile b/arch/arm/mach-lpc31xx/Makefile
+index a40b338..8075a73 100644
+--- a/arch/arm/mach-lpc31xx/Makefile
++++ b/arch/arm/mach-lpc31xx/Makefile
+@@ -4,7 +4,7 @@
+ 
+ # Object file lists.
+ 
+-obj-y += irq.o time.o generic.o dma.o usb.o wdt.o clock.o sram.o
++obj-y += irq.o evtr.o time.o generic.o dma.o usb.o wdt.o clock.o sram.o
+ obj-$(CONFIG_OF) += dt.o
+ 
+ 
+diff --git a/arch/arm/mach-lpc31xx/board-ea313x.c b/arch/arm/mach-lpc31xx/board-ea313x.c
+index 368f7e0..aa11885 100644
+--- a/arch/arm/mach-lpc31xx/board-ea313x.c
++++ b/arch/arm/mach-lpc31xx/board-ea313x.c
+@@ -141,7 +141,7 @@ static const char *ea3131_dt_match[] __initconst = {
+ DT_MACHINE_START(EA313X, "NXP EA3131 (Device Tree Support)")
+ 	.map_io		= lpc313x_map_io,
+ 	.init_early	= lpc31xx_init_early,
+-	.init_irq	= lpc313x_init_irq,
++	.init_irq	= lpc31xx_init_irq,
+ 	.timer		= &lpc313x_timer,
+ 	.init_machine	= ea3131_dt_init,
+ 	.dt_compat	= ea3131_dt_match,
+diff --git a/arch/arm/mach-lpc31xx/dt.c b/arch/arm/mach-lpc31xx/dt.c
+index 5f1c703..f5749b2 100644
+--- a/arch/arm/mach-lpc31xx/dt.c
++++ b/arch/arm/mach-lpc31xx/dt.c
+@@ -60,7 +60,7 @@ static const char *lpc31xx_dt_match[] __initconst = {
+ DT_MACHINE_START(EA313X, "NXP LPC31xx (Device Tree Support)")
+ 	.map_io		= lpc313x_map_io,
+ 	.init_early	= lpc31xx_init_early,
+-	.init_irq	= lpc313x_init_irq,
++	.init_irq	= lpc31xx_init_irq,
+ 	.timer		= &lpc313x_timer,
+ 	.init_machine	= lpc31xx_dt_init,
+ 	.dt_compat	= lpc31xx_dt_match,
+diff --git a/arch/arm/mach-lpc31xx/evtr.c b/arch/arm/mach-lpc31xx/evtr.c
+new file mode 100644
+index 0000000..3966c84
+--- /dev/null
++++ b/arch/arm/mach-lpc31xx/evtr.c
+@@ -0,0 +1,713 @@
++/*  linux/arch/arm/mach-lpc31xx/irq.c
++ *
++ *  Author:	Durgesh Pattamatta
++ *  Copyright (C) 2009 NXP semiconductors
++ *
++ * Interrupt controller and event router driver for LPC31xx & LPC315x.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ *
++ */
++
++#include <linux/init.h>
++#include <linux/list.h>
++#include <linux/timer.h>
++#include <linux/of_irq.h>
++#include <linux/module.h>
++#include <linux/irqdomain.h>
++#include <linux/of_platform.h>
++#include <linux/slab.h>
++#include <linux/gpio.h>
++
++#include <mach/hardware.h>
++#include <asm/irq.h>
++#include <asm/mach/irq.h>
++#include <mach/irqs.h>
++#include <mach/clock.h>
++
++#define IRQ_EVT_START   NR_IRQ_CPU
++
++/* System specific IRQs */
++/* event PIN or internal signal */
++typedef enum _EVT_TYPE_
++{
++  EVT_ipint_int = 0,
++  EVT_mLCD_DB_0,
++  EVT_mLCD_DB_1,
++  EVT_mLCD_DB_2,
++  EVT_mLCD_DB_3,
++  EVT_mLCD_DB_4,
++  EVT_mLCD_DB_5,
++  EVT_mLCD_DB_6,
++  EVT_mLCD_DB_7,
++  EVT_mLCD_DB_8,
++  EVT_mLCD_DB_9,
++  EVT_mLCD_DB_10,
++  EVT_mLCD_DB_11,
++  EVT_mLCD_DB_12,
++  EVT_mLCD_DB_13,
++  EVT_mLCD_DB_14,
++  EVT_mLCD_DB_15,
++  EVT_mLCD_RS,
++  EVT_mLCD_CSB,
++  EVT_mLCD_E_RD,
++  EVT_mLCD_RW_WR,
++  EVT_mNAND_RYBN0,
++  EVT_mNAND_RYBN1,
++  EVT_mNAND_RYBN2,
++  EVT_mNAND_RYBN3,
++  EVT_EBI_D_0,
++  EVT_EBI_D_1,
++  EVT_EBI_D_2,
++  EVT_EBI_D_3,
++  EVT_EBI_D_4,
++  EVT_EBI_D_5,
++  EVT_EBI_D_6,
++  EVT_EBI_D_7,
++  EVT_EBI_D_8,
++  EVT_EBI_D_9,
++  EVT_EBI_D_10,
++  EVT_EBI_D_11,
++  EVT_EBI_D_12,
++  EVT_EBI_D_13,
++  EVT_EBI_D_14,
++  EVT_EBI_D_15,
++  EVT_EBI_NWE,
++  EVT_EBI_A_0_ALE,
++  EVT_EBI_A_1_CLE,
++  EVT_EBI_DQM_0_NOE,
++  EVT_EBI_NCAS_BLOUT_0,
++  EVT_EBI_NRAS_BLOUT_1,
++  EVT_GPIO1,
++  EVT_GPIO0,
++  EVT_GPIO2,
++  EVT_GPIO3,
++  EVT_GPIO4,
++  EVT_mGPIO5,
++  EVT_mGPIO6,
++  EVT_mGPIO7,
++  EVT_mGPIO8,
++  EVT_mGPIO9,
++  EVT_mGPIO10,
++  EVT_GPIO11,
++  EVT_GPIO12,
++  EVT_GPIO13,
++  EVT_GPIO14,
++  EVT_GPIO15,
++  EVT_GPIO16,
++  EVT_GPIO17,
++  EVT_GPIO18,
++  EVT_NAND_NCS_0,
++  EVT_NAND_NCS_1,
++  EVT_NAND_NCS_2,
++  EVT_NAND_NCS_3,
++  EVT_SPI_MISO,
++  EVT_SPI_MOSI,
++  EVT_SPI_CS_IN,
++  EVT_SPI_SCK,
++  EVT_SPI_CS_OUT0,
++  EVT_UART_RXD,
++  EVT_UART_TXD,
++  EVT_mUART_CTS_N,
++  EVT_mUART_RTS_N,
++  EVT_mI2STX_CLK0,
++  EVT_mI2STX_BCK0,
++  EVT_mI2STX_DATA0,
++  EVT_mI2STX_WS0,
++  EVT_I2SRX_BCK0,
++  EVT_I2SRX_DATA0,
++  EVT_I2SRX_WS0,
++  EVT_I2SRX_DATA1,
++  EVT_I2SRX_BCK1,
++  EVT_I2SRX_WS1,
++  EVT_I2STX_DATA1,
++  EVT_I2STX_BCK1,
++  EVT_I2STX_WS1,
++  EVT_CLK_256FS_O,
++  EVT_I2C_SDA1,
++  EVT_I2C_SCL1,
++  EVT_PWM_DATA,
++  EVT_AD_NINT_I,
++  EVT_PLAY_DET_I,
++  EVT_timer0_intct1,
++  EVT_timer1_intct1,
++  EVT_timer2_intct1,
++  EVT_timer3_intct1,
++  EVT_adc_int,
++  EVT_wdog_m0,
++  EVT_uart_rxd,
++  EVT_i2c0_scl_n,
++  EVT_i2c1_scl_n,
++  EVT_arm926_nfiq,
++  EVT_arm926_nirq,
++  EVT_MCI_DAT_0,
++  EVT_MCI_DAT_1,
++  EVT_MCI_DAT_2,
++  EVT_MCI_DAT_3,
++  EVT_MCI_DAT_4,
++  EVT_MCI_DAT_5,
++  EVT_MCI_DAT_6,
++  EVT_MCI_DAT_7,
++  EVT_MCI_CMD,
++  EVT_MCI_CLK,
++  EVT_USB_VBUS,
++  EVT_usb_otg_ahb_needclk,
++  EVT_usb_atx_pll_lock,
++  EVT_usb_otg_vbus_pwr_en,
++  EVT_USB_ID,
++  EVT_isram0_mrc_finished,
++  EVT_isram1_mrc_finished,
++  EVT_LAST
++} EVENT_T;
++
++/* External interrupt type enumerations */
++typedef enum
++{
++  EVT_ACTIVE_LOW,
++  EVT_ACTIVE_HIGH,
++  EVT_FALLING_EDGE,
++  EVT_RISING_EDGE,
++  EVT_BOTH_EDGE
++} EVENT_TYPE_T;
++
++/* Macros to compute the bank based on EVENT_T */
++#define EVT_GET_BANK(evt)   (((evt) >> 5) & 0x3)
++
++/* structure to map board IRQ to event pin */
++typedef struct {
++	u32 irq;
++	EVENT_T event_pin;
++	EVENT_TYPE_T type;
++} IRQ_EVENT_MAP_T;
++
++#define EVT_MAX_VALID_BANKS   4
++#define EVT_MAX_VALID_INT_OUT 5
++
++/* Activation polarity register defines */
++#define EVT_APR_HIGH    1
++#define EVT_APR_LOW     0
++#define EVT_APR_BANK0_DEF 0x00000001
++#define EVT_APR_BANK1_DEF 0x00000000
++#define EVT_APR_BANK2_DEF 0x00000000
++#define EVT_APR_BANK3_DEF 0x0FFFFFFC
++
++/* Activation type register defines */
++#define EVT_ATR_EDGE    1
++#define EVT_ATR_LEVEL   0
++#define EVT_ATR_BANK0_DEF 0x00000001
++#define EVT_ATR_BANK1_DEF 0x00000000
++#define EVT_ATR_BANK2_DEF 0x00000000
++#define EVT_ATR_BANK3_DEF 0x077FFFFC
++
++/* Other chip IRQs routed through event router.
++ * These IRQs should be treated as board IRQs but they are
++ * common for all boards.
++ */
++#define IRQ_WDT        30  /* Watchdog interrupt */
++#define IRQ_VBUS_EN    31  /* VBUS power enable */
++#define IRQ_VBUS_OVRC  32  /* Detect VBUS over current - Host mode */
++#define IRQ_USB_ID     33  /* Detect ID pin change - OTG */
++
++#define _INTERNAL_IRQ_EVENT_MAP	\
++	{IRQ_WDT, EVT_wdog_m0, EVT_RISING_EDGE}, \
++	{IRQ_VBUS_EN, EVT_usb_otg_vbus_pwr_en, EVT_FALLING_EDGE}, \
++	{IRQ_VBUS_OVRC, EVT_USB_VBUS, EVT_FALLING_EDGE}, \
++	{IRQ_USB_ID, EVT_USB_ID, EVT_ACTIVE_LOW}, \
++
++#if defined(CONFIG_LPC3152_AD)
++/* For chips with analog die there are some more AD events routed
++ * through event router.
++ */
++#define IRQ_RTC	        34
++#define IRQ_PLAY        35
++#define NR_IRQ_CHIP_EVT	6
++
++#define AD_IRQ_EVENT_MAP	\
++	{IRQ_RTC, EVT_AD_NINT_I, EVT_ACTIVE_LOW}, \
++	{IRQ_PLAY, EVT_PLAY_DET_I, EVT_ACTIVE_HIGH}, \
++
++#define CHIP_IRQ_EVENT_MAP   _INTERNAL_IRQ_EVENT_MAP \
++	AD_IRQ_EVENT_MAP
++
++#else
++#define CHIP_IRQ_EVENT_MAP   _INTERNAL_IRQ_EVENT_MAP
++#define NR_IRQ_CHIP_EVT	     4
++#endif
++
++/* now compute the board start IRQ number */
++#define IRQ_BOARD_START   (NR_IRQ_CPU + NR_IRQ_CHIP_EVT)
++
++/* Route all internal chip events to IRQ_EVT_ROUTER0 */
++#define IRQ_EVTR0_START        IRQ_EVT_START
++#define IRQ_EVTR0_END          (IRQ_BOARD_START - 1)
++
++
++#if defined (CONFIG_MACH_VAL3153)
++
++# define IRQ_CS8900_ETH_INT  IRQ_BOARD_START	/* Ethernet chip */
++# define IRQ_SDMMC_CD0       (IRQ_BOARD_START + 1)	/* SD card detect */
++# define IRQ_SDMMC_CD1       (IRQ_BOARD_START + 2)	/* SD card detect */
++# define NR_IRQ_EBOARD        3
++
++/* now define board irq to event pin map */
++#define BOARD_IRQ_EVENT_MAP	{ \
++	CHIP_IRQ_EVENT_MAP \
++	{IRQ_CS8900_ETH_INT, EVT_GPIO16, EVT_ACTIVE_HIGH}, \
++	{IRQ_SDMMC_CD0, EVT_GPIO12, EVT_ACTIVE_HIGH}, \
++	{IRQ_SDMMC_CD1, EVT_GPIO13, EVT_ACTIVE_HIGH}, \
++	}
++/* Following defines group the board IRQs into 4 IRQ_EVNTR groups.
++   IRQ_EVT_ROUTERx IRQ is generated when event in the corresponding
++   group triggers.
++*/
++#define IRQ_EVTR1_START        IRQ_CS8900_ETH_INT
++#define IRQ_EVTR1_END          IRQ_CS8900_ETH_INT
++#define IRQ_EVTR2_START        IRQ_SDMMC_CD0
++#define IRQ_EVTR2_END          IRQ_SDMMC_CD0
++#define IRQ_EVTR3_START        IRQ_SDMMC_CD1
++#define IRQ_EVTR3_END          IRQ_SDMMC_CD1
++
++
++#elif defined (CONFIG_MACH_EA313X) || defined(CONFIG_MACH_EA3152)
++# define IRQ_DM9000_ETH_INT   IRQ_BOARD_START	/* Ethernet chip */
++# define IRQ_SDMMC_CD         (IRQ_BOARD_START + 1)	/* SD card detect */
++# define IRQ_EA_VBUS_OVRC     (IRQ_BOARD_START + 2)	/* Over current indicator */
++# define IRQ_PENDOWN	      (IRQ_BOARD_START + 3)	/* Pendown from touch screen */
++# define NR_IRQ_EBOARD        4
++
++/* now define board irq to event pin map */
++#define BOARD_IRQ_EVENT_MAP	{ \
++	CHIP_IRQ_EVENT_MAP \
++	{IRQ_DM9000_ETH_INT, EVT_mNAND_RYBN3, EVT_ACTIVE_HIGH}, \
++	{IRQ_SDMMC_CD, EVT_mI2STX_BCK0, EVT_ACTIVE_LOW}, \
++	{IRQ_EA_VBUS_OVRC, EVT_I2SRX_WS0, EVT_ACTIVE_LOW}, \
++	{IRQ_PENDOWN, EVT_GPIO4, EVT_ACTIVE_HIGH}, \
++	}
++/* Following defines group the board IRQs into 4 IRQ_EVNTR groups.
++   IRQ_EVT_ROUTERx IRQ is generated when event in the corresponding
++   group triggers.
++*/
++#define IRQ_EVTR1_START        IRQ_DM9000_ETH_INT
++#define IRQ_EVTR1_END          IRQ_DM9000_ETH_INT
++#define IRQ_EVTR2_START        IRQ_SDMMC_CD
++#define IRQ_EVTR2_END          IRQ_SDMMC_CD
++#define IRQ_EVTR3_START        IRQ_EA_VBUS_OVRC
++#define IRQ_EVTR3_END          IRQ_PENDOWN
++
++#elif defined (CONFIG_MACH_VAL3154)
++# define IRQ_SDMMC_CD	 IRQ_BOARD_START 	/* SD card detect */
++# define NR_IRQ_EBOARD	 1
++
++/* now define board irq to event pin map */
++#define BOARD_IRQ_EVENT_MAP	{ \
++	CHIP_IRQ_EVENT_MAP \
++	{IRQ_SDMMC_CD, EVT_mI2STX_BCK0, EVT_ACTIVE_LOW}, \
++	}
++/* Following defines group the board IRQs into 4 IRQ_EVNTR groups.
++   IRQ_EVT_ROUTERx IRQ is generated when event in the corresponding
++   group triggers.
++*/
++#define IRQ_EVTR1_START        IRQ_SDMMC_CD
++#define IRQ_EVTR1_END          IRQ_SDMMC_CD
++#define IRQ_EVTR2_START        0
++#define IRQ_EVTR2_END          0
++#define IRQ_EVTR3_START        0
++#define IRQ_EVTR3_END          0
++
++#else
++# define NR_IRQ_EBOARD          0
++#define IRQ_EVTR0_START        0
++#define IRQ_EVTR0_END          0
++#define IRQ_EVTR1_START        0
++#define IRQ_EVTR1_END          0
++#define IRQ_EVTR2_START        0
++#define IRQ_EVTR2_END          0
++#define IRQ_EVTR3_START        0
++#define IRQ_EVTR3_END          0
++
++#endif
++
++
++static IRQ_EVENT_MAP_T irq_2_event[] = BOARD_IRQ_EVENT_MAP;
++
++static void evt_mask_irq(struct irq_data *data)
++{
++	printk("mask irq %d\n", data->irq);
++	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
++	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
++
++	EVRT_MASK_CLR(bank) = _BIT(bit_pos);
++}
++
++static void evt_unmask_irq(struct irq_data *data)
++{
++	printk("unmask irq %d\n", data->irq);
++	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
++	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
++
++	EVRT_MASK_SET(bank) = _BIT(bit_pos);
++}
++
++static void evt_ack_irq(struct irq_data *data)
++{
++	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
++	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
++	//EVRT_MASK_CLR(bank) = _BIT(bit_pos);
++	EVRT_INT_CLR(bank) = _BIT(bit_pos);
++}
++
++static int evt_set_type(struct irq_data *data, unsigned int flow_type)
++{
++	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
++	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
++
++	printk("set type %d %x\n", data->irq, flow_type);
++	switch (flow_type) {
++	case IRQ_TYPE_EDGE_RISING:
++		EVRT_APR(bank) |= _BIT(bit_pos);
++		EVRT_ATR(bank) |= _BIT(bit_pos);
++		break;
++	case IRQ_TYPE_EDGE_FALLING:
++		EVRT_APR(bank) &= ~_BIT(bit_pos);
++		EVRT_ATR(bank) |= _BIT(bit_pos);
++		break;
++	case IRQ_TYPE_EDGE_BOTH:
++		EVRT_ATR(bank) |= _BIT(bit_pos);
++		break;
++	case IRQ_TYPE_LEVEL_HIGH:
++		EVRT_APR(bank) |= _BIT(bit_pos);
++		EVRT_ATR(bank) &= ~_BIT(bit_pos);
++		break;
++	case IRQ_TYPE_LEVEL_LOW:
++		EVRT_APR(bank) &= ~_BIT(bit_pos);
++		EVRT_ATR(bank) &= ~_BIT(bit_pos);
++		break;
++	default:
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++static int evt_set_wake(struct irq_data *data, unsigned int on)
++{
++	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
++	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
++
++	if (on)
++		/* enable routing to CGU_WAKEUP */
++		EVRT_OUT_MASK_SET(4, bank) = _BIT(bit_pos);
++	else
++		/* disable routing to CGU_WAKEUP */
++		EVRT_OUT_MASK_CLR(4, bank) = _BIT(bit_pos);
++
++	return 0;
++}
++
++static int set_input(unsigned irq);
++
++unsigned int evt_startup(struct irq_data *data)
++{
++	evt_unmask_irq(data);
++	return set_input(data->irq);
++}
++
++static struct irq_chip lpc31xx_evtr_chip = {
++	.name = "EVENTROUTER",
++	.irq_ack = evt_ack_irq,
++	.irq_mask = evt_mask_irq,
++	.irq_unmask = evt_unmask_irq,
++	.irq_set_type = evt_set_type,
++	.irq_set_wake = evt_set_wake,
++	//.irq_startup = evt_startup,
++};
++
++
++
++#define ROUTER_HDLR(n) \
++	static void router##n##_handler (unsigned int irq, struct irq_desc *desc) { \
++		u32 status, bank, bit_pos; \
++		if (IRQ_EVTR##n##_START == IRQ_EVTR##n##_END) { \
++			/* translate IRQ number */ \
++			irq = IRQ_EVTR##n##_START; \
++			printk("handle a irq %d\n", irq); \
++			generic_handle_irq(irq); \
++		} else { \
++			for (irq = IRQ_EVTR##n##_START; irq <= IRQ_EVTR##n##_END; irq++) {  \
++				/* compute bank & bit position for the event_pin */ \
++				bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin); \
++				bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F; \
++				status = EVRT_OUT_PEND(n, bank); \
++				if (status & _BIT(bit_pos)) { \
++					generic_handle_irq(irq); \
++					printk("handle b irq %d\n", irq); \
++				} \
++			} \
++		} \
++	}
++
++
++#if IRQ_EVTR0_END
++ROUTER_HDLR(0)
++#endif /* IRQ_EVTR0_END */
++
++#if IRQ_EVTR1_END
++ROUTER_HDLR(1)
++#endif /* IRQ_EVTR1_END */
++
++#if IRQ_EVTR2_END
++ROUTER_HDLR(2)
++#endif /* IRQ_EVTR2_END */
++
++#if IRQ_EVTR3_END
++ROUTER_HDLR(3)
++#endif /* IRQ_EVTR3_END */
++
++void __init lpc31xx_init_evtr(void)
++{
++	unsigned int irq;
++	int i, j, v;
++	u32 bank, bit_pos;
++
++	/* mask all external events */
++	for (i = 0; i < EVT_MAX_VALID_BANKS; i++)
++	{
++		/* mask all events */
++		EVRT_MASK_CLR(i) = 0xFFFFFFFF;
++		/* clear all pending events */
++		EVRT_INT_CLR(i) = 0xFFFFFFFF;
++
++		for (j = 0; j < EVT_MAX_VALID_INT_OUT; j++)
++		{
++			/* mask all events */
++			EVRT_OUT_MASK_CLR(j,i) = 0xFFFFFFFF;
++		}
++	}
++
++	/* Now configure external/board interrupts using event router */
++	for (irq = IRQ_EVT_START; irq < IRQ_EVT_START + NR_IRQ_CHIP_EVT + NR_IRQ_EBOARD; irq++) {
++		/* compute bank & bit position for the event_pin */
++		bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin);
++		bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F;
++
++		irq_set_chip(irq, &lpc31xx_evtr_chip);
++		set_irq_flags(irq, IRQF_VALID);
++		/* configure the interrupt sensitivity */
++		switch (irq_2_event[irq - IRQ_EVT_START].type) {
++			case EVT_ACTIVE_LOW:
++				EVRT_APR(bank) &= ~_BIT(bit_pos);
++				EVRT_ATR(bank) &= ~_BIT(bit_pos);
++				irq_set_handler(irq, handle_level_irq);
++				break;
++			case EVT_ACTIVE_HIGH:
++				EVRT_APR(bank) |= _BIT(bit_pos);
++				EVRT_ATR(bank) &= ~_BIT(bit_pos);
++				irq_set_handler(irq, handle_level_irq);
++				break;
++			case EVT_FALLING_EDGE:
++				EVRT_APR(bank) &= ~_BIT(bit_pos);
++				EVRT_ATR(bank) |= _BIT(bit_pos);
++				irq_set_handler(irq, handle_edge_irq);
++				break;
++			case EVT_RISING_EDGE:
++				EVRT_APR(bank) |= _BIT(bit_pos);
++				EVRT_ATR(bank) |= _BIT(bit_pos);
++				irq_set_handler(irq, handle_edge_irq);
++				break;
++			case EVT_BOTH_EDGE:
++				EVRT_ATR(bank) |= _BIT(bit_pos);
++				irq_set_handler(irq, handle_edge_irq);
++				break;
++			default:
++				printk("Invalid Event type.\r\n");
++				break;
++		}
++		if ( (irq >= IRQ_EVTR0_START) && (irq <= IRQ_EVTR0_END) ) {
++			/* enable routing to vector 0 */
++			EVRT_OUT_MASK_SET(0, bank) = _BIT(bit_pos);
++			v = 0;
++		} else if ( (irq >= IRQ_EVTR1_START) && (irq <= IRQ_EVTR1_END) ) {
++			/* enable routing to vector 1 */
++			EVRT_OUT_MASK_SET(1, bank) = _BIT(bit_pos);
++			v = 1;
++		} else if ( (irq >= IRQ_EVTR2_START) && (irq <= IRQ_EVTR2_END) ) {
++			/* enable routing to vector 2 */
++			EVRT_OUT_MASK_SET(2, bank) = _BIT(bit_pos);
++			v = 2;
++		} else if ( (irq >= IRQ_EVTR3_START) && (irq <= IRQ_EVTR3_END) ) {
++			/* enable routing to vector 3 */
++			EVRT_OUT_MASK_SET(3, bank) = _BIT(bit_pos);
++			v = 3;
++		} else {
++			v = -1;
++			printk("Invalid Event router setup.\r\n");
++		}
++		printk("irq=%d Event=0x%02x bank:%d bit:%02d type:%d vector %d\n", irq,
++			irq_2_event[irq - IRQ_EVT_START].event_pin, bank,
++			bit_pos, irq_2_event[irq - IRQ_EVT_START].type, v);
++
++	}
++	/* for power management. Wake from internal irqs */
++	EVRT_APR(3) &= ~_BIT(12);
++	EVRT_ATR(3) &= ~_BIT(12);
++	EVRT_MASK_SET(3) = _BIT(12);
++
++	/* install IRQ_EVT_ROUTER0  chain handler */
++#if IRQ_EVTR0_END
++	/* install chain handler for IRQ_EVT_ROUTER0 */
++	irq_set_chained_handler (IRQ_EVT_ROUTER0, router0_handler);
++#endif
++
++#if IRQ_EVTR1_END
++	/* install chain handler for IRQ_EVT_ROUTER1 */
++	irq_set_chained_handler (IRQ_EVT_ROUTER1, router1_handler);
++#endif
++
++#if IRQ_EVTR2_END
++	/* install chain handler for IRQ_EVT_ROUTER2 */
++	irq_set_chained_handler (IRQ_EVT_ROUTER2, router2_handler);
++#endif
++
++#if IRQ_EVTR3_END
++	/* install chain handler for IRQ_EVT_ROUTER3 */
++	irq_set_chained_handler (IRQ_EVT_ROUTER3, router3_handler);
++#endif
++}
++
++/* table to map from event to gpio bit */
++/* mask 0x1E0 reg, mask 0x1F bit */
++int event_to_gpioreg[] = {
++	0x000,0x00A,0x00D,0x004,0x011,0x003,0x012,0x013,
++	0x002,0x014,0x015,0x016,0x017,0x018,0x019,0x01A,
++	0x01B,0x00F,0x00C,0x00E,0x010,0x005,0x020,0x021,
++	0x022,0x0C7,0x0C8,0x0C9,0x0CA,0x0C6,0x0CB,0x0CC,
++	0x0CD,0x0CE,0x0C0,0x0C1,0x0C2,0x0C3,0x0C4,0x0C5,
++	0x0CF,0x029,0x028,0x008,0x00B,0x009,0x027,0x0E1,
++	0x0E0,0x0E2,0x0E3,0x0E4,0x01C,0x001,0x01D,0x01E,
++	0x000,0x01F,0x0E5,0x0E6,0x0E7,0x0E8,0x0E9,0x0EA,
++	0x0EB,0x0EC,0x141,0x142,0x143,0x140,0x120,0x121,
++	0x122,0x123,0x124,0x180,0x181,0x023,0x024,0x006,
++	0x007,0x025,0x026,0x060,0x061,0x062,0x080,0x081,
++	0x082,0x0A0,0x0A1,0x0A2,0x0A3,0x100,0x101,0x160,
++	0x0ED,0x0EE,0x000,0x000,0x000,0x000,0x000,0x000,
++	0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
++	0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
++	0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
++};
++
++struct event_data {
++	int event;
++	int group;
++	int edge;
++};
++
++static struct event_data *events;
++static int num_events;
++
++extern int lpc3131_reg_to_gpio(unsigned index, unsigned gpio);
++
++/* when a gpio pin is request as an interrupt source,
++ * make sure it is input mode
++ */
++static int set_input(unsigned irq)
++{
++	int ret, reg, gpio, event;
++
++	event = events[irq - 30].event;
++	reg  = event_to_gpioreg[event];
++	if (!reg) /* not a gpio pin */
++		return 0;
++	gpio = lpc3131_reg_to_gpio(reg >> 5, reg & 0x1F);
++	printk("setting to input %d\n", gpio);
++	ret = gpio_request(gpio, "IRQ");
++	if (ret)
++		return ret;
++	return gpio_direction_input(gpio);
++}
++
++int event_to_irq(int event)
++{
++	int i;
++	for (i = 0; i < num_events; i++) {
++		if (events[i].event == event) {
++			return i + 30; /* fixme */
++		}
++	}
++	return -EINVAL;
++}
++EXPORT_SYMBOL(event_to_irq);
++
++static const struct of_device_id evtr_of_match[] __initconst = {
++	{ .compatible = "nxp,lpc31xx-evtr", },
++	{},
++};
++
++static int __devinit lpc313x_evtr_probe(struct platform_device *pdev)
++{
++	const __be32 *ip;
++	struct device_node *np = pdev->dev.of_node;
++	int cells, length, i;
++
++	printk("###### Event router probe ######\n");
++
++	irq_domain_generate_simple(evtr_of_match, 0x13000000, 30);
++
++	ip = of_get_property(np, "#event-cells", NULL);
++	if (!ip)
++		return -EINVAL;
++	cells = be32_to_cpup(ip);
++	if (cells != 3)
++		return -EINVAL;
++
++	ip = of_get_property(np, "events", &length);
++	num_events = length / (sizeof(uint32_t) * cells);
++	events = kzalloc(sizeof(*events) * num_events, GFP_KERNEL);
++	for (i = 0; i < num_events; i++) {
++		events[i].group = be32_to_cpup(ip++);
++		events[i].event = be32_to_cpup(ip++);
++		events[i].edge = be32_to_cpup(ip++);
++		printk("group %d bit %02x edge %d\n", events[i].group, events[i].event, events[i].edge);
++		//set_input(events[i].event);
++	}
++	return 0;
++}
++
++static int lpc313x_evtr_remove(struct platform_device *pdev)
++{
++	return -EBUSY;
++}
++
++static struct platform_driver lpc313x_evtr_driver = {
++	.driver = {
++		.name = "lpc31xx-evtr",
++		.owner = THIS_MODULE,
++		.of_match_table = evtr_of_match,
++	},
++	.probe = lpc313x_evtr_probe,
++	.remove = lpc313x_evtr_remove,
++};
++
++static __init int lpc313x_evtr_init(void)
++{
++	if (platform_driver_register(&lpc313x_evtr_driver))
++		printk(KERN_ERR "Unable to register Event Router driver\n");
++
++	return 0;
++}
++
++/* Make sure we get initialised before anyone else tries to use us */
++core_initcall(lpc313x_evtr_init);
++
++
+diff --git a/arch/arm/mach-lpc31xx/include/mach/board.h b/arch/arm/mach-lpc31xx/include/mach/board.h
+index c8d01ea..7be6e8b 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/board.h
++++ b/arch/arm/mach-lpc31xx/include/mach/board.h
+@@ -31,7 +31,7 @@
+ 
+ 
+ extern void __init lpc313x_map_io(void);
+-extern void __init lpc313x_init_irq(void);
++extern void __init lpc31xx_init_irq(void);
+ extern void __init lpc313x_init(void);
+ extern int __init lpc313x_register_i2c_devices(void);
+ extern void lpc313x_vbus_power(int enable);
+diff --git a/arch/arm/mach-lpc31xx/include/mach/event_router.h b/arch/arm/mach-lpc31xx/include/mach/event_router.h
+deleted file mode 100644
+index b26eff9..0000000
+--- a/arch/arm/mach-lpc31xx/include/mach/event_router.h
++++ /dev/null
+@@ -1,201 +0,0 @@
+-/* linux/arch/arm/mach-lpc313x/include/mach/event_router.h
+- *  
+- *  Author:	Durgesh Pattamatta
+- *  Copyright (C) 2009 NXP semiconductors
+- *
+- * Event router defines for LPC313x and LPC315x SoCs.
+- *
+- * This program is free software; you can redistribute it and/or modify
+- * it under the terms of the GNU General Public License as published by
+- * the Free Software Foundation; either version 2 of the License, or
+- * (at your option) any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+- *
+- */
+-
+-
+-#ifndef __ASM_ARCH_EVT_IRQS_H
+-#define __ASM_ARCH_EVT_IRQS_H
+-
+-
+-/* event PIN or internal signal */
+-typedef enum _EVT_TYPE_
+-{
+-  EVT_ipint_int = 0,
+-  EVT_mLCD_DB_0,
+-  EVT_mLCD_DB_1,
+-  EVT_mLCD_DB_2,
+-  EVT_mLCD_DB_3,
+-  EVT_mLCD_DB_4,
+-  EVT_mLCD_DB_5,
+-  EVT_mLCD_DB_6,
+-  EVT_mLCD_DB_7,
+-  EVT_mLCD_DB_8,
+-  EVT_mLCD_DB_9,
+-  EVT_mLCD_DB_10,
+-  EVT_mLCD_DB_11,
+-  EVT_mLCD_DB_12,
+-  EVT_mLCD_DB_13,
+-  EVT_mLCD_DB_14,
+-  EVT_mLCD_DB_15,
+-  EVT_mLCD_RS,
+-  EVT_mLCD_CSB,
+-  EVT_mLCD_E_RD,
+-  EVT_mLCD_RW_WR,
+-  EVT_mNAND_RYBN0,
+-  EVT_mNAND_RYBN1,
+-  EVT_mNAND_RYBN2,
+-  EVT_mNAND_RYBN3,
+-  EVT_EBI_D_0,
+-  EVT_EBI_D_1,
+-  EVT_EBI_D_2,
+-  EVT_EBI_D_3,
+-  EVT_EBI_D_4,
+-  EVT_EBI_D_5,
+-  EVT_EBI_D_6,
+-  EVT_EBI_D_7,
+-  EVT_EBI_D_8,
+-  EVT_EBI_D_9,
+-  EVT_EBI_D_10,
+-  EVT_EBI_D_11,
+-  EVT_EBI_D_12,
+-  EVT_EBI_D_13,
+-  EVT_EBI_D_14,
+-  EVT_EBI_D_15,
+-  EVT_EBI_NWE,
+-  EVT_EBI_A_0_ALE,
+-  EVT_EBI_A_1_CLE,
+-  EVT_EBI_DQM_0_NOE,
+-  EVT_EBI_NCAS_BLOUT_0,
+-  EVT_EBI_NRAS_BLOUT_1,
+-  EVT_GPIO1,
+-  EVT_GPIO0,
+-  EVT_GPIO2,
+-  EVT_GPIO3,
+-  EVT_GPIO4,
+-  EVT_mGPIO5,
+-  EVT_mGPIO6,
+-  EVT_mGPIO7,
+-  EVT_mGPIO8,
+-  EVT_mGPIO9,
+-  EVT_mGPIO10,
+-  EVT_GPIO11,
+-  EVT_GPIO12,
+-  EVT_GPIO13,
+-  EVT_GPIO14,
+-  EVT_GPIO15,
+-  EVT_GPIO16,
+-  EVT_GPIO17,
+-  EVT_GPIO18,
+-  EVT_NAND_NCS_0,
+-  EVT_NAND_NCS_1,
+-  EVT_NAND_NCS_2,
+-  EVT_NAND_NCS_3,
+-  EVT_SPI_MISO,
+-  EVT_SPI_MOSI,
+-  EVT_SPI_CS_IN,
+-  EVT_SPI_SCK,
+-  EVT_SPI_CS_OUT0,
+-  EVT_UART_RXD,
+-  EVT_UART_TXD,
+-  EVT_mUART_CTS_N,
+-  EVT_mUART_RTS_N,
+-  EVT_mI2STX_CLK0,
+-  EVT_mI2STX_BCK0,
+-  EVT_mI2STX_DATA0,
+-  EVT_mI2STX_WS0,
+-  EVT_I2SRX_BCK0,
+-  EVT_I2SRX_DATA0,
+-  EVT_I2SRX_WS0,
+-  EVT_I2SRX_DATA1,
+-  EVT_I2SRX_BCK1,
+-  EVT_I2SRX_WS1,
+-  EVT_I2STX_DATA1,
+-  EVT_I2STX_BCK1,
+-  EVT_I2STX_WS1,
+-  EVT_CLK_256FS_O,
+-  EVT_I2C_SDA1,
+-  EVT_I2C_SCL1,
+-  EVT_PWM_DATA,
+-  EVT_AD_NINT_I,
+-  EVT_PLAY_DET_I,
+-  EVT_timer0_intct1,
+-  EVT_timer1_intct1,
+-  EVT_timer2_intct1,
+-  EVT_timer3_intct1,
+-  EVT_adc_int,
+-  EVT_wdog_m0,
+-  EVT_uart_rxd,
+-  EVT_i2c0_scl_n,
+-  EVT_i2c1_scl_n,
+-  EVT_arm926_nfiq,
+-  EVT_arm926_nirq,
+-  EVT_MCI_DAT_0,
+-  EVT_MCI_DAT_1,
+-  EVT_MCI_DAT_2,
+-  EVT_MCI_DAT_3,
+-  EVT_MCI_DAT_4,
+-  EVT_MCI_DAT_5,
+-  EVT_MCI_DAT_6,
+-  EVT_MCI_DAT_7,
+-  EVT_MCI_CMD,
+-  EVT_MCI_CLK,
+-  EVT_USB_VBUS,
+-  EVT_usb_otg_ahb_needclk,
+-  EVT_usb_atx_pll_lock,
+-  EVT_usb_otg_vbus_pwr_en,
+-  EVT_USB_ID,
+-  EVT_isram0_mrc_finished,
+-  EVT_isram1_mrc_finished,
+-  EVT_LAST
+-} EVENT_T;
+-
+-/* External interrupt type enumerations */
+-typedef enum
+-{
+-  EVT_ACTIVE_LOW,
+-  EVT_ACTIVE_HIGH,
+-  EVT_FALLING_EDGE,
+-  EVT_RISING_EDGE,
+-  EVT_BOTH_EDGE
+-} EVENT_TYPE_T;
+-
+-/* Macros to compute the bank based on EVENT_T */
+-#define EVT_GET_BANK(evt)   (((evt) >> 5) & 0x3)
+-
+-/* structure to map board IRQ to event pin */
+-typedef struct {
+-	u32 irq;
+-	EVENT_T event_pin;
+-	EVENT_TYPE_T type;
+-} IRQ_EVENT_MAP_T;
+-
+-#define EVT_MAX_VALID_BANKS   4
+-#define EVT_MAX_VALID_INT_OUT 5
+-
+-/* Activation polarity register defines */
+-#define EVT_APR_HIGH    1
+-#define EVT_APR_LOW     0
+-#define EVT_APR_BANK0_DEF 0x00000001
+-#define EVT_APR_BANK1_DEF 0x00000000
+-#define EVT_APR_BANK2_DEF 0x00000000
+-#define EVT_APR_BANK3_DEF 0x0FFFFFFC
+-
+-/* Activation type register defines */
+-#define EVT_ATR_EDGE    1
+-#define EVT_ATR_LEVEL   0
+-#define EVT_ATR_BANK0_DEF 0x00000001
+-#define EVT_ATR_BANK1_DEF 0x00000000
+-#define EVT_ATR_BANK2_DEF 0x00000000
+-#define EVT_ATR_BANK3_DEF 0x077FFFFC
+-
+-
+-#endif
+diff --git a/arch/arm/mach-lpc31xx/include/mach/gpio.h b/arch/arm/mach-lpc31xx/include/mach/gpio.h
+index 2e3175c..4792ac1 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/gpio.h
++++ b/arch/arm/mach-lpc31xx/include/mach/gpio.h
+@@ -26,7 +26,7 @@
+ #include <linux/irqflags.h>
+ #include <mach/hardware.h>
+ 
+-#define ARCH_NR_GPIOS 1024
++#define ARCH_NR_GPIOS 256
+ 
+ #define GPIO_PORT_MASK  0x0FE0
+ #define GPIO_PIN_MASK   0x001F
+diff --git a/arch/arm/mach-lpc31xx/include/mach/irqs.h b/arch/arm/mach-lpc31xx/include/mach/irqs.h
+index 76cfd32..274ac62 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/irqs.h
++++ b/arch/arm/mach-lpc31xx/include/mach/irqs.h
+@@ -1,9 +1,9 @@
+ /* linux/arch/arm/mach-lpc313x/include/mach/irqs.h
+  *
+- *  Author:	Durgesh Pattamatta
+- *  Copyright (C) 2009 NXP semiconductors
++ * Author:	Durgesh Pattamatta
++ * Copyright (C) 2009 NXP semiconductors
+  *
+- *  IRQ defines for LPC313x and LPC315x SoCs.
++ * IRQ defines for LPC313x and LPC315x SoCs.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+@@ -12,12 +12,12 @@
+  *
+  * This program is distributed in the hope that it will be useful,
+  * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  * GNU General Public License for more details.
+  *
+  * You should have received a copy of the GNU General Public License
+  * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+  *
+  */
+ 
+@@ -25,174 +25,39 @@
+ #ifndef __ASM_ARCH_IRQS_H
+ #define __ASM_ARCH_IRQS_H
+ 
+-
+-
+-# define IRQ_EVT_ROUTER0  1        /*interrupts from Event router 0*/
+-# define IRQ_EVT_ROUTER1  2        /*interrupts from Event router 1*/
+-# define IRQ_EVT_ROUTER2  3        /*interrupts from Event router 2*/
+-# define IRQ_EVT_ROUTER3  4        /*interrupts from Event router 3*/
+-# define IRQ_TIMER0       5        /*Timer 0 IRQ */
+-# define IRQ_TIMER1       6        /*Timer 1 IRQ */
+-# define IRQ_TIMER2       7        /*Timer 2 IRQ */
+-# define IRQ_TIMER3       8        /*Timer 3 IRQ */
+-# define IRQ_ADC          9        /*10bit ADC irq*/
+-# define IRQ_UART         10       /*UART irq */
+-# define IRQ_I2C0         11       /*I2C 0 IRQ */
+-# define IRQ_I2C1         12       /*I2C 1 IRQ */
+-# define IRQ_I2S0_OUT     13       /*I2S 0 out IRQ */
+-# define IRQ_I2S1_OUT     14       /*I2S 1 out IRQ */
+-# define IRQ_I2S0_IN      15       /*I2S 0 IN IRQ */
+-# define IRQ_I2S1_IN      16       /*I2S 1 IN IRQ */
+-# define IRQ_LCD          18       /*LCD irq */
+-# define IRQ_SPI_SMS      19       /*SPI SMS IRQ */
+-# define IRQ_SPI_TX       20       /*SPI Transmit IRQ */
+-# define IRQ_SPI_RX       21       /*SPI Receive IRQ */
+-# define IRQ_SPI_OVR      22       /*SPI overrun IRQ */
+-# define IRQ_SPI          23       /*SPI interrupt IRQ */
+-# define IRQ_DMA          24       /*DMA irq */
+-# define IRQ_NAND_FLASH   25       /*NAND flash irq */
+-# define IRQ_MCI          26       /*MCI irq */
+-# define IRQ_USB          27       /*USB irq */
+-# define IRQ_ISRAM0       28       /*ISRAM0 irq */
+-# define IRQ_ISRAM1       29       /*ISRAM1 irq */
+-
+-
+-# define NR_IRQ_CPU	  30	/* IRQs directly recognized by CPU */
+-
+-#define IRQ_EVT_START   NR_IRQ_CPU
+-
+-/* System specific IRQs */
+-#include "event_router.h"
+-
+-/* Other chip IRQs routed through event router.
+- * These IRQs should be treated as board IRQs but they are
+- * common for all boards.
+- */
+-#define IRQ_WDT        30  /* Watchdog interrupt */
+-#define IRQ_VBUS_EN    31  /* VBUS power enable */
+-#define IRQ_VBUS_OVRC  32  /* Detect VBUS over current - Host mode */
+-#define IRQ_USB_ID     33  /* Detect ID pin change - OTG */
+-
+-#define _INTERNAL_IRQ_EVENT_MAP	\
+-	{IRQ_WDT, EVT_wdog_m0, EVT_RISING_EDGE}, \
+-	{IRQ_VBUS_EN, EVT_usb_otg_vbus_pwr_en, EVT_FALLING_EDGE}, \
+-	{IRQ_VBUS_OVRC, EVT_USB_VBUS, EVT_FALLING_EDGE}, \
+-	{IRQ_USB_ID, EVT_USB_ID, EVT_ACTIVE_LOW}, \
+-
+-#if defined(CONFIG_LPC3152_AD)
+-/* For chips with analog die there are some more AD events routed
+- * through event router.
+- */
+-#define IRQ_RTC	        34
+-#define IRQ_PLAY        35
+-#define NR_IRQ_CHIP_EVT	6
+-
+-#define AD_IRQ_EVENT_MAP	\
+-	{IRQ_RTC, EVT_AD_NINT_I, EVT_ACTIVE_LOW}, \
+-	{IRQ_PLAY, EVT_PLAY_DET_I, EVT_ACTIVE_HIGH}, \
+-
+-#define CHIP_IRQ_EVENT_MAP   _INTERNAL_IRQ_EVENT_MAP \
+-	AD_IRQ_EVENT_MAP 
+-
+-#else
+-#define CHIP_IRQ_EVENT_MAP   _INTERNAL_IRQ_EVENT_MAP
+-#define NR_IRQ_CHIP_EVT	     4
+-#endif
+-
+-/* now compute the board start IRQ number */
+-#define IRQ_BOARD_START   (NR_IRQ_CPU + NR_IRQ_CHIP_EVT)
+-
+-/* Route all internal chip events to IRQ_EVT_ROUTER0 */
+-#define IRQ_EVTR0_START        IRQ_EVT_START
+-#define IRQ_EVTR0_END          (IRQ_BOARD_START - 1)
+-
+-
+-#if defined (CONFIG_MACH_VAL3153) 
+-
+-# define IRQ_CS8900_ETH_INT  IRQ_BOARD_START	/* Ethernet chip */
+-# define IRQ_SDMMC_CD0       (IRQ_BOARD_START + 1)	/* SD card detect */
+-# define IRQ_SDMMC_CD1       (IRQ_BOARD_START + 2)	/* SD card detect */
+-# define NR_IRQ_BOARD        3
+-
+-/* now define board irq to event pin map */
+-#define BOARD_IRQ_EVENT_MAP	{ \
+-	CHIP_IRQ_EVENT_MAP \
+-	{IRQ_CS8900_ETH_INT, EVT_GPIO16, EVT_ACTIVE_HIGH}, \
+-	{IRQ_SDMMC_CD0, EVT_GPIO12, EVT_ACTIVE_HIGH}, \
+-	{IRQ_SDMMC_CD1, EVT_GPIO13, EVT_ACTIVE_HIGH}, \
+-	}
+-/* Following defines group the board IRQs into 4 IRQ_EVNTR groups.
+-   IRQ_EVT_ROUTERx IRQ is generated when event in the corresponding 
+-   group triggers.
+-*/
+-#define IRQ_EVTR1_START        IRQ_CS8900_ETH_INT
+-#define IRQ_EVTR1_END          IRQ_CS8900_ETH_INT
+-#define IRQ_EVTR2_START        IRQ_SDMMC_CD0
+-#define IRQ_EVTR2_END          IRQ_SDMMC_CD0
+-#define IRQ_EVTR3_START        IRQ_SDMMC_CD1
+-#define IRQ_EVTR3_END          IRQ_SDMMC_CD1
+-
+-
+-#elif defined (CONFIG_MACH_EA313X) || defined(CONFIG_MACH_EA3152)
+-# define IRQ_DM9000_ETH_INT   IRQ_BOARD_START	/* Ethernet chip */
+-# define IRQ_SDMMC_CD         (IRQ_BOARD_START + 1)	/* SD card detect */
+-# define IRQ_EA_VBUS_OVRC     (IRQ_BOARD_START + 2)	/* Over current indicator */
+-# define IRQ_PENDOWN	      (IRQ_BOARD_START + 3)	/* Pendown from touch screen */
+-# define NR_IRQ_BOARD         4
+-
+-/* now define board irq to event pin map */
+-#define BOARD_IRQ_EVENT_MAP	{ \
+-	CHIP_IRQ_EVENT_MAP \
+-	{IRQ_DM9000_ETH_INT, EVT_mNAND_RYBN3, EVT_ACTIVE_HIGH}, \
+-	{IRQ_SDMMC_CD, EVT_mI2STX_BCK0, EVT_ACTIVE_LOW}, \
+-	{IRQ_EA_VBUS_OVRC, EVT_I2SRX_WS0, EVT_ACTIVE_LOW}, \
+-	{IRQ_PENDOWN, EVT_GPIO4, EVT_ACTIVE_HIGH}, \
+-	}
+-/* Following defines group the board IRQs into 4 IRQ_EVNTR groups.
+-   IRQ_EVT_ROUTERx IRQ is generated when event in the corresponding 
+-   group triggers.
+-*/
+-#define IRQ_EVTR1_START        IRQ_DM9000_ETH_INT
+-#define IRQ_EVTR1_END          IRQ_DM9000_ETH_INT
+-#define IRQ_EVTR2_START        IRQ_SDMMC_CD
+-#define IRQ_EVTR2_END          IRQ_SDMMC_CD
+-#define IRQ_EVTR3_START        IRQ_EA_VBUS_OVRC
+-#define IRQ_EVTR3_END          IRQ_PENDOWN
+-
+-#elif defined (CONFIG_MACH_VAL3154)
+-# define IRQ_SDMMC_CD	 IRQ_BOARD_START 	/* SD card detect */
+-# define NR_IRQ_BOARD	 1
+-
+-/* now define board irq to event pin map */
+-#define BOARD_IRQ_EVENT_MAP	{ \
+-	CHIP_IRQ_EVENT_MAP \
+-	{IRQ_SDMMC_CD, EVT_mI2STX_BCK0, EVT_ACTIVE_LOW}, \
+-	}
+-/* Following defines group the board IRQs into 4 IRQ_EVNTR groups.
+-   IRQ_EVT_ROUTERx IRQ is generated when event in the corresponding 
+-   group triggers.
+-*/
+-#define IRQ_EVTR1_START        IRQ_SDMMC_CD
+-#define IRQ_EVTR1_END          IRQ_SDMMC_CD
+-#define IRQ_EVTR2_START        0
+-#define IRQ_EVTR2_END          0
+-#define IRQ_EVTR3_START        0
+-#define IRQ_EVTR3_END          0
+-
+-#else
+-# define NR_IRQ_BOARD          0
+-#define IRQ_EVTR0_START        0
+-#define IRQ_EVTR0_END          0
+-#define IRQ_EVTR1_START        0
+-#define IRQ_EVTR1_END          0
+-#define IRQ_EVTR2_START        0
+-#define IRQ_EVTR2_END          0
+-#define IRQ_EVTR3_START        0
+-#define IRQ_EVTR3_END          0
+-
+-#endif
+-
+-
+-#define NR_IRQS		(NR_IRQ_CPU + NR_IRQ_CHIP_EVT + NR_IRQ_BOARD)
++#define IRQ_EVT_ROUTER0	1	/*interrupts from Event router 0*/
++#define IRQ_EVT_ROUTER1	2	/*interrupts from Event router 1*/
++#define IRQ_EVT_ROUTER2	3	/*interrupts from Event router 2*/
++#define IRQ_EVT_ROUTER3	4	/*interrupts from Event router 3*/
++#define IRQ_TIMER0	5	/*Timer 0 IRQ */
++#define IRQ_TIMER1	6	/*Timer 1 IRQ */
++#define IRQ_TIMER2	7	/*Timer 2 IRQ */
++#define IRQ_TIMER3	8	/*Timer 3 IRQ */
++#define IRQ_ADC		9	/*10bit ADC IRQ*/
++#define IRQ_UART	10	/*UART IRQ */
++#define IRQ_I2C0	11	/*I2C 0 IRQ */
++#define IRQ_I2C1	12	/*I2C 1 IRQ */
++#define IRQ_I2S0_OUT	13	/*I2S 0 out IRQ */
++#define IRQ_I2S1_OUT	14	/*I2S 1 out IRQ */
++#define IRQ_I2S0_IN	15	/*I2S 0 IN IRQ */
++#define IRQ_I2S1_IN	16	/*I2S 1 IN IRQ */
++#define IRQ_LCD		18	/*LCD IRQ */
++#define IRQ_SPI_SMS	19	/*SPI SMS IRQ */
++#define IRQ_SPI_TX	20	/*SPI Transmit IRQ */
++#define IRQ_SPI_RX	21	/*SPI Receive IRQ */
++#define IRQ_SPI_OVR	22	/*SPI overrun IRQ */
++#define IRQ_SPI		23	/*SPI interrupt IRQ */
++#define IRQ_DMA		24	/*DMA IRQ */
++#define IRQ_NAND_FLASH	25	/*NAND flash IRQ */
++#define IRQ_MCI		26	/*MCI IRQ */
++#define IRQ_USB		27	/*USB IRQ */
++#define IRQ_ISRAM0	28	/*ISRAM0 IRQ */
++#define IRQ_ISRAM1	29	/*ISRAM1 IRQ */
++
++#define NR_IRQ_CPU	30	/* IRQs directly recognized by CPU */
++
++#define NR_IRQ_BOARD	34	/* Leave room for board specific IRQs */
++
++#define NR_IRQS		(NR_IRQ_CPU + NR_IRQ_BOARD)
+ 
+ #endif
+diff --git a/arch/arm/mach-lpc31xx/irq.c b/arch/arm/mach-lpc31xx/irq.c
+index 5dc8f90..cf172f9 100644
+--- a/arch/arm/mach-lpc31xx/irq.c
++++ b/arch/arm/mach-lpc31xx/irq.c
+@@ -1,9 +1,9 @@
+-/*  linux/arch/arm/mach-lpc313x/irq.c
++/*  linux/arch/arm/mach-lpc31xx/irq.c
+  *
+  *  Author:	Durgesh Pattamatta
+  *  Copyright (C) 2009 NXP semiconductors
+  *
+- * Interrupt controller and event router driver for LPC313x & LPC315x.
++ * Interrupt controller and event router driver for LPC31xx & LPC315x.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+@@ -33,8 +33,11 @@
+ #include <mach/irqs.h>
+ #include <mach/clock.h>
+ 
++/* Macros to compute the bank based on EVENT_T */
++#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
++#define EVT_arm926_nirq		0x6C
+ 
+-static IRQ_EVENT_MAP_T irq_2_event[] = BOARD_IRQ_EVENT_MAP;
++extern void __init lpc31xx_init_evtr(void);
+ 
+ static void intc_mask_irq(struct irq_data *data)
+ {
+@@ -75,7 +78,7 @@ static int intc_set_wake(struct irq_data *data, unsigned int on)
+ 	return 0;
+ }
+ 
+-static struct irq_chip lpc313x_internal_chip = {
++static struct irq_chip lpc31xx_internal_chip = {
+ 	.name = "INTC",
+ 	.irq_ack = intc_mask_irq,
+ 	.irq_mask = intc_mask_irq,
+@@ -83,134 +86,14 @@ static struct irq_chip lpc313x_internal_chip = {
+ 	.irq_set_wake = intc_set_wake,
+ };
+ 
+-static void evt_mask_irq(struct irq_data *data)
+-{
+-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
+-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
+-
+-	EVRT_MASK_CLR(bank) = _BIT(bit_pos);
+-}
+-
+-static void evt_unmask_irq(struct irq_data *data)
+-{
+-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
+-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
+-
+-	EVRT_MASK_SET(bank) = _BIT(bit_pos);
+-}
+-
+-static void evt_ack_irq(struct irq_data *data)
+-{
+-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
+-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
+-	//EVRT_MASK_CLR(bank) = _BIT(bit_pos);
+-	EVRT_INT_CLR(bank) = _BIT(bit_pos);
+-}
+-
+-static int evt_set_type(struct irq_data *data, unsigned int flow_type)
+-{
+-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
+-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
+-
+-	switch (flow_type) {
+-	case IRQ_TYPE_EDGE_RISING:
+-		EVRT_APR(bank) |= _BIT(bit_pos);
+-		EVRT_ATR(bank) |= _BIT(bit_pos);
+-		break;
+-	case IRQ_TYPE_EDGE_FALLING:
+-		EVRT_APR(bank) &= ~_BIT(bit_pos);
+-		EVRT_ATR(bank) |= _BIT(bit_pos);
+-		break;
+-	case IRQ_TYPE_EDGE_BOTH:
+-		EVRT_ATR(bank) |= _BIT(bit_pos);
+-		break;
+-	case IRQ_TYPE_LEVEL_HIGH:
+-		EVRT_APR(bank) |= _BIT(bit_pos);
+-		EVRT_ATR(bank) &= ~_BIT(bit_pos);
+-		break;
+-	case IRQ_TYPE_LEVEL_LOW:
+-		EVRT_APR(bank) &= ~_BIT(bit_pos);
+-		EVRT_ATR(bank) &= ~_BIT(bit_pos);
+-		break;
+-	default:
+-		return -EINVAL;
+-	}
+-
+-	return 0;
+-}
+-
+-static int evt_set_wake(struct irq_data *data, unsigned int on)
+-{
+-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
+-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
+-
+-	if (on)
+-		/* enable routing to CGU_WAKEUP */
+-		EVRT_OUT_MASK_SET(4, bank) = _BIT(bit_pos);
+-	else
+-		/* disable routing to CGU_WAKEUP */
+-		EVRT_OUT_MASK_CLR(4, bank) = _BIT(bit_pos);
+-
+-	return 0;
+-}
+-
+-
+-static struct irq_chip lpc313x_evtr_chip = {
+-	.name = "EVENTROUTER",
+-	.irq_ack = evt_ack_irq,
+-	.irq_mask = evt_mask_irq,
+-	.irq_unmask = evt_unmask_irq,
+-	.irq_set_type = evt_set_type,
+-	.irq_set_wake = evt_set_wake,
+-};
+-
+-
+-#define ROUTER_HDLR(n) \
+-	static void router##n##_handler (unsigned int irq, struct irq_desc *desc) { \
+-		u32 status, bank, bit_pos; \
+-		if (IRQ_EVTR##n##_START == IRQ_EVTR##n##_END) { \
+-			/* translate IRQ number */ \
+-			irq = IRQ_EVTR##n##_START; \
+-			generic_handle_irq(irq); \
+-		} else { \
+-			for (irq = IRQ_EVTR##n##_START; irq <= IRQ_EVTR##n##_END; irq++) {  \
+-				/* compute bank & bit position for the event_pin */ \
+-				bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin); \
+-				bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F; \
+-				status = EVRT_OUT_PEND(n, bank); \
+-				if (status & _BIT(bit_pos)) \
+-					generic_handle_irq(irq); \
+-			} \
+-		} \
+-	}
+-
+-
+-#if IRQ_EVTR0_END
+-ROUTER_HDLR(0)
+-#endif /* IRQ_EVTR0_END */
+-
+-#if IRQ_EVTR1_END
+-ROUTER_HDLR(1)
+-#endif /* IRQ_EVTR1_END */
+-
+-#if IRQ_EVTR2_END
+-ROUTER_HDLR(2)
+-#endif /* IRQ_EVTR2_END */
+-
+-#if IRQ_EVTR3_END
+-ROUTER_HDLR(3)
+-#endif /* IRQ_EVTR3_END */
+-
+ static const struct of_device_id intc_of_match[] __initconst = {
+ 	{ .compatible = "nxp,lpc31xx-intc", },
+ 	{},
+ };
+ 
+-void __init lpc313x_init_irq(void)
++void __init lpc31xx_init_irq(void)
+ {
+ 	unsigned int irq;
+-	int i, j;
+-	u32 bank, bit_pos;
+ 
+ 	irq_domain_generate_simple(intc_of_match, 0x60000000, 0);
+ 
+@@ -224,25 +107,10 @@ void __init lpc313x_init_irq(void)
+ 	INTC_IRQ_VEC_BASE = 0x00000000;
+ 	INTC_FIQ_VEC_BASE = 0x00000000;
+ 
+-	/* mask all interrupt by setting high priority untill init is done*/
++	/* mask all interrupt by setting high priority until init is done*/
+ 	INTC_IRQ_PRI_MASK = 0xFF;
+ 	INTC_FIQ_PRI_MASK = 0xFF;
+ 
+-	/* mask all external events */
+-	for (i = 0; i < EVT_MAX_VALID_BANKS; i++)
+-	{
+-		/* mask all events */
+-		EVRT_MASK_CLR(i) = 0xFFFFFFFF;
+-		/* clear all pending events */
+-		EVRT_INT_CLR(i) = 0xFFFFFFFF;
+-
+-		for (j = 0; j < EVT_MAX_VALID_INT_OUT; j++)
+-		{
+-			/* mask all events */
+-			EVRT_OUT_MASK_CLR(j,i) = 0xFFFFFFFF;
+-		}
+-	}
+-
+ 	/* Clear and disable all interrupts. Start from index 1 since 0 is unused.*/
+ 	for (irq = 1; irq < NR_IRQ_CPU; irq++) {
+ 		/* Set the initial control values */
+@@ -257,99 +125,17 @@ void __init lpc313x_init_irq(void)
+ 			INTC_REQ_PRIO_LVL(1) |
+ 			INTC_REQ_WE_PRIO_LVL;
+ 
+-		irq_set_chip_and_handler(irq, &lpc313x_internal_chip,
++		irq_set_chip_and_handler(irq, &lpc31xx_internal_chip,
+ 					 handle_level_irq);
+ 		set_irq_flags(irq, IRQF_VALID);
+ 	}
+-
+-	/* Now configure external/board interrupts using event router */
+-	for (irq = IRQ_EVT_START; irq < NR_IRQS; irq++) {
+-		/* compute bank & bit position for the event_pin */
+-		bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin);
+-		bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F;
+-		
+-		printk("irq=%d Event=0x%x bank:%d bit:%d type:%d\r\n", irq,
+-			irq_2_event[irq - IRQ_EVT_START].event_pin, bank,
+-			bit_pos, irq_2_event[irq - IRQ_EVT_START].type);
+-
+-		irq_set_chip(irq, &lpc313x_evtr_chip);
+-		set_irq_flags(irq, IRQF_VALID);
+-		/* configure the interrupt sensitivity */
+-		switch (irq_2_event[irq - IRQ_EVT_START].type) {
+-			case EVT_ACTIVE_LOW:
+-				EVRT_APR(bank) &= ~_BIT(bit_pos);
+-				EVRT_ATR(bank) &= ~_BIT(bit_pos);
+-				irq_set_handler(irq, handle_level_irq);
+-				break;
+-			case EVT_ACTIVE_HIGH:
+-				EVRT_APR(bank) |= _BIT(bit_pos);
+-				EVRT_ATR(bank) &= ~_BIT(bit_pos);
+-				irq_set_handler(irq, handle_level_irq);
+-				break;
+-			case EVT_FALLING_EDGE:
+-				EVRT_APR(bank) &= ~_BIT(bit_pos);
+-				EVRT_ATR(bank) |= _BIT(bit_pos);
+-				irq_set_handler(irq, handle_edge_irq);
+-				break;
+-			case EVT_RISING_EDGE:
+-				EVRT_APR(bank) |= _BIT(bit_pos);
+-				EVRT_ATR(bank) |= _BIT(bit_pos);
+-				irq_set_handler(irq, handle_edge_irq);
+-				break;
+-			case EVT_BOTH_EDGE:
+-				EVRT_ATR(bank) |= _BIT(bit_pos);
+-				irq_set_handler(irq, handle_edge_irq);
+-				break;
+-			default:
+-				printk("Invalid Event type.\r\n");
+-				break;
+-		}
+-		if ( (irq >= IRQ_EVTR0_START) && (irq <= IRQ_EVTR0_END) ) {
+-			/* enable routing to vector 0 */
+-			EVRT_OUT_MASK_SET(0, bank) = _BIT(bit_pos);
+-		} else if ( (irq >= IRQ_EVTR1_START) && (irq <= IRQ_EVTR1_END) ) {
+-			/* enable routing to vector 1 */
+-			EVRT_OUT_MASK_SET(1, bank) = _BIT(bit_pos);
+-		} else if ( (irq >= IRQ_EVTR2_START) && (irq <= IRQ_EVTR2_END) ) {
+-			/* enable routing to vector 2 */
+-			EVRT_OUT_MASK_SET(2, bank) = _BIT(bit_pos);
+-		} else if ( (irq >= IRQ_EVTR3_START) && (irq <= IRQ_EVTR3_END) ) {
+-			/* enable routing to vector 3 */
+-			EVRT_OUT_MASK_SET(3, bank) = _BIT(bit_pos);
+-		} else {
+-			printk("Invalid Event router setup.\r\n");
+-		}
+-	}
+-	/* for power management. Wake from internal irqs */
+-	EVRT_APR(3) &= ~_BIT(12);
+-	EVRT_ATR(3) &= ~_BIT(12);
+-	EVRT_MASK_SET(3) = _BIT(12);
+-
+-	/* install IRQ_EVT_ROUTER0  chain handler */
+-#if IRQ_EVTR0_END
+-	/* install chain handler for IRQ_EVT_ROUTER0 */
+-	irq_set_chained_handler (IRQ_EVT_ROUTER0, router0_handler);
+-#endif
+-
+-#if IRQ_EVTR1_END
+-	/* install chain handler for IRQ_EVT_ROUTER1 */
+-	irq_set_chained_handler (IRQ_EVT_ROUTER1, router1_handler);
+-#endif
+-
+-#if IRQ_EVTR2_END
+-	/* install chain handler for IRQ_EVT_ROUTER2 */
+-	irq_set_chained_handler (IRQ_EVT_ROUTER2, router2_handler);
+-#endif
+-
+-#if IRQ_EVTR3_END
+-	/* install chain handler for IRQ_EVT_ROUTER3 */
+-	irq_set_chained_handler (IRQ_EVT_ROUTER3, router3_handler);
+-#endif
++	lpc31xx_init_evtr();
+ 
+ 	/* Set the priority threshold to 0, i.e. don't mask any interrupt */
+ 	/* on the basis of priority level, for both targets (IRQ/FIQ)    */
+ 	INTC_IRQ_PRI_MASK = 0;
+ 	INTC_FIQ_PRI_MASK = 0;
++
+ }
+ 
+ 
+diff --git a/arch/arm/mach-lpc31xx/usb.c b/arch/arm/mach-lpc31xx/usb.c
+index 9c1c8b0..4439b03 100644
+--- a/arch/arm/mach-lpc31xx/usb.c
++++ b/arch/arm/mach-lpc31xx/usb.c
+@@ -177,6 +177,9 @@ static void lpc313x_vbusen_timer(unsigned long data)
+ 	enable_irq(brd->vbus_ovrc_irq);
+ }
+ 
++/* Macros to compute the bank based on EVENT_T */
++#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
++#define EVT_usb_atx_pll_lock	0x79
+ 
+ /*-------------------------------------------------------------------------*/
+ int __init usbotg_init(void)
+@@ -245,6 +248,7 @@ int __init usbotg_init(void)
+ 			printk(KERN_INFO "Can't acquire vbus-over GPIO\n");
+ 		gpio_direction_input(over);
+ #endif
++#define IRQ_EA_VBUS_OVRC  37  /* Detect VBUS over current - Host mode */
+ 		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_EA_VBUS_OVRC;
+ 
+ #else
+diff --git a/drivers/gpio/gpio-lpc31xx.c b/drivers/gpio/gpio-lpc31xx.c
+index 19f5e42..9d57e60 100644
+--- a/drivers/gpio/gpio-lpc31xx.c
++++ b/drivers/gpio/gpio-lpc31xx.c
+@@ -31,7 +31,51 @@
+ #define GPIO_M1_SET	0x24
+ #define GPIO_M1_RESET	0x28
+ 
++struct lpc31xx_gpio_chip {
++	struct of_mm_gpio_chip mmchip;
++	int index;
++};
++
++/* this table maps from gpio register bits into event router bits
++ * the numbers correspond to the 128 event bits in the event router
++ * look up the gpio bit in this table to get an event bit then
++ * ask the event router driver to tell you which irq it is mapped to
++ */
++static const uint8_t ebi_mci[] = {0x38,0x35,0x08,0x05,0x03,0x15,0x4F,0x50,0x2B,0x2D,0x01,0x2C,0x12,0x02,0x13,0x11,
++	0x14,0x04,0x06,0x07,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F,0x10,0x34,0x36,0x37,0x39};
++static const uint8_t ebi_i2stx_0[] = {0x16,0x17,0x18,0x4D,0x4E,0x51,0x52,0x2E,0x2A,0x29};
++static const uint8_t i2srx_0[] = {0x53,0x54,0x55};
++static const uint8_t i2srx_1[] = {0x56,0x57,0x58};
++static const uint8_t i2stx_1[] = {0x59,0x5A,0x5B,0x5C};
++static const uint8_t ebi[] = {0x22,0x23,0x24,0x25,0x26,0x27,0x1D,0x19,0x1A,0x1B,0x1C,0x1E,0x1F,0x20,0x21,0x28};
++static const uint8_t gpio[] = {0x30,0x2F,0x31,0x32,0x33,0x3A,0x3B,0x3C,0x3D,0x3E,0x3F,0x40,0x41,0x60,0x61};
++static const uint8_t i2c1[] = {0x5D,0x5E};
++static const uint8_t spi[] = {0x46,0x47,0x48,0x49,0x4A};
++static const uint8_t nand_ctrl[] = {0x45,0x42,0x43,0x44};
++static const uint8_t pwm[] = {0x5F};
++static const uint8_t uart[] = {0x4B,0x4C};
++
++static struct {
++	const uint8_t *evt;
++	int count;
++	struct lpc31xx_gpio_chip *chip;
++} gpio_evt[] = {
++	{ebi_mci, 	sizeof(ebi_mci)},
++	{ebi_i2stx_0, 	sizeof(ebi_i2stx_0)},
++	{NULL, 		1},  /* cgu one is odd, not mapped into event router */
++	{i2srx_0, 	sizeof(i2srx_0)},
++	{i2srx_1, 	sizeof(i2srx_1)},
++	{i2stx_1, 	sizeof(i2stx_1)},
++	{ebi, 		sizeof(ebi)},
++	{gpio, 		sizeof(gpio)},
++	{i2c1, 		sizeof(i2c1)},
++	{spi, 		sizeof(spi)},
++	{nand_ctrl, 	sizeof(nand_ctrl)},
++	{pwm, 		sizeof(pwm)},
++	{uart, 		sizeof(uart)},
++};
+ 
++#if 0
+ /**
+  * struct lpc313x_gpio_chip - wrapper for specific implementation of gpio
+  * @chip: The chip structure to be exported via gpiolib.
+@@ -39,7 +83,7 @@
+  * @config: special function and pull-resistor control information.
+  * @pm_save: Save information for suspend/resume support.
+  *
+- * This wrapper provides the necessary information for the Samsung
++ * This wrapper provides the necessary information for the NXP
+  * specific gpios being registered with gpiolib.
+  */
+ struct lpc313x_gpio_chip {
+@@ -51,6 +95,7 @@ struct lpc313x_gpio_chip {
+ 	uint32_t		pm_save[4];
+ #endif
+ };
++#endif
+ 
+ static int inline *gpc(void __iomem *base, int reg)
+ {
+@@ -111,37 +156,55 @@ static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int va
+ 		*gpc(base, GPIO_M0_RESET) = pin;
+ }
+ 
+-static int lpc3131_gpio_to_irq(struct gpio_chip *chip, int irq)
++extern int event_to_irq(int event);
++
++static int lpc3131_gpio_to_irq(struct gpio_chip *gc, unsigned gpio)
++{
++	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(gc);
++	struct lpc31xx_gpio_chip *chip = container_of(mm_gc, struct lpc31xx_gpio_chip, mmchip);
++
++	return event_to_irq(gpio_evt[chip->index].evt[gpio]);
++}
++
++int lpc3131_reg_to_gpio(unsigned index, unsigned gpio)
+ {
+-	printk("------------- implement lpc3131_gpio_to_irq -------------\n");
+-	return -ENOENT;
++	struct lpc31xx_gpio_chip *chip;
++
++	chip = gpio_evt[index].chip;
++	return chip->mmchip.gc.base + gpio;
+ }
++EXPORT_SYMBOL(lpc3131_reg_to_gpio);
++
+ 
+ static int lpc313x_gpiochip_remove(struct platform_device *ofdev)
+ {
+ 	return -EBUSY;
+ }
+ 
+-static int __devinit lpc313x_simple_gpiochip_probe(struct platform_device *ofdev)
++static int __devinit lpc313x_simple_gpiochip_probe(struct platform_device *pdev)
+ {
+-	struct of_mm_gpio_chip *chip;
++	struct lpc31xx_gpio_chip *chip;
+ 	struct gpio_chip *gc;
++	struct resource *res;
+ 	int ret;
+ 
+ 	chip = kzalloc(sizeof(*chip), GFP_KERNEL);
+ 	if (!chip)
+ 		return -ENOMEM;
+ 
+-	gc = &chip->gc;
++	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
++	chip->index = (res->start >> 6) & 7;
++	gpio_evt[chip->index].chip = chip;
+ 
+-	gc->ngpio            = 32;
++	gc = &chip->mmchip.gc;
++	gc->ngpio            = gpio_evt[chip->index].count;
+ 	gc->direction_input  = lpc3131_gpio_direction_input;
+ 	gc->direction_output = lpc3131_gpio_direction_output;
+ 	gc->get              = lpc3131_gpio_get_value;
+ 	gc->set              = lpc3131_gpio_set_value;
+ 	gc->to_irq	     = lpc3131_gpio_to_irq;
+ 
+-	ret = of_mm_gpiochip_add(ofdev->dev.of_node, chip);
++	ret = of_mm_gpiochip_add(pdev->dev.of_node, &chip->mmchip);
+ 	if (ret)
+ 		return ret;
+ 
+diff --git a/drivers/of/irq.c b/drivers/of/irq.c
+index 9cf0060..bdded99 100644
+--- a/drivers/of/irq.c
++++ b/drivers/of/irq.c
+@@ -336,6 +336,7 @@ EXPORT_SYMBOL_GPL(of_irq_map_one);
+  */
+ int of_irq_to_resource(struct device_node *dev, int index, struct resource *r)
+ {
++	int type;
+ 	int irq = irq_of_parse_and_map(dev, index);
+ 
+ 	/* Only dereference the resource if both the
+diff --git a/drivers/of/platform.c b/drivers/of/platform.c
+index 63b3ec4..1996bb2 100644
+--- a/drivers/of/platform.c
++++ b/drivers/of/platform.c
+@@ -11,6 +11,7 @@
+  *  2 of the License, or (at your option) any later version.
+  *
+  */
++
+ #include <linux/errno.h>
+ #include <linux/module.h>
+ #include <linux/amba/bus.h>
+diff --git a/drivers/usb/host/ehci-lpc.c b/drivers/usb/host/ehci-lpc.c
+index 6044cc9..68e61d4 100644
+--- a/drivers/usb/host/ehci-lpc.c
++++ b/drivers/usb/host/ehci-lpc.c
+@@ -315,6 +315,7 @@ static int lpc_ehci_resume(struct device *dev)
+ static int lpc313x_ehci_suspend(struct platform_device *pdev, pm_message_t state)
+ {
+ #ifdef CONFIG_PM
++#define IRQ_VBUS_OVRC  32  /* Detect VBUS over current - Host mode */
+ 	disable_irq(IRQ_VBUS_OVRC);
+ 	/* Shutoff vbus power */
+ 	lpc313x_vbus_power(0);
+@@ -328,6 +329,10 @@ static int lpc313x_ehci_suspend(struct platform_device *pdev, pm_message_t state
+ 	return 0;
+ }
+ 
++/* Macros to compute the bank based on EVENT_T */
++#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
++#define EVT_usb_atx_pll_lock	0x79
++
+ static int lpc313x_ehci_resume(struct platform_device * pdev)
+ {
+ #ifdef CONFIG_PM
