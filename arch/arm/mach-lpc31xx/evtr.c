@@ -344,7 +344,6 @@ static IRQ_EVENT_MAP_T irq_2_event[] = BOARD_IRQ_EVENT_MAP;
 
 static void evt_mask_irq(struct irq_data *data)
 {
-	printk("mask irq %d\n", data->irq);
 	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
 	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
 
@@ -353,7 +352,6 @@ static void evt_mask_irq(struct irq_data *data)
 
 static void evt_unmask_irq(struct irq_data *data)
 {
-	printk("unmask irq %d\n", data->irq);
 	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
 	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
 
@@ -373,7 +371,6 @@ static int evt_set_type(struct irq_data *data, unsigned int flow_type)
 	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
 	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
 
-	printk("set type %d %x\n", data->irq, flow_type);
 	switch (flow_type) {
 	case IRQ_TYPE_EDGE_RISING:
 		EVRT_APR(bank) |= _BIT(bit_pos);
@@ -431,7 +428,7 @@ static struct irq_chip lpc31xx_evtr_chip = {
 	.irq_unmask = evt_unmask_irq,
 	.irq_set_type = evt_set_type,
 	.irq_set_wake = evt_set_wake,
-	//.irq_startup = evt_startup,
+	.irq_startup = evt_startup,
 };
 
 
@@ -442,7 +439,6 @@ static struct irq_chip lpc31xx_evtr_chip = {
 		if (IRQ_EVTR##n##_START == IRQ_EVTR##n##_END) { \
 			/* translate IRQ number */ \
 			irq = IRQ_EVTR##n##_START; \
-			printk("handle a irq %d\n", irq); \
 			generic_handle_irq(irq); \
 		} else { \
 			for (irq = IRQ_EVTR##n##_START; irq <= IRQ_EVTR##n##_END; irq++) {  \
@@ -452,7 +448,6 @@ static struct irq_chip lpc31xx_evtr_chip = {
 				status = EVRT_OUT_PEND(n, bank); \
 				if (status & _BIT(bit_pos)) { \
 					generic_handle_irq(irq); \
-					printk("handle b irq %d\n", irq); \
 				} \
 			} \
 		} \

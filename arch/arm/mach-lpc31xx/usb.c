@@ -255,13 +255,14 @@ int __init usbotg_init(void)
 		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_VBUS_OVRC;
 #endif
 
+#if 0
 		/* request IRQ to handle VBUS power event */
 		retval = request_irq( lpc313x_usb_brd.vbus_ovrc_irq, lpc313x_vbus_ovrc_irq, 
 			IRQF_DISABLED, "VBUSOVR", 
 			&lpc313x_usb_brd);
-
 		if ( 0 != retval )
 			printk(KERN_INFO "Unable to register IRQ_VBUS_OVRC handler\n");
+#endif
 		
 #else
 		printk(KERN_ERR "Unable to register USB host. Check USB_ID jumper!!!!!\n");
