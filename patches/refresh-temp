@@ -1,0 +1,32 @@
+Bottom: c4b15ab0dd3b2680d326947fa5ed0565fa73783e
+Top:    c235d44f21f59e7a0a916e44538b5da031fc8cad
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-15 00:36:47 -0400
+
+Refresh of irq
+
+---
+
+diff --git a/drivers/net/ethernet/davicom/dm9000.c b/drivers/net/ethernet/davicom/dm9000.c
+index 698ce3d..77edf3f 100644
+--- a/drivers/net/ethernet/davicom/dm9000.c
++++ b/drivers/net/ethernet/davicom/dm9000.c
+@@ -1395,6 +1395,7 @@ of_gpio_to_irq(struct platform_device *pdev, int offset)
+ 
+ 	gpio = of_get_gpio_flags(pdev->dev.of_node, offset, &flags);
+ 	if (!gpio_is_valid(gpio)) {
++		dev_err(&pdev->dev, "invalid gpio #%d: %d\n", offset, gpio);
+ 		return gpio;
+ 	}
+ 	ret = gpio_request(gpio, dev_name(&pdev->dev));
+@@ -1458,10 +1459,8 @@ dm9000_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	irq_res  = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+-	printk("dm9000 irq_res %p\n", irq_res);
+ 	if (irq_res) {
+ 		ndev->irq	= irq_res->start;
+-printk("dm9000 irq %d\n", ndev->irq);
+ 		db->irq_flags	= irq_res->flags;
+ 	} else {
+ #ifdef CONFIG_OF
