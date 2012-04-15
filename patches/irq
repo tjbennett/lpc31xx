@@ -1,5 +1,5 @@
 Bottom: 2edbc737696fecf1a64ea208db16aaba57d10551
-Top:    c4b15ab0dd3b2680d326947fa5ed0565fa73783e
+Top:    c235d44f21f59e7a0a916e44538b5da031fc8cad
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-14 11:58:54 -0400
 
@@ -1656,29 +1656,6 @@ index 19f5e42..a5ab721 100644
  	if (ret)
  		return ret;
  
-diff --git a/drivers/net/ethernet/davicom/dm9000.c b/drivers/net/ethernet/davicom/dm9000.c
-index 77edf3f..698ce3d 100644
---- a/drivers/net/ethernet/davicom/dm9000.c
-+++ b/drivers/net/ethernet/davicom/dm9000.c
-@@ -1395,7 +1395,6 @@ of_gpio_to_irq(struct platform_device *pdev, int offset)
- 
- 	gpio = of_get_gpio_flags(pdev->dev.of_node, offset, &flags);
- 	if (!gpio_is_valid(gpio)) {
--		dev_err(&pdev->dev, "invalid gpio #%d: %d\n", offset, gpio);
- 		return gpio;
- 	}
- 	ret = gpio_request(gpio, dev_name(&pdev->dev));
-@@ -1459,8 +1458,10 @@ dm9000_probe(struct platform_device *pdev)
- 	}
- 
- 	irq_res  = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-+	printk("dm9000 irq_res %p\n", irq_res);
- 	if (irq_res) {
- 		ndev->irq	= irq_res->start;
-+printk("dm9000 irq %d\n", ndev->irq);
- 		db->irq_flags	= irq_res->flags;
- 	} else {
- #ifdef CONFIG_OF
 diff --git a/drivers/of/platform.c b/drivers/of/platform.c
 index 63b3ec4..2d9d20b 100644
 --- a/drivers/of/platform.c
