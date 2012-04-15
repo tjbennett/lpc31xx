@@ -427,6 +427,7 @@
 #define MPMC_SDRAMC_RASCAS_RAS2        _SBF(0,2)
 #define MPMC_SDRAMC_RASCAS_RAS3        _SBF(0,3)
 
+#if 0
 /***********************************************************************
  * SD/MMC MCI register definitions
  **********************************************************************/
@@ -520,7 +521,7 @@
 /* Status register defines */
 #define SDMMC_GET_FCNT(x)       (((x)>>17) & 0x1FF)
 #define SDMMC_FIFO_SZ           32
-
+#endif
 
 /***********************************************************************
  * NAND Controller register definitions
