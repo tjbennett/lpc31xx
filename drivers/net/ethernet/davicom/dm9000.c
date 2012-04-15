@@ -100,7 +100,7 @@ typedef struct board_info {
 
 	void __iomem	*io_addr;	/* Register I/O base address */
 	void __iomem	*io_data;	/* Data I/O address */
-	unsigned long	 irq_flags;
+	u16		 irq;		/* IRQ */
 
 	u16		tx_pkt_cnt;
 	u16		queue_pkt_len;
@@ -127,6 +127,7 @@ typedef struct board_info {
 	struct resource *data_res;
 	struct resource	*addr_req;   /* resources requested */
 	struct resource *data_req;
+	struct resource *irq_res;
 
 	int		 irq_wake;
 
@@ -1170,7 +1171,7 @@ static int
 dm9000_open(struct net_device *dev)
 {
 	board_info_t *db = netdev_priv(dev);
-	unsigned long irqflags = db->irq_flags & IRQF_TRIGGER_MASK;
+	unsigned long irqflags = db->irq_res->flags & IRQF_TRIGGER_MASK;
 
 	if (netif_msg_ifup(db))
 		dev_dbg(db->dev, "enabling %s\n", dev->name);
@@ -1395,7 +1396,6 @@ dm9000_probe(struct platform_device *pdev)
 	struct dm9000_plat_data *pdata = pdev->dev.platform_data;
 	struct board_info *db;	/* Point a board information structure */
 	struct net_device *ndev;
-	struct resource *irq_res;
 	const unsigned char *mac_src;
 	int ret = 0;
 	int iosize;
@@ -1426,19 +1426,14 @@ dm9000_probe(struct platform_device *pdev)
 
 	db->addr_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	db->data_res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (db->addr_res == NULL || db->data_res == NULL ) {
+	db->irq_res  = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+
+	if (db->addr_res == NULL || db->data_res == NULL ||
+	    db->irq_res == NULL) {
 		dev_err(db->dev, "insufficient resources\n");
 		ret = -ENOENT;
 		goto out;
 	}
-
-	irq_res  = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (!irq_res) {
-		dev_err(db->dev, "missing irq\n", ret);
-		goto out;
-	}
-	ndev->irq	= irq_res->start;
-	db->irq_flags	= irq_res->flags;
 
 	db->irq_wake = platform_get_irq(pdev, 1);
 	if (db->irq_wake >= 0) {
@@ -1503,6 +1498,7 @@ pdata->flags		= DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM | DM9000_PLATF_S
 
 	/* fill in parameters for net-dev structure */
 	ndev->base_addr = (unsigned long)db->io_addr;
+	ndev->irq	= db->irq_res->start;
 
 	/* ensure at least we have a default set of IO routines */
 	dm9000_set_io(db, iosize);
