@@ -1,0 +1,332 @@
+Bottom: b1a5c52cd6307d0c0dfcb5eadba5f9c421bcb21d
+Top:    c4b15ab0dd3b2680d326947fa5ed0565fa73783e
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-15 00:35:20 -0400
+
+Refresh of irq
+
+---
+
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+index 12dfd19..3413798 100644
+--- a/arch/arm/boot/dts/ea3131.dts
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -103,6 +103,8 @@
+ 		dm9000@20020000 {
+ 			compatible = "davicom,dm9000";
+ 			reg = <0x20020000 0x100 0x20030000 0x100>;
++			interrupt-parent = <&evtr>;
++			interrupts = <4>;
+ 			gpios = <
+ 				&gpio_ebi_i2stx_0 2 0 /* main irq, map gpio to irq */
+ 				0  /* WOL irq, map gpio to irq */
+diff --git a/arch/arm/boot/dts/lpc3131.dtsi b/arch/arm/boot/dts/lpc3131.dtsi
+index 6fd9b64..c487022 100644
+--- a/arch/arm/boot/dts/lpc3131.dtsi
++++ b/arch/arm/boot/dts/lpc3131.dtsi
+@@ -46,7 +46,8 @@
+ 	wdt@13002400 {
+ 		compatible = "nxp,lpc31xx-wdt";
+ 		reg = <0x13002400 0x400>;
+-		interrupts = <30>;
++		interrupt-parent = <&evtr>;
++		interrupts = <0>;
+ 	};
+ 	sys@13002800 {
+ 		compatible = "nxp,lpc31xx-sys";
+diff --git a/arch/arm/mach-lpc31xx/evtr.c b/arch/arm/mach-lpc31xx/evtr.c
+index 25875a5..d1f84f8 100644
+--- a/arch/arm/mach-lpc31xx/evtr.c
++++ b/arch/arm/mach-lpc31xx/evtr.c
+@@ -25,7 +25,10 @@
+ #include <linux/list.h>
+ #include <linux/timer.h>
+ #include <linux/of_irq.h>
++#include <linux/module.h>
+ #include <linux/irqdomain.h>
++#include <linux/of_platform.h>
++#include <linux/slab.h>
+ 
+ #include <mach/hardware.h>
+ #include <asm/irq.h>
+@@ -255,7 +258,7 @@ typedef struct {
+ # define IRQ_CS8900_ETH_INT  IRQ_BOARD_START	/* Ethernet chip */
+ # define IRQ_SDMMC_CD0       (IRQ_BOARD_START + 1)	/* SD card detect */
+ # define IRQ_SDMMC_CD1       (IRQ_BOARD_START + 2)	/* SD card detect */
+-# define NR_IRQ_BOARD        3
++# define NR_IRQ_EBOARD        3
+ 
+ /* now define board irq to event pin map */
+ #define BOARD_IRQ_EVENT_MAP	{ \
+@@ -281,7 +284,7 @@ typedef struct {
+ # define IRQ_SDMMC_CD         (IRQ_BOARD_START + 1)	/* SD card detect */
+ # define IRQ_EA_VBUS_OVRC     (IRQ_BOARD_START + 2)	/* Over current indicator */
+ # define IRQ_PENDOWN	      (IRQ_BOARD_START + 3)	/* Pendown from touch screen */
+-# define NR_IRQ_BOARD         4
++# define NR_IRQ_EBOARD        4
+ 
+ /* now define board irq to event pin map */
+ #define BOARD_IRQ_EVENT_MAP	{ \
+@@ -304,7 +307,7 @@ typedef struct {
+ 
+ #elif defined (CONFIG_MACH_VAL3154)
+ # define IRQ_SDMMC_CD	 IRQ_BOARD_START 	/* SD card detect */
+-# define NR_IRQ_BOARD	 1
++# define NR_IRQ_EBOARD	 1
+ 
+ /* now define board irq to event pin map */
+ #define BOARD_IRQ_EVENT_MAP	{ \
+@@ -323,7 +326,7 @@ typedef struct {
+ #define IRQ_EVTR3_END          0
+ 
+ #else
+-# define NR_IRQ_BOARD          0
++# define NR_IRQ_EBOARD          0
+ #define IRQ_EVTR0_START        0
+ #define IRQ_EVTR0_END          0
+ #define IRQ_EVTR1_START        0
+@@ -420,6 +423,7 @@ static struct irq_chip lpc31xx_evtr_chip = {
+ };
+ 
+ 
++
+ #define ROUTER_HDLR(n) \
+ 	static void router##n##_handler (unsigned int irq, struct irq_desc *desc) { \
+ 		u32 status, bank, bit_pos; \
+@@ -456,11 +460,6 @@ ROUTER_HDLR(2)
+ ROUTER_HDLR(3)
+ #endif /* IRQ_EVTR3_END */
+ 
+-static const struct of_device_id intc_of_match[] __initconst = {
+-	{ .compatible = "nxp,lpc31xx-evtr", },
+-	{},
+-};
+-
+ void __init lpc31xx_init_evtr(void)
+ {
+ 	unsigned int irq;
+@@ -483,7 +482,7 @@ void __init lpc31xx_init_evtr(void)
+ 	}
+ 
+ 	/* Now configure external/board interrupts using event router */
+-	for (irq = IRQ_EVT_START; irq < NR_IRQS; irq++) {
++	for (irq = IRQ_EVT_START; irq <= IRQ_EVT_START + NR_IRQ_CHIP_EVT + NR_IRQ_EBOARD; irq++) {
+ 		/* compute bank & bit position for the event_pin */
+ 		bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin);
+ 		bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F;
+@@ -537,6 +536,7 @@ void __init lpc31xx_init_evtr(void)
+ 			EVRT_OUT_MASK_SET(3, bank) = _BIT(bit_pos);
+ 			v = 3;
+ 		} else {
++			v = -1;
+ 			printk("Invalid Event router setup.\r\n");
+ 		}
+ 		printk("irq=%d Event=0x%02x bank:%d bit:%02d type:%d vector %d\n", irq,
+@@ -571,4 +571,85 @@ void __init lpc31xx_init_evtr(void)
+ #endif
+ }
+ 
++struct event {
++	int bit;
++	int group;
++	int edge;
++};
++
++static struct event *events;
++static int num_events;
++
++int event_to_irq(int event)
++{
++	int i;
++	for (i = 0; i < num_events; i++) {
++		if (events[i].bit == event) {
++			return i + 30; /* fixme */
++		}
++	}
++	return -EINVAL;
++}
++EXPORT_SYMBOL(event_to_irq);
++
++static const struct of_device_id evtr_of_match[] __initconst = {
++	{ .compatible = "nxp,lpc31xx-evtr", },
++	{},
++};
++
++static int __devinit lpc313x_evtr_probe(struct platform_device *pdev)
++{
++	const __be32 *ip;
++	struct device_node *np = pdev->dev.of_node;
++	int cells, length, i;
++
++	printk("###### Event router probe ######\n");
++
++	irq_domain_generate_simple(evtr_of_match, 0x13000000, 30);
++
++	ip = of_get_property(np, "#event-cells", NULL);
++	if (!ip)
++		return -EINVAL;
++	cells = be32_to_cpup(ip);
++	if (cells != 3)
++		return -EINVAL;
++
++	ip = of_get_property(np, "events", &length);
++	num_events = length / (sizeof(uint32_t) * cells);
++	events = kzalloc(sizeof(*events) * num_events, GFP_KERNEL);
++	for (i = 0; i < num_events; i++) {
++		events[i].group = be32_to_cpup(ip++);
++		events[i].bit = be32_to_cpup(ip++);
++		events[i].edge = be32_to_cpup(ip++);
++		printk("group %d bit %02x edge %d\n", events[i].group, events[i].bit, events[i].edge);
++	}
++	return 0;
++}
++
++static int lpc313x_evtr_remove(struct platform_device *pdev)
++{
++	return -EBUSY;
++}
++
++static struct platform_driver lpc313x_evtr_driver = {
++	.driver = {
++		.name = "lpc31xx-evtr",
++		.owner = THIS_MODULE,
++		.of_match_table = evtr_of_match,
++	},
++	.probe = lpc313x_evtr_probe,
++	.remove = lpc313x_evtr_remove,
++};
++
++static __init int lpc313x_evtr_init(void)
++{
++	if (platform_driver_register(&lpc313x_evtr_driver))
++		printk(KERN_ERR "Unable to register Event Router driver\n");
++
++	return 0;
++}
++
++/* Make sure we get initialised before anyone else tries to use us */
++core_initcall(lpc313x_evtr_init);
++
+ 
+diff --git a/arch/arm/mach-lpc31xx/irq.c b/arch/arm/mach-lpc31xx/irq.c
+index b184aed..4d74141 100644
+--- a/arch/arm/mach-lpc31xx/irq.c
++++ b/arch/arm/mach-lpc31xx/irq.c
+@@ -33,6 +33,10 @@
+ #include <mach/irqs.h>
+ #include <mach/clock.h>
+ 
++/* Macros to compute the bank based on EVENT_T */
++#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
++#define EVT_arm926_nirq		0x6C
++
+ extern void __init lpc31xx_init_evtr(void);
+ 
+ static void intc_mask_irq(struct irq_data *data)
+diff --git a/arch/arm/mach-lpc31xx/usb.c b/arch/arm/mach-lpc31xx/usb.c
+index 9c1c8b0..4439b03 100644
+--- a/arch/arm/mach-lpc31xx/usb.c
++++ b/arch/arm/mach-lpc31xx/usb.c
+@@ -177,6 +177,9 @@ static void lpc313x_vbusen_timer(unsigned long data)
+ 	enable_irq(brd->vbus_ovrc_irq);
+ }
+ 
++/* Macros to compute the bank based on EVENT_T */
++#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
++#define EVT_usb_atx_pll_lock	0x79
+ 
+ /*-------------------------------------------------------------------------*/
+ int __init usbotg_init(void)
+@@ -245,6 +248,7 @@ int __init usbotg_init(void)
+ 			printk(KERN_INFO "Can't acquire vbus-over GPIO\n");
+ 		gpio_direction_input(over);
+ #endif
++#define IRQ_EA_VBUS_OVRC  37  /* Detect VBUS over current - Host mode */
+ 		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_EA_VBUS_OVRC;
+ 
+ #else
+diff --git a/drivers/gpio/gpio-lpc31xx.c b/drivers/gpio/gpio-lpc31xx.c
+index 716cc32..a5ab721 100644
+--- a/drivers/gpio/gpio-lpc31xx.c
++++ b/drivers/gpio/gpio-lpc31xx.c
+@@ -155,14 +155,19 @@ static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int va
+ 		*gpc(base, GPIO_M0_RESET) = pin;
+ }
+ 
++extern int event_to_irq(int event);
++
+ static int lpc3131_gpio_to_irq(struct gpio_chip *gc, unsigned gpio)
+ {
+ 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(gc);
+ 	struct lpc31xx_gpio_chip *chip = container_of(mm_gc, struct lpc31xx_gpio_chip, mmchip);
++	int irq;
+ 
+ 	printk("------------- implement lpc3131_gpio_to_irq -------------\n");
+-	printk("index %d gpio %d event %d", chip->index, gpio, gpio_evt[chip->index].evt[gpio]);
+-	return -ENOENT;
++	printk("index %d gpio %d event %02x\n", chip->index, gpio, gpio_evt[chip->index].evt[gpio]);
++	irq = event_to_irq(gpio_evt[chip->index].evt[gpio]);
++	printk("irq %d\n", irq);
++	return irq;
+ }
+ 
+ static int lpc313x_gpiochip_remove(struct platform_device *ofdev)
+diff --git a/drivers/net/ethernet/davicom/dm9000.c b/drivers/net/ethernet/davicom/dm9000.c
+index 77edf3f..698ce3d 100644
+--- a/drivers/net/ethernet/davicom/dm9000.c
++++ b/drivers/net/ethernet/davicom/dm9000.c
+@@ -1395,7 +1395,6 @@ of_gpio_to_irq(struct platform_device *pdev, int offset)
+ 
+ 	gpio = of_get_gpio_flags(pdev->dev.of_node, offset, &flags);
+ 	if (!gpio_is_valid(gpio)) {
+-		dev_err(&pdev->dev, "invalid gpio #%d: %d\n", offset, gpio);
+ 		return gpio;
+ 	}
+ 	ret = gpio_request(gpio, dev_name(&pdev->dev));
+@@ -1459,8 +1458,10 @@ dm9000_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	irq_res  = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
++	printk("dm9000 irq_res %p\n", irq_res);
+ 	if (irq_res) {
+ 		ndev->irq	= irq_res->start;
++printk("dm9000 irq %d\n", ndev->irq);
+ 		db->irq_flags	= irq_res->flags;
+ 	} else {
+ #ifdef CONFIG_OF
+diff --git a/drivers/of/platform.c b/drivers/of/platform.c
+index 63b3ec4..2d9d20b 100644
+--- a/drivers/of/platform.c
++++ b/drivers/of/platform.c
+@@ -11,6 +11,8 @@
+  *  2 of the License, or (at your option) any later version.
+  *
+  */
++#define DEBUG
++
+ #include <linux/errno.h>
+ #include <linux/module.h>
+ #include <linux/amba/bus.h>
+diff --git a/drivers/usb/host/ehci-lpc.c b/drivers/usb/host/ehci-lpc.c
+index 6044cc9..68e61d4 100644
+--- a/drivers/usb/host/ehci-lpc.c
++++ b/drivers/usb/host/ehci-lpc.c
+@@ -315,6 +315,7 @@ static int lpc_ehci_resume(struct device *dev)
+ static int lpc313x_ehci_suspend(struct platform_device *pdev, pm_message_t state)
+ {
+ #ifdef CONFIG_PM
++#define IRQ_VBUS_OVRC  32  /* Detect VBUS over current - Host mode */
+ 	disable_irq(IRQ_VBUS_OVRC);
+ 	/* Shutoff vbus power */
+ 	lpc313x_vbus_power(0);
+@@ -328,6 +329,10 @@ static int lpc313x_ehci_suspend(struct platform_device *pdev, pm_message_t state
+ 	return 0;
+ }
+ 
++/* Macros to compute the bank based on EVENT_T */
++#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
++#define EVT_usb_atx_pll_lock	0x79
++
+ static int lpc313x_ehci_resume(struct platform_device * pdev)
+ {
+ #ifdef CONFIG_PM
