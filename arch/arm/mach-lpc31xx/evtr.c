@@ -25,7 +25,10 @@
 #include <linux/list.h>
 #include <linux/timer.h>
 #include <linux/of_irq.h>
+#include <linux/module.h>
 #include <linux/irqdomain.h>
+#include <linux/of_platform.h>
+#include <linux/slab.h>
 
 #include <mach/hardware.h>
 #include <asm/irq.h>
@@ -255,7 +258,7 @@ typedef struct {
 # define IRQ_CS8900_ETH_INT  IRQ_BOARD_START	/* Ethernet chip */
 # define IRQ_SDMMC_CD0       (IRQ_BOARD_START + 1)	/* SD card detect */
 # define IRQ_SDMMC_CD1       (IRQ_BOARD_START + 2)	/* SD card detect */
-# define NR_IRQ_BOARD        3
+# define NR_IRQ_EBOARD        3
 
 /* now define board irq to event pin map */
 #define BOARD_IRQ_EVENT_MAP	{ \
@@ -281,7 +284,7 @@ typedef struct {
 # define IRQ_SDMMC_CD         (IRQ_BOARD_START + 1)	/* SD card detect */
 # define IRQ_EA_VBUS_OVRC     (IRQ_BOARD_START + 2)	/* Over current indicator */
 # define IRQ_PENDOWN	      (IRQ_BOARD_START + 3)	/* Pendown from touch screen */
-# define NR_IRQ_BOARD         4
+# define NR_IRQ_EBOARD        4
 
 /* now define board irq to event pin map */
 #define BOARD_IRQ_EVENT_MAP	{ \
@@ -304,7 +307,7 @@ typedef struct {
 
 #elif defined (CONFIG_MACH_VAL3154)
 # define IRQ_SDMMC_CD	 IRQ_BOARD_START 	/* SD card detect */
-# define NR_IRQ_BOARD	 1
+# define NR_IRQ_EBOARD	 1
 
 /* now define board irq to event pin map */
 #define BOARD_IRQ_EVENT_MAP	{ \
@@ -323,7 +326,7 @@ typedef struct {
 #define IRQ_EVTR3_END          0
 
 #else
-# define NR_IRQ_BOARD          0
+# define NR_IRQ_EBOARD          0
 #define IRQ_EVTR0_START        0
 #define IRQ_EVTR0_END          0
 #define IRQ_EVTR1_START        0
@@ -420,6 +423,7 @@ static struct irq_chip lpc31xx_evtr_chip = {
 };
 
 
+
 #define ROUTER_HDLR(n) \
 	static void router##n##_handler (unsigned int irq, struct irq_desc *desc) { \
 		u32 status, bank, bit_pos; \
@@ -456,11 +460,6 @@ ROUTER_HDLR(2)
 ROUTER_HDLR(3)
 #endif /* IRQ_EVTR3_END */
 
-static const struct of_device_id intc_of_match[] __initconst = {
-	{ .compatible = "nxp,lpc31xx-evtr", },
-	{},
-};
-
 void __init lpc31xx_init_evtr(void)
 {
 	unsigned int irq;
@@ -483,7 +482,7 @@ void __init lpc31xx_init_evtr(void)
 	}
 
 	/* Now configure external/board interrupts using event router */
-	for (irq = IRQ_EVT_START; irq < NR_IRQS; irq++) {
+	for (irq = IRQ_EVT_START; irq <= IRQ_EVT_START + NR_IRQ_CHIP_EVT + NR_IRQ_EBOARD; irq++) {
 		/* compute bank & bit position for the event_pin */
 		bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin);
 		bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F;
@@ -537,6 +536,7 @@ void __init lpc31xx_init_evtr(void)
 			EVRT_OUT_MASK_SET(3, bank) = _BIT(bit_pos);
 			v = 3;
 		} else {
+			v = -1;
 			printk("Invalid Event router setup.\r\n");
 		}
 		printk("irq=%d Event=0x%02x bank:%d bit:%02d type:%d vector %d\n", irq,
@@ -570,5 +570,86 @@ void __init lpc31xx_init_evtr(void)
 	irq_set_chained_handler (IRQ_EVT_ROUTER3, router3_handler);
 #endif
 }
+
+struct event {
+	int bit;
+	int group;
+	int edge;
+};
+
+static struct event *events;
+static int num_events;
+
+int event_to_irq(int event)
+{
+	int i;
+	for (i = 0; i < num_events; i++) {
+		if (events[i].bit == event) {
+			return i + 30; /* fixme */
+		}
+	}
+	return -EINVAL;
+}
+EXPORT_SYMBOL(event_to_irq);
+
+static const struct of_device_id evtr_of_match[] __initconst = {
+	{ .compatible = "nxp,lpc31xx-evtr", },
+	{},
+};
+
+static int __devinit lpc313x_evtr_probe(struct platform_device *pdev)
+{
+	const __be32 *ip;
+	struct device_node *np = pdev->dev.of_node;
+	int cells, length, i;
+
+	printk("###### Event router probe ######\n");
+
+	irq_domain_generate_simple(evtr_of_match, 0x13000000, 30);
+
+	ip = of_get_property(np, "#event-cells", NULL);
+	if (!ip)
+		return -EINVAL;
+	cells = be32_to_cpup(ip);
+	if (cells != 3)
+		return -EINVAL;
+
+	ip = of_get_property(np, "events", &length);
+	num_events = length / (sizeof(uint32_t) * cells);
+	events = kzalloc(sizeof(*events) * num_events, GFP_KERNEL);
+	for (i = 0; i < num_events; i++) {
+		events[i].group = be32_to_cpup(ip++);
+		events[i].bit = be32_to_cpup(ip++);
+		events[i].edge = be32_to_cpup(ip++);
+		printk("group %d bit %02x edge %d\n", events[i].group, events[i].bit, events[i].edge);
+	}
+	return 0;
+}
+
+static int lpc313x_evtr_remove(struct platform_device *pdev)
+{
+	return -EBUSY;
+}
+
+static struct platform_driver lpc313x_evtr_driver = {
+	.driver = {
+		.name = "lpc31xx-evtr",
+		.owner = THIS_MODULE,
+		.of_match_table = evtr_of_match,
+	},
+	.probe = lpc313x_evtr_probe,
+	.remove = lpc313x_evtr_remove,
+};
+
+static __init int lpc313x_evtr_init(void)
+{
+	if (platform_driver_register(&lpc313x_evtr_driver))
+		printk(KERN_ERR "Unable to register Event Router driver\n");
+
+	return 0;
+}
+
+/* Make sure we get initialised before anyone else tries to use us */
+core_initcall(lpc313x_evtr_init);
 
 

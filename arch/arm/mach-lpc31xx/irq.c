@@ -33,6 +33,10 @@
 #include <mach/irqs.h>
 #include <mach/clock.h>
 
+/* Macros to compute the bank based on EVENT_T */
+#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
+#define EVT_arm926_nirq		0x6C
+
 extern void __init lpc31xx_init_evtr(void);
 
 static void intc_mask_irq(struct irq_data *data)

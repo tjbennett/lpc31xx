@@ -155,14 +155,19 @@ static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int va
 		*gpc(base, GPIO_M0_RESET) = pin;
 }
 
+extern int event_to_irq(int event);
+
 static int lpc3131_gpio_to_irq(struct gpio_chip *gc, unsigned gpio)
 {
 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(gc);
 	struct lpc31xx_gpio_chip *chip = container_of(mm_gc, struct lpc31xx_gpio_chip, mmchip);
+	int irq;
 
 	printk("------------- implement lpc3131_gpio_to_irq -------------\n");
-	printk("index %d gpio %d event %d", chip->index, gpio, gpio_evt[chip->index].evt[gpio]);
-	return -ENOENT;
+	printk("index %d gpio %d event %02x\n", chip->index, gpio, gpio_evt[chip->index].evt[gpio]);
+	irq = event_to_irq(gpio_evt[chip->index].evt[gpio]);
+	printk("irq %d\n", irq);
+	return irq;
 }
 
 static int lpc313x_gpiochip_remove(struct platform_device *ofdev)
