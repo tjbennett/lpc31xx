@@ -20,6 +20,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+
 #include <linux/blkdev.h>
 #include <linux/clk.h>
 #include <linux/debugfs.h>
@@ -40,6 +41,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
+#include <linux/of_irq.h>
 #include <linux/gpio.h>
 
 #include "lpc31xx_mmc.h"
@@ -616,8 +618,7 @@ static void lpc313x_mci_set_power(struct lpc313x_mci_slot *slot, int enable)
 	 * jumper.
 	 */
 	if (gpio_is_valid(slot->gpio_power)) {
-		printk("lpc313x_mci_set_power %d\n", slot->gpio_power);
-		gpio_set_value(slot->gpio_power, enable);
+		gpio_set_value(slot->gpio_power, !enable);
 	}
 }
 
@@ -767,7 +768,7 @@ static int lpc313x_mci_get_cd(struct lpc313x_mci_slot *slot)
 
 	if (gpio_is_valid(slot->gpio_cd)) {
 		present = !gpio_get_value(slot->gpio_cd);
-		dev_vdbg(&slot->mmc->class_dev, "card is %spresent\n", present ? "" : "not ");
+		dev_dbg(&slot->mmc->class_dev, "card is %spresent\n", present ? "" : "not ");
 	}
 	return present;
 }
@@ -1270,9 +1271,9 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 		return;
 
 	enable_irq(slot->irq);
-	present = !gpio_get_value(slot->gpio_cd);
+	present = lpc313x_mci_get_cd(slot);
 	present_old = test_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
-	dev_vdbg(&slot->mmc->class_dev, "detect change: %d (was %d)\n",
+	dev_dbg(&slot->mmc->class_dev, "detect change: %d (was %d)\n",
 			present, present_old);
 
 	if (present != present_old) {
@@ -1282,9 +1283,13 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 
 		spin_lock(&host->lock);
 
-		/* Power up slot */
 		lpc313x_mci_set_power(slot, present);
-		set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+		if (present) {
+			set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+			set_bit(LPC313x_MMC_CARD_NEED_INIT, &slot->flags);
+		} else {
+			clear_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+		}
 
 
 		/* Clean up queue if present */
@@ -1346,10 +1351,11 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 
 static irqreturn_t lpc313x_mci_detect_interrupt(int irq, void *dev_id)
 {
+	int level;
 	struct lpc313x_mci_slot	*slot = dev_id;
 
-	/* select the opposite level senstivity */
-	int level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_LOW : IRQ_TYPE_LEVEL_HIGH;
+	/* select the opposite level sensitivity */
+	level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_HIGH : IRQ_TYPE_LEVEL_LOW;
 	irq_set_irq_type(slot->irq, level);
 
 	/*
@@ -1390,14 +1396,20 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 		gpio_direction_input(slot->gpio_cd);
 	}
 	slot->gpio_wp = of_get_named_gpio_flags(np, "gpios", 1, &flags);
-	if (gpio_is_valid(slot->gpio_wp))
-		gpio_request(slot->gpio_cd, "mmc wp");
+	if (gpio_is_valid(slot->gpio_wp)) {
+		gpio_request(slot->gpio_wp, "mmc wp");
+		gpio_direction_input(slot->gpio_wp);
+	}
 	slot->gpio_power = of_get_named_gpio_flags(np, "gpios", 2, &flags);
-	if (gpio_is_valid(slot->gpio_power))
-		gpio_request(slot->gpio_cd, "mmc power");
+	if (gpio_is_valid(slot->gpio_power)) {
+		gpio_request(slot->gpio_power, "mmc power");
+		gpio_direction_output(slot->gpio_power, 1);
+	}
 	slot->gpio_select = of_get_named_gpio_flags(np, "gpios", 3, &flags);
-	if (gpio_is_valid(slot->gpio_select))
+	if (gpio_is_valid(slot->gpio_select)) {
 		gpio_request(slot->gpio_select, "mmc select");
+		gpio_direction_input(slot->gpio_select);
+	}
 
 	mmc->ops = &lpc313x_mci_ops;
 	mmc->f_min = DIV_ROUND_UP(host->bus_hz, 510);
@@ -1425,9 +1437,6 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 		mmc->ocr_avail |= mask;
 	}
 
-	/* Start with slot power disabled, will be enabled when card is detected */
-	lpc313x_mci_set_power(slot, 0);
-
 	mmc->caps = MMC_CAP_SDIO_IRQ;
 	width = of_get_property(np, "width", NULL);
 	if (*width == 4)
@@ -1440,10 +1449,29 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 	mmc->max_req_size = mmc->max_blk_size * mmc->max_blk_count;
 	mmc->max_seg_size = mmc->max_req_size;
 
-	slot->irq = of_get_property(np, "interrupts", NULL);
-	/* select the opposite level sensitivity */
-	level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_LOW : IRQ_TYPE_LEVEL_HIGH;
+	/* Create card detect handler thread for the slot */
+	setup_timer(&slot->detect_timer, lpc313x_mci_detect_change,
+			(unsigned long)slot);
 
+	slot->irq = irq_of_parse_and_map(np, 0);
+	/* select the opposite level sensitivity */
+	level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_HIGH : IRQ_TYPE_LEVEL_LOW;
+
+	if(lpc313x_mci_get_cd(slot)) {
+		lpc313x_mci_set_power(slot, 1);
+		set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+		set_bit(LPC313x_MMC_CARD_NEED_INIT, &slot->flags);
+	} else {
+		lpc313x_mci_set_power(slot, 0);
+		clear_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+	}
+
+	host->slot[host->slot_count++] = slot;
+	mmc_add_host(mmc);
+
+#if defined (CONFIG_DEBUG_FS)
+	lpc313x_mci_init_debugfs(slot);
+#endif
 	/* set card detect irq info */
 	irq_set_irq_type(slot->irq, level);
 	ret = request_irq(slot->irq,
@@ -1453,23 +1481,6 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 			slot);
 	/****temporary for PM testing */
 	enable_irq_wake(slot->irq);
-
-	/* Assume card is present initially */
-	if(!gpio_get_value(slot->gpio_cd))
-		set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
-	else
-		clear_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
-
-	host->slot[host->slot_count++] = slot;
-	mmc_add_host(mmc);
-
-#if defined (CONFIG_DEBUG_FS)
-	lpc313x_mci_init_debugfs(slot);
-#endif
-
-	/* Create card detect handler thread for the slot */
-	setup_timer(&slot->detect_timer, lpc313x_mci_detect_change,
-			(unsigned long)slot);
 
 	return 0;
 err_ocr:
@@ -1612,6 +1623,11 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, host);
 
+	// enable interrupt for command done, data over, data empty, receive ready and error such as transmit, receive timeout, crc error
+	mci_writel(host, SDMMC_RINTSTS, 0xFFFFFFFF);
+	mci_writel(host, SDMMC_INTMASK,SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER | SDMMC_INT_TXDR | SDMMC_INT_RXDR | LPC313x_MCI_ERROR_FLAGS);
+	mci_writel(host, SDMMC_CTRL,SDMMC_CTRL_INT_ENABLE); // enable mci interrupt
+
 	for_each_child_of_node(np, node) {
 		ret = lpc313x_mci_init_slot(host, node);
 		if (ret) {
@@ -1619,12 +1635,6 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 			goto err_init_slot;
 		}
 	}
-
-	// enable interrupt for command done, data over, data empty, receive ready and error such as transmit, receive timeout, crc error
-	mci_writel(host, SDMMC_RINTSTS, 0xFFFFFFFF);
-	mci_writel(host, SDMMC_INTMASK,SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER | SDMMC_INT_TXDR | SDMMC_INT_RXDR | LPC313x_MCI_ERROR_FLAGS);
-	mci_writel(host, SDMMC_CTRL,SDMMC_CTRL_INT_ENABLE); // enable mci interrupt
-
 
 	dev_info(&pdev->dev, "LPC313x MMC controller at irq %d\n", irq);
 
