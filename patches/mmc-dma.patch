@@ -1,5 +1,5 @@
 Bottom: 274820e36e012ba511c16096bc824df4c663d1ed
-Top:    9bd3c3f5df66b9bffcdf10a227ece36912d6dc69
+Top:    8124068695760b7539d8c18ddaf41096b79e66a7
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-15 19:35:45 -0400
 
@@ -43,7 +43,7 @@ index 0ec045a..a0d82c6 100644
  /***********************************************************************
   * NAND Controller register definitions
 diff --git a/drivers/mmc/host/lpc31xx_mmc.c b/drivers/mmc/host/lpc31xx_mmc.c
-index e4190c0..adefd33 100644
+index e4190c0..9ad5037 100644
 --- a/drivers/mmc/host/lpc31xx_mmc.c
 +++ b/drivers/mmc/host/lpc31xx_mmc.c
 @@ -49,8 +49,8 @@
@@ -57,14 +57,11 @@ index e4190c0..adefd33 100644
  
  #define LPC313x_MCI_DATA_ERROR_FLAGS	(SDMMC_INT_DTO | SDMMC_INT_DCRC | SDMMC_INT_HTO | SDMMC_INT_SBE | SDMMC_INT_EBE)
  #define LPC313x_MCI_CMD_ERROR_FLAGS	(SDMMC_INT_RTO | SDMMC_INT_RCRC | SDMMC_INT_RESP_ERR | SDMMC_INT_HLE)
-@@ -139,6 +139,21 @@ struct lpc313x_mci_slot {
+@@ -139,6 +139,18 @@ struct lpc313x_mci_slot {
  	struct timer_list	detect_timer;
  };
  
 +/* Register access macros */
-+//#define mci_readl(reg) __raw_readl(&SDMMC_##reg)
-+//#define mci_writel(reg,value) __raw_writel((value),&SDMMC_##reg)
-+
 +static inline uint32_t mci_readl(struct lpc313x_mci *host, uint32_t reg)
 +{
 +	return __raw_readl(host->regs + reg);
@@ -79,7 +76,7 @@ index e4190c0..adefd33 100644
  #define lpc313x_mci_test_and_clear_pending(host, event)		\
  	test_and_clear_bit(event, &host->pending_events)
  #define lpc313x_mci_set_completed(host, event)			\
-@@ -296,7 +311,7 @@ static void lpc313x_mci_set_timeout(struct lpc313x_mci *host,
+@@ -296,7 +308,7 @@ static void lpc313x_mci_set_timeout(struct lpc313x_mci *host,
  	/* the standard response timeout value (Ncr) is 64 clocks.
  	 * Let give 4 additional clocks for response.
  	 */
@@ -88,7 +85,7 @@ index e4190c0..adefd33 100644
  }
  
  static u32 lpc313x_mci_prepare_command(struct mmc_host *mmc,
-@@ -348,11 +363,11 @@ static void lpc313x_mci_start_command(struct lpc313x_mci *host,
+@@ -348,11 +360,11 @@ static void lpc313x_mci_start_command(struct lpc313x_mci *host,
  	dev_vdbg(&host->pdev->dev,
  			"start cmd:%d ARGR=0x%08x CMDR=0x%08x\n",
  			cmd->opcode, cmd->arg, cmd_flags);
@@ -103,7 +100,7 @@ index e4190c0..adefd33 100644
  		cpu_relax();
  }
  
-@@ -543,15 +558,15 @@ static void lpc313x_mci_submit_data(struct lpc313x_mci *host, struct mmc_data *d
+@@ -543,15 +555,15 @@ static void lpc313x_mci_submit_data(struct lpc313x_mci *host, struct mmc_data *d
  			host->dir_status = LPC313x_MCI_SEND_STATUS;
  
  		//SDMMC_INTMASK |= (SDMMC_INT_RXDR | SDMMC_INT_TXDR);
@@ -124,7 +121,7 @@ index e4190c0..adefd33 100644
  }
  
  void lpc313x_mci_setup_bus(struct lpc313x_mci_slot *slot)
-@@ -568,24 +583,24 @@ void lpc313x_mci_setup_bus(struct lpc313x_mci_slot *slot)
+@@ -568,24 +580,24 @@ void lpc313x_mci_setup_bus(struct lpc313x_mci_slot *slot)
  		/* store the actual clock for calculations */
  		slot->clock = (host->bus_hz / div) >> 1;
  		/* disable clock */
@@ -157,7 +154,7 @@ index e4190c0..adefd33 100644
  }
  
  static void lpc313x_mci_select_slot(struct lpc313x_mci_slot *slot, int enable)
-@@ -638,8 +653,8 @@ static void lpc313x_mci_start_request(struct lpc313x_mci *host,
+@@ -638,8 +650,8 @@ static void lpc313x_mci_start_request(struct lpc313x_mci *host,
  	data = mrq->data;
  	if (data) {
  		lpc313x_mci_set_timeout(host, slot, data);
@@ -168,7 +165,7 @@ index e4190c0..adefd33 100644
  	}
  
  	cmd = mrq->cmd;
-@@ -760,17 +775,19 @@ static int lpc313x_mci_get_cd(struct lpc313x_mci_slot *slot)
+@@ -760,17 +772,19 @@ static int lpc313x_mci_get_cd(struct lpc313x_mci_slot *slot)
  	return present;
  }
  
@@ -193,7 +190,7 @@ index e4190c0..adefd33 100644
  	}
  }
  
-@@ -830,12 +847,12 @@ static void lpc313x_mci_command_complete(struct lpc313x_mci *host,
+@@ -830,12 +844,12 @@ static void lpc313x_mci_command_complete(struct lpc313x_mci *host,
  		 * core/sd.c expect those bits be in resp[0]. Hence
  		 * reverse the response word order.
  		 */
@@ -211,7 +208,7 @@ index e4190c0..adefd33 100644
  		cmd->resp[1] = 0;
  		cmd->resp[2] = 0;
  		cmd->resp[3] = 0;
-@@ -993,7 +1010,7 @@ unlock:
+@@ -993,7 +1007,7 @@ unlock:
  
  
  
@@ -220,7 +217,7 @@ index e4190c0..adefd33 100644
  {
      u32* pData = (u32*)buf;
  
-@@ -1002,12 +1019,12 @@ inline static void lpc313x_mci_push_data(void *buf,int cnt)
+@@ -1002,12 +1016,12 @@ inline static void lpc313x_mci_push_data(void *buf,int cnt)
  
      cnt = cnt >> 2;
      while (cnt > 0) {
@@ -235,7 +232,7 @@ index e4190c0..adefd33 100644
  {
      u32* pData = (u32*)buf;
  
-@@ -1015,7 +1032,7 @@ inline static void lpc313x_mci_pull_data(void *buf,int cnt)
+@@ -1015,7 +1029,7 @@ inline static void lpc313x_mci_pull_data(void *buf,int cnt)
  	    printk("error not align 4\n");
      cnt = cnt >> 2;
      while (cnt > 0) {
@@ -244,7 +241,7 @@ index e4190c0..adefd33 100644
          cnt--;
      }
  }
-@@ -1030,11 +1047,11 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
+@@ -1030,11 +1044,11 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
  	unsigned int		nbytes = 0,len,old_len,count =0;
  
  	do {
@@ -258,7 +255,7 @@ index e4190c0..adefd33 100644
  
  			offset += len;
  			nbytes += len;
-@@ -1049,7 +1066,7 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
+@@ -1049,7 +1063,7 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
  			}
  		} else {
  			unsigned int remaining = sg->length - offset;
@@ -267,7 +264,7 @@ index e4190c0..adefd33 100644
  			nbytes += remaining;
  
  			flush_dcache_page(sg_page(sg));
-@@ -1058,12 +1075,12 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
+@@ -1058,12 +1072,12 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
  				goto done;
  			offset = len - remaining;
  			buf = sg_virt(sg);
@@ -283,7 +280,7 @@ index e4190c0..adefd33 100644
  		if (status & LPC313x_MCI_DATA_ERROR_FLAGS) {
  			host->data_status = status;
  			data->bytes_xfered += nbytes;
-@@ -1074,7 +1091,7 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
+@@ -1074,7 +1088,7 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
  		}
  		count ++;
  	} while (status & SDMMC_INT_RXDR); // if the RXDR is ready let read again
@@ -292,7 +289,7 @@ index e4190c0..adefd33 100644
  	host->pio_offset = offset;
  	data->bytes_xfered += nbytes;
  	return;
-@@ -1096,9 +1113,9 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
+@@ -1096,9 +1110,9 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
  
  	do {
  
@@ -304,7 +301,7 @@ index e4190c0..adefd33 100644
  
  			offset += len;
  			nbytes += len;
-@@ -1113,7 +1130,7 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
+@@ -1113,7 +1127,7 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
  		} else {
  			unsigned int remaining = sg->length - offset;
  
@@ -313,7 +310,7 @@ index e4190c0..adefd33 100644
  			nbytes += remaining;
  
  			host->sg = sg = sg_next(sg);
-@@ -1123,12 +1140,12 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
+@@ -1123,12 +1137,12 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
  
  			offset = len - remaining;
  			buf = sg_virt(sg);
@@ -329,7 +326,7 @@ index e4190c0..adefd33 100644
  		if (status & LPC313x_MCI_DATA_ERROR_FLAGS) {
  			host->data_status = status;
  			data->bytes_xfered += nbytes;
-@@ -1168,12 +1185,12 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
+@@ -1168,12 +1182,12 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
  
  	spin_lock(&host->lock);
  	do {
@@ -345,7 +342,7 @@ index e4190c0..adefd33 100644
  		    host->cmd_status = status;
  		    smp_wmb();
  		    lpc313x_mci_set_pending(host, EVENT_CMD_COMPLETE);
-@@ -1181,7 +1198,7 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
+@@ -1181,7 +1195,7 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
  		}
  
  		if (pending & LPC313x_MCI_DATA_ERROR_FLAGS) { // if there is an error, let report DATA_ERROR
@@ -354,7 +351,7 @@ index e4190c0..adefd33 100644
  			host->data_status = status;
  			smp_wmb();
  			lpc313x_mci_set_pending(host, EVENT_DATA_ERROR);
-@@ -1190,7 +1207,7 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
+@@ -1190,7 +1204,7 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
  
  
  		if(pending & SDMMC_INT_DATA_OVER) {
@@ -363,7 +360,7 @@ index e4190c0..adefd33 100644
  		    if (!host->data_status)
  			host->data_status = status;
  		    smp_wmb();
-@@ -1203,25 +1220,25 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
+@@ -1203,25 +1217,25 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
  		}
  
  		if (pending & SDMMC_INT_RXDR) {
@@ -393,7 +390,7 @@ index e4190c0..adefd33 100644
  		    mmc_signal_sdio_irq(host->cur_slot->mmc);
  		}
  	} while (pass_count++ < 5);
-@@ -1278,9 +1295,9 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
+@@ -1278,9 +1292,9 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
  		if (mrq) {
  			if (mrq == host->mrq) {
  			  	/* reset all blocks */
@@ -405,7 +402,7 @@ index e4190c0..adefd33 100644
  
  				host->data = NULL;
  				host->cmd = NULL;
-@@ -1569,27 +1586,27 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
+@@ -1569,27 +1583,27 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
  	SYS_SDMMC_DELAYMODES = 0x1B;
  
    	/* reset all blocks */
@@ -442,7 +439,7 @@ index e4190c0..adefd33 100644
  
  	tasklet_init(&host->tasklet, lpc313x_mci_tasklet_func, (unsigned long)host);
  	ret = request_irq(irq, lpc313x_mci_interrupt, 0, dev_name(&pdev->dev), host);
-@@ -1607,9 +1624,9 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
+@@ -1607,9 +1621,9 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
  	}
  
  	// enable interrupt for command done, data over, data empty, receive ready and error such as transmit, receive timeout, crc error
@@ -455,7 +452,7 @@ index e4190c0..adefd33 100644
  
  
  	dev_info(&pdev->dev, "LPC313x MMC controller at irq %d\n", irq);
-@@ -1644,8 +1661,8 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
+@@ -1644,8 +1658,8 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
  	struct clk *clk;
  	int i;
  
@@ -466,7 +463,7 @@ index e4190c0..adefd33 100644
  
  	platform_set_drvdata(pdev, NULL);
  
-@@ -1656,8 +1673,8 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
+@@ -1656,8 +1670,8 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
  	}
  
  	/* disable clock to CIU */
@@ -477,7 +474,7 @@ index e4190c0..adefd33 100644
  
  	/*  turn off the mci clock here */
  	clk = clk_get(NULL, "mmc_hclk");
-@@ -1681,10 +1698,11 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
+@@ -1681,10 +1695,11 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
  static int lpc313x_mci_suspend(struct platform_device *pdev, pm_message_t state)
  {
  #ifdef CONFIG_PM
@@ -490,7 +487,7 @@ index e4190c0..adefd33 100644
  
  	/* Disable IP clocks */
  	clk = clk_get(NULL, "mmc_hclk");
-@@ -1700,6 +1718,7 @@ static int lpc313x_mci_suspend(struct platform_device *pdev, pm_message_t state)
+@@ -1700,6 +1715,7 @@ static int lpc313x_mci_suspend(struct platform_device *pdev, pm_message_t state)
  static int lpc313x_mci_resume(struct platform_device *pdev)
  {
  #ifdef CONFIG_PM
@@ -498,7 +495,7 @@ index e4190c0..adefd33 100644
  	struct clk *clk;
  	int ret;
  
-@@ -1712,7 +1731,7 @@ static int lpc313x_mci_resume(struct platform_device *pdev)
+@@ -1712,7 +1728,7 @@ static int lpc313x_mci_resume(struct platform_device *pdev)
  	clk_put(clk);
  
  	/* Enable Card clock */
