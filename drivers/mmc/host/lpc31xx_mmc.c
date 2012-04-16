@@ -140,9 +140,6 @@ struct lpc313x_mci_slot {
 };
 
 /* Register access macros */
-//#define mci_readl(reg) __raw_readl(&SDMMC_##reg)
-//#define mci_writel(reg,value) __raw_writel((value),&SDMMC_##reg)
-
 static inline uint32_t mci_readl(struct lpc313x_mci *host, uint32_t reg)
 {
 	return __raw_readl(host->regs + reg);
