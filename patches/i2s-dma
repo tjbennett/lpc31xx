@@ -1,5 +1,5 @@
 Bottom: 0063e54d41187a3d0dceddaaf0e1ecfde88702ad
-Top:    0ec26fddefc0cd3b409f01e273810390e2d51b75
+Top:    44ac81a2cca3d9ea0546a50286daf2b70b58dd53
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-16 23:41:32 -0400
 
@@ -102,7 +102,7 @@ index 9e93378..a845d28 100644
  	u32 target_codec_rate;
  	u32 real_fs_codec_rate;
 diff --git a/sound/soc/lpc313x/lpc313x-i2s.c b/sound/soc/lpc313x/lpc313x-i2s.c
-index d255fa7..e536618 100644
+index d255fa7..ffd86bbe5 100644
 --- a/sound/soc/lpc313x/lpc313x-i2s.c
 +++ b/sound/soc/lpc313x/lpc313x-i2s.c
 @@ -27,6 +27,7 @@
@@ -113,7 +113,7 @@ index d255fa7..e536618 100644
  
  #include <sound/core.h>
  #include <sound/pcm.h>
-@@ -120,6 +121,22 @@ static struct lpc313x_i2s_info i2s_info =
+@@ -120,6 +121,20 @@ static struct lpc313x_i2s_info i2s_info =
  	},
  };
  
@@ -131,12 +131,10 @@ index d255fa7..e536618 100644
 +	return value;
 +}
 +
-+
-+
  static inline int lpc313x_get_ch_dir(struct snd_pcm_substream *substream)
  {
  	int dir = CH_REC;
-@@ -170,18 +187,19 @@ static void lpc313x_i2s_shutdown(struct snd_pcm_substream *substream,
+@@ -170,18 +185,19 @@ static void lpc313x_i2s_shutdown(struct snd_pcm_substream *substream,
  static int lpc313x_i2s_startup(struct snd_pcm_substream *substream,
  								struct snd_soc_dai *dai)
  {
@@ -159,7 +157,7 @@ index d255fa7..e536618 100644
  #endif
  	}
  
-@@ -205,7 +223,7 @@ static int lpc313x_i2s_startup(struct snd_pcm_substream *substream,
+@@ -205,7 +221,7 @@ static int lpc313x_i2s_startup(struct snd_pcm_substream *substream,
  	lpc313x_chan_clk_enable(i2s_info.ch_info[dir].chclk, 0, 0);
  
  	/* Mask all interrupts for the I2S channel */
@@ -168,7 +166,7 @@ index d255fa7..e536618 100644
  
  	return 0;
  }
-@@ -246,6 +264,7 @@ static int lpc313x_i2s_hw_params(struct snd_pcm_substream *substream,
+@@ -246,6 +262,7 @@ static int lpc313x_i2s_hw_params(struct snd_pcm_substream *substream,
  			         struct snd_pcm_hw_params *params,
  					 struct snd_soc_dai *dai)
  {
@@ -176,7 +174,7 @@ index d255fa7..e536618 100644
  	int dir = lpc313x_get_ch_dir(substream);
  	u32 tmp;
  
-@@ -254,11 +273,11 @@ static int lpc313x_i2s_hw_params(struct snd_pcm_substream *substream,
+@@ -254,11 +271,11 @@ static int lpc313x_i2s_hw_params(struct snd_pcm_substream *substream,
  	switch (i2s_info.ch_info[dir].daifmt & SND_SOC_DAIFMT_FORMAT_MASK) {
  		case SND_SOC_DAIFMT_I2S:
  			spin_lock_irq(&i2s_info.lock);
@@ -191,7 +189,7 @@ index d255fa7..e536618 100644
  			spin_unlock_irq(&i2s_info.lock);
  			break;
  
-@@ -398,7 +417,51 @@ EXPORT_SYMBOL_GPL(lpc313x_i2s_dai);
+@@ -398,7 +415,51 @@ EXPORT_SYMBOL_GPL(lpc313x_i2s_dai);
  
  static __devinit int lpc313x_i2s_dev_probe(struct platform_device *pdev)
  {
