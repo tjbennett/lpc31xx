@@ -135,8 +135,6 @@ lpc31xx_i2s_read(const struct lpc31xx_i2s_info *info, uint32_t reg)
 	return value;
 }
 
-
-
 static inline int lpc313x_get_ch_dir(struct snd_pcm_substream *substream)
 {
 	int dir = CH_REC;
