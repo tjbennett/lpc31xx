@@ -27,7 +27,6 @@
 
 #include "constants.h"
 
-
 /* macros to convert phys to virtual & virtual to phys memory location*/
 #define io_p2v(x) (0xf0000000 | (((x) & 0xff000000) >> 4) | ((x) & 0x000fffff))
 #define io_v2p(x) (             (((x) & 0x0ff00000) << 4) | ((x) & 0x000fffff))
