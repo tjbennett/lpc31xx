@@ -5,6 +5,7 @@ Date:   2012-03-30 19:47:49 -0400
 
 device trees
 
+
 ---
 
 diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts

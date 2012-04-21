@@ -5,6 +5,7 @@ Date:   2012-04-16 21:26:39 -0400
 
 mmc dma
 
+
 ---
 
 diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
