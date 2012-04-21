@@ -1,5 +1,5 @@
-Bottom: b0ba73f9ea4177fc5b70b5500a125fc771d29d82
-Top:    a60e8eef2d6d3c0d56ad08c15257dc8d9415158c
+Bottom: 82ee4eed625006070d0dbfbb12422b4c93e994bd
+Top:    af1b83d60d1a824444cb657c6f63fdf2590c5c66
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-10 00:01:59 -0400
 
@@ -548,10 +548,10 @@ index 4ff6533..5dc8f90 100644
  	INTC_IRQ_PRI_MASK = 0;
  	INTC_FIQ_PRI_MASK = 0;
 diff --git a/drivers/dma/Kconfig b/drivers/dma/Kconfig
-index f1a2749..502456e 100644
+index cf9da36..ffd51fd 100644
 --- a/drivers/dma/Kconfig
 +++ b/drivers/dma/Kconfig
-@@ -245,6 +245,13 @@ config MXS_DMA
+@@ -244,6 +244,13 @@ config MXS_DMA
  	  Support the MXS DMA engine. This engine including APBH-DMA
  	  and APBX-DMA is integrated into Freescale i.MX23/28 chips.
  
@@ -566,7 +566,7 @@ index f1a2749..502456e 100644
  	bool "Cirrus Logic EP93xx DMA support"
  	depends on ARCH_EP93XX
 diff --git a/drivers/dma/Makefile b/drivers/dma/Makefile
-index 009a222..9a6d637 100644
+index 86b795b..45d6e79 100644
 --- a/drivers/dma/Makefile
 +++ b/drivers/dma/Makefile
 @@ -20,6 +20,7 @@ obj-$(CONFIG_AMCC_PPC440SPE_ADMA) += ppc4xx/
@@ -578,7 +578,7 @@ index 009a222..9a6d637 100644
  obj-$(CONFIG_SIRF_DMA) += sirf-dma.o
  obj-$(CONFIG_STE_DMA40) += ste_dma40.o ste_dma40_ll.o
 diff --git a/drivers/dma/dmaengine.c b/drivers/dma/dmaengine.c
-index a6c6051..d9a9eaf 100644
+index 2397f6f..8224ab9 100644
 --- a/drivers/dma/dmaengine.c
 +++ b/drivers/dma/dmaengine.c
 @@ -45,6 +45,8 @@
@@ -2110,7 +2110,7 @@ index a9a7dfa..e4190c0 100644
  	/* set delay gates */
  	SYS_SDMMC_DELAYMODES = 0x1B;
 diff --git a/drivers/net/ethernet/davicom/dm9000.c b/drivers/net/ethernet/davicom/dm9000.c
-index f8fd607..761926c 100644
+index af228a2..41831c8 100644
 --- a/drivers/net/ethernet/davicom/dm9000.c
 +++ b/drivers/net/ethernet/davicom/dm9000.c
 @@ -35,11 +35,15 @@
@@ -2221,7 +2221,7 @@ index f8fd607..761926c 100644
  /*
   * Search DM9000 board, allocate space and register it
   */
-@@ -1463,6 +1497,8 @@ dm9000_probe(struct platform_device *pdev)
+@@ -1461,6 +1495,8 @@ dm9000_probe(struct platform_device *pdev)
  		ret = -EINVAL;
  		goto out;
  	}
@@ -2230,7 +2230,7 @@ index f8fd607..761926c 100644
  
  	/* fill in parameters for net-dev structure */
  	ndev->base_addr = (unsigned long)db->io_addr;
-@@ -1489,13 +1525,15 @@ dm9000_probe(struct platform_device *pdev)
+@@ -1487,13 +1523,15 @@ dm9000_probe(struct platform_device *pdev)
  		 * over-rides */
  
  		if (pdata->inblk != NULL)
