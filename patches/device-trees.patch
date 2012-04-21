@@ -1,5 +1,5 @@
-Bottom: 08fb6459cd273b972e41ece9318e768735bf031e
-Top:    b0ba73f9ea4177fc5b70b5500a125fc771d29d82
+Bottom: 27cf30f6b7e62b30e57cc3845e4f199b981701c5
+Top:    82ee4eed625006070d0dbfbb12422b4c93e994bd
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-03-30 19:47:49 -0400
 
@@ -1990,10 +1990,10 @@ index 0cf5d37..160e8cc 100644
  arch_initcall(wdt_device_init);
 +#endif
 diff --git a/drivers/gpio/Makefile b/drivers/gpio/Makefile
-index fa10df6..a33f4bf 100644
+index 007f54b..72566a9 100644
 --- a/drivers/gpio/Makefile
 +++ b/drivers/gpio/Makefile
-@@ -20,6 +20,7 @@ obj-$(CONFIG_GPIO_IT8761E)	+= gpio-it8761e.o
+@@ -21,6 +21,7 @@ obj-$(CONFIG_GPIO_IT8761E)	+= gpio-it8761e.o
  obj-$(CONFIG_GPIO_JANZ_TTL)	+= gpio-janz-ttl.o
  obj-$(CONFIG_ARCH_KS8695)	+= gpio-ks8695.o
  obj-$(CONFIG_GPIO_LANGWELL)	+= gpio-langwell.o
@@ -2128,7 +2128,7 @@ index 1566ec5..6e523fa 100644
 +/* Make sure we get initialised before anyone else tries to use us */
  core_initcall(lpc313x_gpiolib_init);
 diff --git a/drivers/input/touchscreen/ads7846.c b/drivers/input/touchscreen/ads7846.c
-index 23fd901..2ec9049 100644
+index f02028e..5d43429 100644
 --- a/drivers/input/touchscreen/ads7846.c
 +++ b/drivers/input/touchscreen/ads7846.c
 @@ -32,6 +32,8 @@
@@ -2918,10 +2918,10 @@ index 3e76633..398e3df 100644
  };
  
 diff --git a/drivers/net/ethernet/davicom/dm9000.c b/drivers/net/ethernet/davicom/dm9000.c
-index f7ca4cc..f8fd607 100644
+index f014275..af228a2 100644
 --- a/drivers/net/ethernet/davicom/dm9000.c
 +++ b/drivers/net/ethernet/davicom/dm9000.c
-@@ -1679,11 +1679,22 @@ dm9000_drv_remove(struct platform_device *pdev)
+@@ -1677,11 +1677,22 @@ dm9000_drv_remove(struct platform_device *pdev)
  	return 0;
  }
  
