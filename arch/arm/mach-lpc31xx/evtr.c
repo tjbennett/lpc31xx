@@ -652,6 +652,20 @@ static const struct of_device_id evtr_of_match[] __initconst = {
 	{},
 };
 
+int lpc31xx_set_cgu_wakeup(int enable, int event)
+{
+	uint32_t bank = EVT_GET_BANK(event);
+	uint32_t bit_pos = event & 0x1F;
+
+	if (enable) {
+		EVRT_OUT_MASK_SET(4, bank) = _BIT(bit_pos);
+	} else {
+		EVRT_OUT_MASK_CLR(4, bank) = _BIT(bit_pos);
+	}
+	return 0;
+}
+EXPORT_SYMBOL(lpc31xx_set_cgu_wakeup);
+
 static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
 {
 	const __be32 *ip;
