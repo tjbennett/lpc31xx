@@ -1,6 +1,6 @@
 Version: 1
-Previous: d89ea1b0e068eab4b03bae05096efb211e327205
-Head: 7eeb5703a0c2ac781ed63174c3d98b72efde4f7e
+Previous: 3f92aa37277c55d93213502e989f1f58a1c724c0
+Head: c621d3fd5ccaa7820047d28b4c92a768846851d1
 Applied:
   roland-dt-1.patch: cadcaf8f210fa1e31eb98c88d9020d8537f44510
   base.patch: 87371c595602b0653b9aa06b5371926af14d9bea
@@ -30,5 +30,6 @@ Applied:
   mmc-dma.patch: 9d9fdbff0aa9e71338429a84614161cb32b7caa6
   nand-dma.patch: 2884bb4f45d179f8a03934ea7674cc27c31ff014
   i2s-dma.patch: 7eeb5703a0c2ac781ed63174c3d98b72efde4f7e
+  patch: c621d3fd5ccaa7820047d28b4c92a768846851d1
 Unapplied:
 Hidden:
