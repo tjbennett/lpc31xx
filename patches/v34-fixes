@@ -1,5 +1,5 @@
 Bottom: 4850907046a105a1b4c16c94207aba36f4b38416
-Top:    4850907046a105a1b4c16c94207aba36f4b38416
+Top:    da604add128f4a5cdb557ccf5fdb0bce7e81afa8
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-21 10:54:01 -0400
 
@@ -8,4 +8,144 @@ v34 compile fixes
 
 ---
 
-
+diff --git a/arch/arm/mach-lpc31xx/include/mach/clock.h b/arch/arm/mach-lpc31xx/include/mach/clock.h
+index eb038b3..ed22aeb 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/clock.h
++++ b/arch/arm/mach-lpc31xx/include/mach/clock.h
+@@ -24,6 +24,8 @@
+ #ifndef __LPC32XX_CLOCK_H
+ #define __LPC32XX_CLOCK_H
+ 
++#include <mach/hardware.h>
++
+  /***********************************************************************
+  * CGU register definitions
+  **********************************************************************/
+diff --git a/arch/arm/mach-lpc31xx/pm.c b/arch/arm/mach-lpc31xx/pm.c
+index f244379..e5addcd 100644
+--- a/arch/arm/mach-lpc31xx/pm.c
++++ b/arch/arm/mach-lpc31xx/pm.c
+@@ -31,6 +31,8 @@
+ #include <linux/io.h>
+ #include <asm/cacheflush.h>
+ 
++#include <mach/hardware.h>
++
+ 
+ #define LPC313x_ISRAM_VA io_p2v(ISRAM0_PHYS)
+ 
+diff --git a/drivers/misc/lpc31xx/lpc313x_adc.c b/drivers/misc/lpc31xx/lpc313x_adc.c
+index 5d306bf..1098552 100644
+--- a/drivers/misc/lpc31xx/lpc313x_adc.c
++++ b/drivers/misc/lpc31xx/lpc313x_adc.c
+@@ -31,6 +31,8 @@
+ #include <linux/delay.h>
+ #include <linux/fs.h>
+ #include <asm/io.h>
++
++#include <mach/hardware.h>
+ #include <mach/registers.h>
+ 
+ #include "lpc313x_adc.h"
+diff --git a/drivers/spi/spi-lpc313x.c b/drivers/spi/spi-lpc313x.c
+index 5a982c7..3234c0a 100644
+--- a/drivers/spi/spi-lpc313x.c
++++ b/drivers/spi/spi-lpc313x.c
+@@ -780,8 +780,8 @@ lpc31xx_spi_dma_prepare(struct lpc31xx_spi *espi, enum dma_data_direction dir)
+ 	if (!nents)
+ 		return ERR_PTR(-ENOMEM);
+ 
+-	txd = chan->device->device_prep_slave_sg(chan, sgt->sgl, nents,
+-						 slave_dirn, DMA_CTRL_ACK);
++	txd = dmaengine_prep_slave_sg(chan, sgt->sgl, nents,
++					slave_dirn, DMA_CTRL_ACK);
+ 	if (!txd) {
+ 		dma_unmap_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
+ 		return ERR_PTR(-ENOMEM);
+diff --git a/drivers/tty/serial/8250/8250.c b/drivers/tty/serial/8250/8250.c
+index 3c25f09..b82fdbd 100644
+--- a/drivers/tty/serial/8250/8250.c
++++ b/drivers/tty/serial/8250/8250.c
+@@ -1068,7 +1068,7 @@ static void autoconfig_16550a(struct uart_8250_port *up)
+ 	}
+ 
+ 	/* Check if it is NXP IP 3106 UART */
+-	serial_outp(up, UART_SCR, 0xDF);
++	serial_out(up, UART_SCR, 0xDF);
+ 	status1 = serial_in(up, UART_SCR);
+ 	if(status1 == 0xDF) {
+ 		/*scratch register present */
+diff --git a/drivers/usb/host/ehci-lpc.c b/drivers/usb/host/ehci-lpc.c
+index 68e61d4..6fb09c5 100644
+--- a/drivers/usb/host/ehci-lpc.c
++++ b/drivers/usb/host/ehci-lpc.c
+@@ -15,6 +15,7 @@
+ #include <linux/fsl_devices.h>
+ #include <linux/usb/otg.h>
+ #include <mach/board.h>
++#include <mach/hardware.h>
+ 
+ static struct platform_driver ehci_lpc_driver;
+ 
+diff --git a/drivers/watchdog/lpc31xx_wdt.c b/drivers/watchdog/lpc31xx_wdt.c
+index 33808b8..3be1e17 100644
+--- a/drivers/watchdog/lpc31xx_wdt.c
++++ b/drivers/watchdog/lpc31xx_wdt.c
+@@ -32,6 +32,8 @@
+ #include <linux/interrupt.h>
+ #include <linux/clk.h>
+ 
++#include <mach/hardware.h>
++
+ #define MAX_HEARTBEAT 120
+ #define DEFAULT_HEARTBEAT 25
+ #define WDT_IN_USE        0
+diff --git a/kernel/irq/irqdomain.c b/kernel/irq/irqdomain.c
+index 0e0ba5f..e01d683 100644
+--- a/kernel/irq/irqdomain.c
++++ b/kernel/irq/irqdomain.c
+@@ -773,7 +773,7 @@ void irq_domain_generate_simple(const struct of_device_id *match,
+ 		(unsigned long long) phys_base, (int) irq_start);
+ 	node = of_find_matching_node_by_address(NULL, match, phys_base);
+ 	if (node)
+-		irq_domain_add_legacy(node, 32, irq_start, 0,
++		irq_domain_add_legacy(node, 30, irq_start, 0,
+ 				      &irq_domain_simple_ops, NULL);
+ }
+ EXPORT_SYMBOL_GPL(irq_domain_generate_simple);
+diff --git a/sound/soc/lpc313x/lpc313x-i2s-clocking.c b/sound/soc/lpc313x/lpc313x-i2s-clocking.c
+index a845d28..5fe1759 100644
+--- a/sound/soc/lpc313x/lpc313x-i2s-clocking.c
++++ b/sound/soc/lpc313x/lpc313x-i2s-clocking.c
+@@ -47,6 +47,7 @@
+ #include <linux/io.h>
+ 
+ #include <mach/board.h>
++#include <mach/hardware.h>
+ #include <mach/registers.h>
+ #include "lpc313x-i2s-clocking.h"
+ 
+diff --git a/sound/soc/lpc313x/lpc313x-i2s.c b/sound/soc/lpc313x/lpc313x-i2s.c
+index ffd86bbe5..240565f 100644
+--- a/sound/soc/lpc313x/lpc313x-i2s.c
++++ b/sound/soc/lpc313x/lpc313x-i2s.c
+@@ -37,6 +37,7 @@
+ 
+ #include <mach/board.h>
+ #include <mach/registers.h>
++#include <mach/hardware.h>
+ 
+ #include "lpc313x-i2s-clocking.h"
+ #include "lpc313x-pcm.h"
+diff --git a/sound/soc/lpc313x/lpc313x-pcm.c b/sound/soc/lpc313x/lpc313x-pcm.c
+index 5af9b97..6e4902b 100644
+--- a/sound/soc/lpc313x/lpc313x-pcm.c
++++ b/sound/soc/lpc313x/lpc313x-pcm.c
+@@ -31,6 +31,7 @@
+ #include <sound/soc.h>
+ 
+ #include <mach/dma.h>
++#include <mach/hardware.h>
+ #include "lpc313x-pcm.h"
+ 
+ #define SND_NAME "lpc31xx-pcm-audio"
