@@ -18,14 +18,14 @@
 
 	evtr@13000000 {
 		events = <
-			0 0x67 3 /* irq 0 EVT_wdog_m0, EVT_RISING_EDGE */
-			0 0x7A 2 /* irq 1 EVT_usb_otg_vbus_pwr_en, EVT_FALLING_EDGE */
-			0 0x77 2 /* irq 2 EVT_USB_VBUS, EVT_FALLING_EDGE */
-			0 0x7b 0 /* irq 3 EVT_USB_ID, EVT_ACTIVE_LOW */
-			1 0x18 1 /* irq 4 EVT_mNAND_RYBN3, EVT_ACTIVE_HIGH, DM9000_ETH_INT */
-			2 0x50 0 /* irq 5 EVT_mI2STX_BCK0, EVT_ACTIVE_LOW, SDMMC_CD */
-			3 0x55 0 /* irq 6 EVT_I2SRX_WS0, EVT_ACTIVE_LOW, EA_VBUS_OVRC */
-			3 0x33 1 /* irq 7 EVT_GPIO4, EVT_ACTIVE_HIGH, PENDOWN */
+			0 0x67 /* irq 0 EVT_wdog_m0, EVT_RISING_EDGE */
+			0 0x7A /* irq 1 EVT_usb_otg_vbus_pwr_en, EVT_FALLING_EDGE */
+			0 0x77 /* irq 2 EVT_USB_VBUS, EVT_FALLING_EDGE */
+			0 0x7b /* irq 3 EVT_USB_ID, EVT_ACTIVE_LOW */
+			1 0x18 /* irq 4 EVT_mNAND_RYBN3, EVT_ACTIVE_HIGH, DM9000_ETH_INT */
+			2 0x50 /* irq 5 EVT_mI2STX_BCK0, EVT_ACTIVE_LOW, SDMMC_CD */
+			3 0x55 /* irq 6 EVT_I2SRX_WS0, EVT_ACTIVE_LOW, EA_VBUS_OVRC */
+			3 0x33 /* irq 7 EVT_GPIO4, EVT_ACTIVE_HIGH, PENDOWN */
 		>;
 	};
 	i2c@1300a000 {

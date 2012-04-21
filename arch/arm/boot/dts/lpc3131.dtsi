@@ -1,5 +1,5 @@
 /*
- * lpc3131.dtsi - Device Tree Include file for LPC3131 family SoC
+ * lpc3131.dtsi - Device Tree Include file for LPC31xx family SoC
  *
  *  Copyright (C) 2011 Jon Smirl <jonsmirl@gmail.com>
  *
@@ -10,10 +10,10 @@
 
 / {
 	model = "NXP LPC3131 SoC";
-	compatible = "nxp,lpc3131";
-	
-	isram0: memory@11028000 {
-		reg = <0x11028000 0x18000>;
-		interrupts = <28>;
+	compatible = "nxp,lpc3131", "nxp,lpc3130";
+
+	isram1: memory@11040000 {
+		reg = <0x11040000 0x18000>;
+		interrupts = <29>;
 	};
 };

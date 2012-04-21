@@ -1,5 +1,5 @@
 /*
- * lpc3130.dtsi - Device Tree Include file for LPC3131 family SoC
+ * lpc3130.dtsi - Device Tree Include file for LPC31xx family SoC
  *
  *  Copyright (C) 2011 Jon Smirl <jonsmirl@gmail.com>
  *
@@ -7,8 +7,8 @@
  */
 
 / {
-	model = "NXP LPC3131 SoC";
-	compatible = "nxp,lpc3131";
+	model = "NXP LPC3130 SoC";
+	compatible = "nxp,lpc3130";
 	#address-cells = <1>;
 	#size-cells = <1>;
 	interrupt-parent = <&intc>;
@@ -26,7 +26,7 @@
 		interrupts = <28>;
 	};
 	evtr: evtr@13000000 {
-		#event-cells = <3>;
+		#event-cells = <2>;
 		compatible = "nxp,lpc31xx-evtr";
 		interrupt-controller;
 		#interrupt-cells = <2>;
