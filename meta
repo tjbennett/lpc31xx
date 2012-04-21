@@ -1,6 +1,6 @@
 Version: 1
-Previous: 5ce730642a27c0a5240556c44f22d8f39a307f55
-Head: 520e8f5bcdd988e8e20f0dd6f79328775af20e70
+Previous: 1186382d0e1cbda28fc66e24b2a8734e6430cedb
+Head: 0fb96f516420ffeaa4af54935bcb01b9ca05fdc4
 Applied:
   roland-dt-1.patch: cadcaf8f210fa1e31eb98c88d9020d8537f44510
   base.patch: 87371c595602b0653b9aa06b5371926af14d9bea
@@ -23,8 +23,8 @@ Applied:
   nxp-audio-analog.patch: a7d2ebe7eae9ad8e1cdd46fec849a2d5e7b1d6ba
   reset.patch: 44020974c5df7545772e30301da65114aa112f94
   adc-registers.patch: 520e8f5bcdd988e8e20f0dd6f79328775af20e70
+  adc-pwm.patch: 0fb96f516420ffeaa4af54935bcb01b9ca05fdc4
 Unapplied:
-  adc-pwm.patch: cdb5c4bca1696e591f86ff9e4a77c699b14fee4f
   device-trees.patch: 1ad849892b7d29ce3e80c146dd644660846ccd24
   dma.patch: acb07ce2f6ff4765a8adc1b3b48b860b4bae9bf3
   irq.patch: d736585b55f5bb13e86c40d1270620c69be61bc9
