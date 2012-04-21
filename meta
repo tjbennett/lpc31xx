@@ -1,6 +1,6 @@
 Version: 1
-Previous: d23c08b3ce97ea763d7aa703bbd87cf58a02a866
-Head: 48e04a1aef3e23f8263d4bc670e7c4c241136fcf
+Previous: c555bbf9d008079d5dd90798a7cd4f9a9a556a71
+Head: babd7e792aa1b24e0d9a00098d890772b5998af9
 Applied:
   roland-dt-1.patch: cadcaf8f210fa1e31eb98c88d9020d8537f44510
   base.patch: 87371c595602b0653b9aa06b5371926af14d9bea
@@ -19,8 +19,8 @@ Applied:
   remove-config-noise.patch: 2ec8730bb59697d5a78fc07b1809445f977b628f
   NXP-DMA-fixes.patch: 21bc78ab5de33d7d8b431f9504d620c485892399
   NXP-uart-dma.patch: 48e04a1aef3e23f8263d4bc670e7c4c241136fcf
+  nxp-nand-dma.patch: babd7e792aa1b24e0d9a00098d890772b5998af9
 Unapplied:
-  nxp-nand-dma.patch: 3226ef6a283e8e69b505897897e5d33d9a4f0eab
   nxp-audio-analog.patch: 28df319532f9c12ff7c3f5fac7958958e7cada7c
   reset.patch: 25360450aa2c5f04dc8eb5be7318bdbd354466d0
   adc-registers.patch: 3b1aa6fc22bc321efdcd21ff9a5cab3c0648d2f8
