@@ -1,5 +1,5 @@
-Bottom: a8953262a0b6d2fa8dd7b4f77d9d517421419f40
-Top:    cb4584019c1a38f7e9f886df9b8826d5085a3a0e
+Bottom: 46da2d16e8a70770caa161f603143f8f1c02c768
+Top:    91b59d581a67757905e38462bd725c973cc11413
 Author: Jon Smirl (none) <jonsmirl@terra>
 Date:   2012-03-19 23:01:38 -0400
 
@@ -76,10 +76,10 @@ index 36d62f1..f5e380a 100644
  
  static int __init clk_init(void)
 diff --git a/drivers/mtd/nand/Kconfig b/drivers/mtd/nand/Kconfig
-index 31b034b..5714c4f 100644
+index 7d17cec..ad94889 100644
 --- a/drivers/mtd/nand/Kconfig
 +++ b/drivers/mtd/nand/Kconfig
-@@ -496,6 +496,12 @@ config MTD_NAND_SH_FLCTL
+@@ -527,6 +527,12 @@ config MTD_NAND_SH_FLCTL
  	help
  	  Several Renesas SuperH CPU has FLCTL. This option enables support
  	  for NAND Flash using FLCTL.
@@ -93,10 +93,10 @@ index 31b034b..5714c4f 100644
  config MTD_NAND_DAVINCI
          tristate "Support NAND on DaVinci SoC"
 diff --git a/drivers/mtd/nand/Makefile b/drivers/mtd/nand/Makefile
-index 618f4ba..718452e 100644
+index d4b4d87..657b71d 100644
 --- a/drivers/mtd/nand/Makefile
 +++ b/drivers/mtd/nand/Makefile
-@@ -49,5 +49,6 @@ obj-$(CONFIG_MTD_NAND_MPC5121_NFC)	+= mpc5121_nfc.o
+@@ -51,5 +51,6 @@ obj-$(CONFIG_MTD_NAND_MPC5121_NFC)	+= mpc5121_nfc.o
  obj-$(CONFIG_MTD_NAND_RICOH)		+= r852.o
  obj-$(CONFIG_MTD_NAND_JZ4740)		+= jz4740_nand.o
  obj-$(CONFIG_MTD_NAND_GPMI_NAND)	+= gpmi-nand/
