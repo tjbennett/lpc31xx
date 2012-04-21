@@ -1,5 +1,5 @@
-Bottom: 5591475dfc53d41d941f3d6bb8d40a622d244646
-Top:    29829f9ffeb25b11617a155271b9567580569a47
+Bottom: 6258cf329da537b91ba0e5fe827beeb6cd6bdde1
+Top:    3362eb1f317f68b13c1af316e63605830a1acda4
 Author: Jon Smirl (none) <jonsmirl@terra>
 Date:   2012-03-19 23:01:39 -0400
 
@@ -73,10 +73,10 @@ index 038bebf..bfd5678 100644
  
  static struct map_desc ea313x_io_desc[] __initdata = {
 diff --git a/sound/soc/Kconfig b/sound/soc/Kconfig
-index 35e662d..956349e 100644
+index 91c9855..f94e135 100644
 --- a/sound/soc/Kconfig
 +++ b/sound/soc/Kconfig
-@@ -45,6 +45,7 @@ source "sound/soc/s6000/Kconfig"
+@@ -48,6 +48,7 @@ source "sound/soc/s6000/Kconfig"
  source "sound/soc/sh/Kconfig"
  source "sound/soc/tegra/Kconfig"
  source "sound/soc/txx9/Kconfig"
@@ -85,19 +85,19 @@ index 35e662d..956349e 100644
  # Supported codecs
  source "sound/soc/codecs/Kconfig"
 diff --git a/sound/soc/Makefile b/sound/soc/Makefile
-index 9ea8ac8..9c0ea2d 100644
+index 2feaf37..4129ddc 100644
 --- a/sound/soc/Makefile
 +++ b/sound/soc/Makefile
-@@ -22,3 +22,4 @@ obj-$(CONFIG_SND_SOC)	+= s6000/
+@@ -25,3 +25,4 @@ obj-$(CONFIG_SND_SOC)	+= s6000/
  obj-$(CONFIG_SND_SOC)	+= sh/
  obj-$(CONFIG_SND_SOC)	+= tegra/
  obj-$(CONFIG_SND_SOC)	+= txx9/
 +obj-$(CONFIG_SND_SOC)	+= lpc313x/
 diff --git a/sound/soc/codecs/Kconfig b/sound/soc/codecs/Kconfig
-index 7c205e7..b120e1b 100644
+index 6508e8b..1eb1510 100644
 --- a/sound/soc/codecs/Kconfig
 +++ b/sound/soc/codecs/Kconfig
-@@ -49,6 +49,7 @@ config SND_SOC_ALL_CODECS
+@@ -50,6 +50,7 @@ config SND_SOC_ALL_CODECS
  	select SND_SOC_SSM2602 if SND_SOC_I2C_AND_SPI
  	select SND_SOC_STA32X if I2C
  	select SND_SOC_STAC9766 if SND_SOC_AC97_BUS
@@ -105,7 +105,7 @@ index 7c205e7..b120e1b 100644
  	select SND_SOC_TLV320AIC23 if I2C
  	select SND_SOC_TLV320AIC26 if SPI_MASTER
  	select SND_SOC_TLV320AIC32X4 if I2C
-@@ -280,6 +281,9 @@ config SND_SOC_TWL6040
+@@ -282,6 +283,9 @@ config SND_SOC_TWL6040
  config SND_SOC_UDA134X
         tristate
  
@@ -116,18 +116,18 @@ index 7c205e7..b120e1b 100644
          tristate
  
 diff --git a/sound/soc/codecs/Makefile b/sound/soc/codecs/Makefile
-index de80781..c2c65e0 100644
+index 6662eb0..19058a0 100644
 --- a/sound/soc/codecs/Makefile
 +++ b/sound/soc/codecs/Makefile
-@@ -52,6 +52,7 @@ snd-soc-wl1273-objs := wl1273.o
- snd-soc-wm1250-ev1-objs := wm1250-ev1.o
+@@ -54,6 +54,7 @@ snd-soc-wm1250-ev1-objs := wm1250-ev1.o
  snd-soc-wm2000-objs := wm2000.o
+ snd-soc-wm2200-objs := wm2200.o
  snd-soc-wm5100-objs := wm5100.o wm5100-tables.o
 +snd-soc-lpc315x-codec-objs := lpc315x_codec.o
  snd-soc-wm8350-objs := wm8350.o
  snd-soc-wm8400-objs := wm8400.o
  snd-soc-wm8510-objs := wm8510.o
-@@ -126,6 +127,7 @@ obj-$(CONFIG_SND_SOC_CX20442)	+= snd-soc-cx20442.o
+@@ -128,6 +129,7 @@ obj-$(CONFIG_SND_SOC_CX20442)	+= snd-soc-cx20442.o
  obj-$(CONFIG_SND_SOC_DA7210)	+= snd-soc-da7210.o
  obj-$(CONFIG_SND_SOC_DFBMCS320)	+= snd-soc-dfbmcs320.o
  obj-$(CONFIG_SND_SOC_DMIC)	+= snd-soc-dmic.o
@@ -135,7 +135,7 @@ index de80781..c2c65e0 100644
  obj-$(CONFIG_SND_SOC_L3)	+= snd-soc-l3.o
  obj-$(CONFIG_SND_SOC_LM4857)	+= snd-soc-lm4857.o
  obj-$(CONFIG_SND_SOC_JZ4740_CODEC)	+= snd-soc-jz4740-codec.o
-@@ -201,3 +203,4 @@ obj-$(CONFIG_SND_SOC_WM_HUBS)	+= snd-soc-wm-hubs.o
+@@ -205,3 +207,4 @@ obj-$(CONFIG_SND_SOC_WM_HUBS)	+= snd-soc-wm-hubs.o
  # Amp
  obj-$(CONFIG_SND_SOC_MAX9877)	+= snd-soc-max9877.o
  obj-$(CONFIG_SND_SOC_TPA6130A2)	+= snd-soc-tpa6130a2.o
