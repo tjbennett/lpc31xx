@@ -1,8 +1,8 @@
-/* linux/arch/arm/mach-lpc313x/gpiolib.c
+/* linux/arch/arm/mach-lpc31xx/gpiolib.c
  *
  * Copyright (c) 2011 Jon Smirl <jonsmirl@gmail.com>
  *
- * LPC313X GPIOlib support
+ * LPC31XX GPIOlib support
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -77,7 +77,7 @@ static struct {
 
 #if 0
 /**
- * struct lpc313x_gpio_chip - wrapper for specific implementation of gpio
+ * struct lpc31xx_gpio_chip - wrapper for specific implementation of gpio
  * @chip: The chip structure to be exported via gpiolib.
  * @base: The base pointer to the gpio configuration registers.
  * @config: special function and pull-resistor control information.
@@ -86,10 +86,10 @@ static struct {
  * This wrapper provides the necessary information for the NXP
  * specific gpios being registered with gpiolib.
  */
-struct lpc313x_gpio_chip {
+struct lpc31xx_gpio_chip {
 	struct gpio_chip	chip;
-	struct lpc313x_gpio_cfg	*config;
-	struct lpc313x_gpio_pm	*pm;
+	struct lpc31xx_gpio_cfg	*config;
+	struct lpc31xx_gpio_pm	*pm;
 	int			base;
 #ifdef CONFIG_PM
 	uint32_t		pm_save[4];
@@ -176,12 +176,12 @@ int lpc3131_reg_to_gpio(unsigned index, unsigned gpio)
 EXPORT_SYMBOL(lpc3131_reg_to_gpio);
 
 
-static int lpc313x_gpiochip_remove(struct platform_device *ofdev)
+static int lpc31xx_gpiochip_remove(struct platform_device *ofdev)
 {
 	return -EBUSY;
 }
 
-static int __devinit lpc313x_simple_gpiochip_probe(struct platform_device *pdev)
+static int __devinit lpc31xx_simple_gpiochip_probe(struct platform_device *pdev)
 {
 	struct lpc31xx_gpio_chip *chip;
 	struct gpio_chip *gc;
@@ -211,28 +211,28 @@ static int __devinit lpc313x_simple_gpiochip_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id lpc313x_simple_gpiochip_match[] = {
+static const struct of_device_id lpc31xx_simple_gpiochip_match[] = {
 	{ .compatible = "nxp,lpc31xx-gpio", },
 	{}
 };
 
-static struct platform_driver lpc313x_simple_gpiochip_driver = {
+static struct platform_driver lpc31xx_simple_gpiochip_driver = {
 	.driver = {
 		.name = "lpc31xx-gpio",
 		.owner = THIS_MODULE,
-		.of_match_table = lpc313x_simple_gpiochip_match,
+		.of_match_table = lpc31xx_simple_gpiochip_match,
 	},
-	.probe = lpc313x_simple_gpiochip_probe,
-	.remove = lpc313x_gpiochip_remove,
+	.probe = lpc31xx_simple_gpiochip_probe,
+	.remove = lpc31xx_gpiochip_remove,
 };
 
-static __init int lpc313x_gpiolib_init(void)
+static __init int lpc31xx_gpiolib_init(void)
 {
-	if (platform_driver_register(&lpc313x_simple_gpiochip_driver))
+	if (platform_driver_register(&lpc31xx_simple_gpiochip_driver))
 		printk(KERN_ERR "Unable to register simple GPIO driver\n");
 
 	return 0;
 }
 
 /* Make sure we get initialised before anyone else tries to use us */
-core_initcall(lpc313x_gpiolib_init);
+core_initcall(lpc31xx_gpiolib_init);

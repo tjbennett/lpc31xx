@@ -1018,7 +1018,7 @@ config ARCH_LPC31XX
 	select ARCH_REQUIRE_GPIOLIB
 	select ARCH_USES_GETTIMEOFFSET
 	help
-	  Say Y here for systems based on one of the NXP LPC313x & LPC315x
+	  Say Y here for systems based on one of the NXP LPC31xx
 	  System on a Chip processors.  These CPUs include an ARM926EJS
 	  core with a wide array of integrated devices for
 	  hand-held and low-power applications.

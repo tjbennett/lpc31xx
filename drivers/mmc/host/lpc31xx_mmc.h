@@ -1,4 +1,4 @@
-/* LPC313x MultiMedia Card Interface driver
+/* LPC31xx MultiMedia Card Interface driver
  *
  * Copyright (C)2009 NXP Semiconductors
  *
@@ -6,8 +6,8 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-#ifndef __DRIVERS_MMC_LPC313x_MCI_H__
-#define __DRIVERS_MMC_LPC313x_MCI_H__
+#ifndef __DRIVERS_MMC_LPC31xx_MCI_H__
+#define __DRIVERS_MMC_LPC31xx_MCI_H__
 
 #define MCI_SLOT 0
 
