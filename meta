@@ -1,6 +1,6 @@
 Version: 1
-Previous: a302046b237afe2d214f289e03187c7d26f94caa
-Head: 870d5c8b14e6d1801074b4943ae57d7179ae12ed
+Previous: ef80f8ab7ce3e9fb32857dc31f00e60ca61d5bcb
+Head: 51049b414715b9bbb1f166a15116f752864dd61f
 Applied:
   roland-dt-1.patch: cadcaf8f210fa1e31eb98c88d9020d8537f44510
   base.patch: 87371c595602b0653b9aa06b5371926af14d9bea
@@ -34,7 +34,6 @@ Applied:
   rename.patch: d69a14981f0adc7468e1258bd7a46f5bacf55545
   symbol-rename.patch: 787c5b356e6207df65d01a1c265f1d84035d85ff
   dt-split: 29a2f73d7b0658d87be7f7572d158b4cb1e09a61
-  irq: 56b4c1848a62c3f175f5c89feb3f233db9e72349
-  refresh-temp: 870d5c8b14e6d1801074b4943ae57d7179ae12ed
+  irq: 51049b414715b9bbb1f166a15116f752864dd61f
 Unapplied:
 Hidden:
