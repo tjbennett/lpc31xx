@@ -1,10 +1,10 @@
 Version: 1
-Previous: 5d708ebc455744d621d901d805ac683f6cc6ba19
-Head: cadcaf8f210fa1e31eb98c88d9020d8537f44510
+Previous: 6d10d747dc9c833fe3978ca1ad95871ee5ca3954
+Head: 1a6b0d0d5e6673836b4f1f090e6f3bb084bb62f8
 Applied:
   roland-dt-1.patch: cadcaf8f210fa1e31eb98c88d9020d8537f44510
+  base.patch: 1a6b0d0d5e6673836b4f1f090e6f3bb084bb62f8
 Unapplied:
-  base.patch: a04b8093163b45922c65245709b46353438c6945
   defconfigs.patch: 427914b702bfe2beb1a37eee959b010ed7432492
   nand.patch: 183fcc5f443cf1dd77ce29aab069c06c60dc017b
   spi.patch: 513dd98bff9e7229c220eed2735c3a4cf4730afa
