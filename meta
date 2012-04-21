@@ -1,5 +1,5 @@
 Version: 1
-Previous: 7ca64699d2c1c48716388785149a3dad6f144018
+Previous: 3dc33a14c554e6b90e0c3dbeeb5f9c7ff4f9e64b
 Head: 787c5b356e6207df65d01a1c265f1d84035d85ff
 Applied:
   roland-dt-1.patch: cadcaf8f210fa1e31eb98c88d9020d8537f44510
@@ -32,6 +32,6 @@ Applied:
   i2s-dma.patch: 7eeb5703a0c2ac781ed63174c3d98b72efde4f7e
   v34-fixes.patch: b2fbaaec979bbabc37f3df74897b74e79455ce33
   rename.patch: d69a14981f0adc7468e1258bd7a46f5bacf55545
-  r2.patch: 787c5b356e6207df65d01a1c265f1d84035d85ff
+  symbol-rename.patch: 787c5b356e6207df65d01a1c265f1d84035d85ff
 Unapplied:
 Hidden:
