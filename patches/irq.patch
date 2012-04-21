@@ -1,5 +1,5 @@
-Bottom: a60e8eef2d6d3c0d56ad08c15257dc8d9415158c
-Top:    274820e36e012ba511c16096bc824df4c663d1ed
+Bottom: af1b83d60d1a824444cb657c6f63fdf2590c5c66
+Top:    0184a9cebd980ddaeb67aee6ef1d458fb8e1242b
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-14 11:58:54 -0400
 
@@ -1731,7 +1731,7 @@ index 19f5e42..9d57e60 100644
  		return ret;
  
 diff --git a/drivers/net/ethernet/davicom/dm9000.c b/drivers/net/ethernet/davicom/dm9000.c
-index 761926c..3b1f5cd 100644
+index 41831c8..d2e4ad5 100644
 --- a/drivers/net/ethernet/davicom/dm9000.c
 +++ b/drivers/net/ethernet/davicom/dm9000.c
 @@ -662,7 +662,6 @@ dm9000_poll_work(struct work_struct *w)
@@ -1773,7 +1773,7 @@ index 9cf0060..bdded99 100644
  
  	/* Only dereference the resource if both the
 diff --git a/drivers/of/platform.c b/drivers/of/platform.c
-index 63b3ec4..1996bb2 100644
+index 343ad29..7437caf 100644
 --- a/drivers/of/platform.c
 +++ b/drivers/of/platform.c
 @@ -11,6 +11,7 @@
