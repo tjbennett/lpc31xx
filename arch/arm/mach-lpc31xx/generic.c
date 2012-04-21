@@ -242,7 +242,8 @@ void __init lpc31xx_init(void)
 #endif
 	lpc31xx_uart_init();
 
-	return platform_add_devices(devices, ARRAY_SIZE(devices));
+	platform_add_devices(devices, ARRAY_SIZE(devices));
+	return;
 }
 
 

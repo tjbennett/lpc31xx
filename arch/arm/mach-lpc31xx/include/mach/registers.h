@@ -28,12 +28,6 @@
 /***********************************************************************
  * Interrupt controller register definitions
  **********************************************************************/
-#define INTC_IRQ_PRI_MASK     __REG(INTC_PHYS + 0x000)
-#define INTC_FIQ_PRI_MASK     __REG(INTC_PHYS + 0x004)
-#define INTC_IRQ_VEC_BASE     __REG(INTC_PHYS + 0x100)
-#define INTC_FIQ_VEC_BASE     __REG(INTC_PHYS + 0x104)
-#define INTC_REQ_REG(irq)     __REG(INTC_PHYS + 0x400 + ((irq) << 2))
-
 #define INTC_REQ_PEND         _BIT(31)
 #define INTC_REQ_SET_SWINT    _BIT(30)
 #define INTC_REQ_CLR_SWINT    _BIT(29)
@@ -95,11 +89,6 @@
 /***********************************************************************
  * Timer register definitions
  **********************************************************************/
-#define TIMER_LOAD(base)      __REG ((base) + 0x00)
-#define TIMER_VALUE(base)     __REG ((base) + 0x04)
-#define TIMER_CONTROL(base)   __REG ((base) + 0x08)
-#define TIMER_CLEAR(base)     __REG ((base) + 0x0c)
-
 #define TM_CTRL_ENABLE    _BIT(7)
 #define TM_CTRL_MODE      _BIT(6)
 #define TM_CTRL_PERIODIC  _BIT(6)
