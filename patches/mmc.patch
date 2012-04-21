@@ -1,5 +1,5 @@
-Bottom: fa51cc24a2b6bb4da75c2d6fa98549ed414da544
-Top:    e0e28d2ef7129dc6babde2d4dbb347e996fcfcff
+Bottom: b60bf79feb2aa9635ce544ec84c9b712059f6e59
+Top:    b85591a1a83833cfba19564f9437c10b3e59805e
 Author: Jon Smirl (none) <jonsmirl@terra>
 Date:   2012-03-19 23:01:39 -0400
 
@@ -50,7 +50,7 @@ index 2d0e0bb..b0aade5 100644
  {
  	int i;
 diff --git a/drivers/mmc/host/Kconfig b/drivers/mmc/host/Kconfig
-index 00fcbed..ebf3f06 100644
+index 2bc06e7..2522be8 100644
 --- a/drivers/mmc/host/Kconfig
 +++ b/drivers/mmc/host/Kconfig
 @@ -4,6 +4,12 @@
@@ -67,10 +67,10 @@ index 00fcbed..ebf3f06 100644
  	tristate "ARM AMBA Multimedia Card Interface support"
  	depends on ARM_AMBA
 diff --git a/drivers/mmc/host/Makefile b/drivers/mmc/host/Makefile
-index 745f8fc..ed3cdd3 100644
+index 3e7e26d..630f6da 100644
 --- a/drivers/mmc/host/Makefile
 +++ b/drivers/mmc/host/Makefile
-@@ -55,3 +55,5 @@ obj-$(CONFIG_MMC_SDHCI_OF_HLWD)		+= sdhci-of-hlwd.o
+@@ -57,3 +57,5 @@ obj-$(CONFIG_MMC_SDHCI_OF_HLWD)		+= sdhci-of-hlwd.o
  ifeq ($(CONFIG_CB710_DEBUG),y)
  	CFLAGS-cb710-mmc	+= -DDEBUG
  endif
