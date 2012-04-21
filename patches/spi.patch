@@ -1,5 +1,5 @@
-Bottom: cb4584019c1a38f7e9f886df9b8826d5085a3a0e
-Top:    fa51cc24a2b6bb4da75c2d6fa98549ed414da544
+Bottom: 91b59d581a67757905e38462bd725c973cc11413
+Top:    b60bf79feb2aa9635ce544ec84c9b712059f6e59
 Author: Jon Smirl (none) <jonsmirl@terra>
 Date:   2012-03-19 23:01:38 -0400
 
@@ -70,10 +70,10 @@ index f5e380a..2d0e0bb 100644
  {
  	int i;
 diff --git a/drivers/spi/Kconfig b/drivers/spi/Kconfig
-index 8293658..15ced0b 100644
+index 3ed7483..e2580f7 100644
 --- a/drivers/spi/Kconfig
 +++ b/drivers/spi/Kconfig
-@@ -378,6 +378,12 @@ config SPI_NUC900
+@@ -403,6 +403,12 @@ config SPI_NUC900
  	help
  	  SPI driver for Nuvoton NUC900 series ARM SoCs
  
@@ -87,10 +87,10 @@ index 8293658..15ced0b 100644
  # Add new SPI master controllers in alphabetical order above this line
  #
 diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
-index 61c3261..f8cdf79 100644
+index a1d48e0..c406882 100644
 --- a/drivers/spi/Makefile
 +++ b/drivers/spi/Makefile
-@@ -31,6 +31,7 @@ obj-$(CONFIG_SPI_FSL_SPI)		+= spi-fsl-spi.o
+@@ -32,6 +32,7 @@ obj-$(CONFIG_SPI_FSL_SPI)		+= spi-fsl-spi.o
  obj-$(CONFIG_SPI_GPIO)			+= spi-gpio.o
  obj-$(CONFIG_SPI_IMX)			+= spi-imx.o
  obj-$(CONFIG_SPI_LM70_LLP)		+= spi-lm70llp.o
