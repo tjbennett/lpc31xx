@@ -352,9 +352,6 @@ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
 	}
 	evtr_domain = irq_domain_add_linear(np, num_events, &evtr_ops, NULL);
 
-	/* Now configure external/board interrupts using event router */
-	for (irq = 0; irq < num_events; irq++) {
-	}
 	/* for power management. Wake from internal irqs */
 	EVRT_APR(3) &= ~_BIT(12);
 	EVRT_ATR(3) &= ~_BIT(12);
