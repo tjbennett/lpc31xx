@@ -1,0 +1,271 @@
+Bottom: 5a1eb1afcd197d6213048d4a910fc81f3c5320c2
+Top:    3877d0fb505bce9c681935666b5a4872dbe825dd
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-22 19:21:25 -0400
+
+Refresh of wdt.patch
+
+---
+
+diff --git a/arch/arm/mach-lpc31xx/Makefile b/arch/arm/mach-lpc31xx/Makefile
+index 8075a73..12522c0 100644
+--- a/arch/arm/mach-lpc31xx/Makefile
++++ b/arch/arm/mach-lpc31xx/Makefile
+@@ -4,7 +4,7 @@
+ 
+ # Object file lists.
+ 
+-obj-y += irq.o evtr.o time.o generic.o dma.o usb.o wdt.o clock.o sram.o
++obj-y += irq.o evtr.o time.o generic.o dma.o usb.o clock.o sram.o
+ obj-$(CONFIG_OF) += dt.o
+ 
+ 
+diff --git a/arch/arm/mach-lpc31xx/board-ea313x.c b/arch/arm/mach-lpc31xx/board-ea313x.c
+index 5c659ca..cb215ff 100644
+--- a/arch/arm/mach-lpc31xx/board-ea313x.c
++++ b/arch/arm/mach-lpc31xx/board-ea313x.c
+@@ -145,7 +145,7 @@ DT_MACHINE_START(EA313X, "NXP EA3131 (Device Tree Support)")
+ 	.timer		= &lpc31xx_timer,
+ 	.init_machine	= ea3131_dt_init,
+ 	.dt_compat	= ea3131_dt_match,
+-	.restart	= arch_reset,
++	.restart	= lpc31xx_arch_reset,
+ MACHINE_END
+ 
+ 
+diff --git a/arch/arm/mach-lpc31xx/dt.c b/arch/arm/mach-lpc31xx/dt.c
+index 01af063..77de935 100644
+--- a/arch/arm/mach-lpc31xx/dt.c
++++ b/arch/arm/mach-lpc31xx/dt.c
+@@ -52,6 +52,8 @@ void __init lpc31xx_init_early(void)
+ static const char *lpc31xx_dt_match[] __initconst = {
+ 	"ncp,lpc3130",
+ 	"nxp,lpc3131",
++	"nxp,lpc3141",
++	"nxp,lpc3142",
+ 	"nxp,lpc3152",
+ 	"nxp,lpc3153",
+ 	NULL,
+@@ -64,5 +66,5 @@ DT_MACHINE_START(EA313X, "NXP LPC31xx (Device Tree Support)")
+ 	.timer		= &lpc31xx_timer,
+ 	.init_machine	= lpc31xx_dt_init,
+ 	.dt_compat	= lpc31xx_dt_match,
+-	.restart	= arch_reset,
++	.restart	= lpc31xx_arch_reset,
+ MACHINE_END
+diff --git a/arch/arm/mach-lpc31xx/generic.c b/arch/arm/mach-lpc31xx/generic.c
+index a59ead8..1a6e3e2 100644
+--- a/arch/arm/mach-lpc31xx/generic.c
++++ b/arch/arm/mach-lpc31xx/generic.c
+@@ -31,6 +31,8 @@
+ #include <linux/of_irq.h>
+ 
+ #include <asm/errno.h>
++#include <asm/pgtable.h>
++
+ #include <mach/hardware.h>
+ 
+ #include <mach/gpio.h>
+@@ -93,6 +95,48 @@ static void lpc31xx_uart_pm(struct uart_port * port, unsigned int state,
+ 
+ }
+ 
++static const struct of_device_id wdt_of_match[] __initconst = {
++	{ .compatible = "nxp,lpc31xx-wdt", },
++	{},
++};
++
++#define wdt_read(reg) \
++	__raw_readl(wdt_regs + reg)
++#define wdt_write(reg, value) \
++	__raw_writel(value, wdt_regs + reg);
++
++void lpc31xx_arch_reset(char mode, const char *cmd)
++{
++	struct device_node *node;
++	static void __iomem *wdt_regs;
++
++	printk("arch_reset: attempting watchdog reset\n");
++
++	/* Remap the necessary zones */
++	node = of_find_matching_node(NULL, wdt_of_match);
++	wdt_regs = of_iomap(node, 0);
++
++	/* enable WDT clock */
++	cgu_clk_en_dis(CGU_SB_WDOG_PCLK_ID, 1);
++
++	/* Disable watchdog */
++	wdt_write(WDT_TCR, 0);
++	wdt_write(WDT_MCR, WDT_MCR_STOP_MR1 | WDT_MCR_INT_MR1);
++
++	/*  If TC and MR1 are equal a reset is generated. */
++	wdt_write(WDT_PR, 0x00000002);
++	wdt_write(WDT_TC, 0x00000FF0);
++	wdt_write(WDT_MR0, 0x0000F000);
++	wdt_write(WDT_MR1, 0x00001000);
++	wdt_write(WDT_EMR, WDT_EMR_CTRL1(0x3));
++	/* Enable watchdog timer; assert reset at timer timeout */
++	wdt_write(WDT_TCR, WDT_TCR_CNT_EN);
++	cpu_reset (0);/* loop forever and wait for reset to happen */
++
++	/*NOTREACHED*/
++}
++
++
+ static struct plat_serial8250_port platform_serial_ports[] = {
+ 	{
+ 		.membase = (void *)io_p2v(UART_PHYS),
+@@ -268,7 +312,7 @@ void __init lpc31xx_init(void)
+ #endif
+ 	lpc31xx_uart_init();
+ 
+-	return platform_add_devices(devices, ARRAY_SIZE(devices));
++	platform_add_devices(devices, ARRAY_SIZE(devices));
+ }
+ 
+ 
+@@ -278,7 +322,6 @@ static int __init lpc31xx_init_console(void)
+ 	static __initdata char serr[] =
+ 		KERN_ERR "Serial port #%u setup failed\n";
+ 	struct uart_port up;
+-	int mul, div;
+ 
+ 	/* Switch on the UART clocks */
+ 	cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
+diff --git a/arch/arm/mach-lpc31xx/include/mach/registers.h b/arch/arm/mach-lpc31xx/include/mach/registers.h
+index beb6f77..4f4757e2 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/registers.h
++++ b/arch/arm/mach-lpc31xx/include/mach/registers.h
+@@ -27,14 +27,14 @@
+ /***********************************************************************
+  * WDT register definitions
+  **********************************************************************/
+-#define WDT_IR       __REG (WDT_PHYS + 0x00)
+-#define WDT_TCR      __REG (WDT_PHYS + 0x04)
+-#define WDT_TC       __REG (WDT_PHYS + 0x08)
+-#define WDT_PR       __REG (WDT_PHYS + 0x0c)
+-#define WDT_MCR      __REG (WDT_PHYS + 0x14)
+-#define WDT_MR0      __REG (WDT_PHYS + 0x18)
+-#define WDT_MR1      __REG (WDT_PHYS + 0x1c)
+-#define WDT_EMR      __REG (WDT_PHYS + 0x3c)
++#define WDT_IR       0x00
++#define WDT_TCR      0x04
++#define WDT_TC       0x08
++#define WDT_PR       0x0c
++#define WDT_MCR      0x14
++#define WDT_MR0      0x18
++#define WDT_MR1      0x1c
++#define WDT_EMR      0x3c
+ 
+ #define WDT_IR_MR1        _BIT(1)
+ #define WDT_IR_MR0        _BIT(0)
+@@ -52,22 +52,6 @@
+ #define WDT_EMR_M0        _BIT(0)
+ 
+ /***********************************************************************
+- * Timer register definitions
+- **********************************************************************/
+-#define TIMER_LOAD(base)      __REG ((base) + 0x00)
+-#define TIMER_VALUE(base)     __REG ((base) + 0x04)
+-#define TIMER_CONTROL(base)   __REG ((base) + 0x08)
+-#define TIMER_CLEAR(base)     __REG ((base) + 0x0c)
+-
+-#define TM_CTRL_ENABLE    _BIT(7)
+-#define TM_CTRL_MODE      _BIT(6)
+-#define TM_CTRL_PERIODIC  _BIT(6)
+-#define TM_CTRL_PS1       _SBF(2, 0)
+-#define TM_CTRL_PS16      _SBF(2, 1)
+-#define TM_CTRL_PS256     _SBF(2, 2)
+-#define TM_CTRL_PS_MASK   _SBF(2, 0x3)
+-
+-/***********************************************************************
+  * UART register definitions
+  **********************************************************************/
+ #define UART_DLL_REG      __REG (UART_PHYS + 0x00)
+diff --git a/arch/arm/mach-lpc31xx/include/mach/system.h b/arch/arm/mach-lpc31xx/include/mach/system.h
+index 0cf511e..db87c4d 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/system.h
++++ b/arch/arm/mach-lpc31xx/include/mach/system.h
+@@ -27,26 +27,4 @@ static inline void arch_idle(void)
+ 	cpu_do_idle ();
+ }
+ 
+-static inline void arch_reset(char mode, const char *cmd)
+-{
+-	printk("arch_reset: attempting watchdog reset\n");
+-
+-	/* enable WDT clock */
+-	cgu_clk_en_dis(CGU_SB_WDOG_PCLK_ID, 1);
+-
+-	/* Disable watchdog */
+-	WDT_TCR = 0;
+-	WDT_MCR = WDT_MCR_STOP_MR1 | WDT_MCR_INT_MR1;
+-
+-	/*  If TC and MR1 are equal a reset is generated. */
+-	WDT_PR  = 0x00000002;
+-	WDT_TC  = 0x00000FF0;
+-	WDT_MR0 = 0x0000F000;
+-	WDT_MR1 = 0x00001000;
+-	WDT_EMR = WDT_EMR_CTRL1(0x3);
+-	/* Enable watchdog timer; assert reset at timer timeout */
+-	WDT_TCR = WDT_TCR_CNT_EN;
+-	cpu_reset (0);/* loop forever and wait for reset to happen */
+-
+-	/*NOTREACHED*/
+-}
++extern void lpc31xx_arch_reset(char mode, const char *cmd);
+diff --git a/arch/arm/mach-lpc31xx/wdt.c b/arch/arm/mach-lpc31xx/wdt.c
+deleted file mode 100644
+index fc9a9e7..0000000
+--- a/arch/arm/mach-lpc31xx/wdt.c
++++ /dev/null
+@@ -1,49 +0,0 @@
+-/*
+- * LPC31xx Watchdog timer device registration
+- *
+- * drivers/watchdog/wdt_lpc31xx.c
+- *
+- * Copyright (C) 2009 NXP Semiconductors
+- *
+- * This program is free software; you can redistribute it and/or modify
+- * it under the terms of the GNU General Public License as published by
+- * the Free Software Foundation; either version 2 of the License, or
+- * (at your option) any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+- *
+- */
+-#include <linux/platform_device.h>
+-#include <mach/constants.h>
+-#include <mach/irqs.h>
+-
+-#ifndef CONFIG_OF
+-static struct resource watchdog_resources[] = {
+-	{
+-		.start = WDT_PHYS,
+-		.end = WDT_PHYS + SZ_4K - 1,
+-		.flags = IORESOURCE_MEM,
+-	},
+-};
+-
+-static struct platform_device watchdog_device = {
+-	.name = "lpc31xx-wdt",
+-	.id = -1,
+-	.num_resources = ARRAY_SIZE(watchdog_resources),
+-	.resource = watchdog_resources,
+-};
+-
+-static int __init wdt_device_init(void)
+-{
+-	return platform_device_register(&watchdog_device);
+-}
+-
+-arch_initcall(wdt_device_init);
+-#endif
