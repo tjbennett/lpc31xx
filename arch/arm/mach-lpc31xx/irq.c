@@ -129,7 +129,6 @@ void __init lpc31xx_init_irq(void)
 					 handle_level_irq);
 		set_irq_flags(irq, IRQF_VALID);
 	}
-	lpc31xx_init_evtr();
 
 	/* Set the priority threshold to 0, i.e. don't mask any interrupt */
 	/* on the basis of priority level, for both targets (IRQ/FIQ)    */
