@@ -27,6 +27,8 @@
 #include <linux/string.h>
 #include <linux/console.h>
 #include <linux/serial_8250.h>
+#include <linux/of_address.h>
+#include <linux/of_irq.h>
 
 #include <asm/errno.h>
 #include <mach/hardware.h>
@@ -35,6 +37,11 @@
 #include <asm/mach/map.h>
 
 /* local functions */
+
+static struct of_device_id uart_ids[] = {
+	{ .compatible = "nxp,lpc31xx-uart" },
+	{ /* sentinel */ }
+};
 
 static void lpc31xx_uart_pm(struct uart_port * port, unsigned int state,
 			      unsigned int oldstate)
@@ -90,7 +97,8 @@ static struct plat_serial8250_port platform_serial_ports[] = {
 	{
 		.membase = (void *)io_p2v(UART_PHYS),
 		.mapbase = (unsigned long)UART_PHYS,
-		.irq = IRQ_UART,
+		//.irq = IRQ_UART,
+		.irq = 13,
 		.uartclk = XTAL_CLOCK,
 		.regshift = 2,
 		.iotype = UPIO_MEM,
@@ -188,6 +196,24 @@ void __init lpc31xx_uart_init(void)
 {
 	int mul, div;
 
+	struct device_node *node;
+	int irq;
+
+	node = of_find_matching_node(NULL, uart_ids);
+	if (!node)
+		return;
+
+	/* Get the interrupts property */
+	irq = irq_of_parse_and_map(node, 0);
+	if (!irq) {
+		pr_crit("LPC31xx: UART -  unable to get IRQ from DT\n");
+		return;
+	}
+	of_node_put(node);
+
+	platform_serial_ports[0].irq = irq;
+	printk("JDS - Uart IRQ %d\n", irq);
+
 	/* check what FDR bootloader is using */
 	mul = (UART_FDR_REG >> 4) & 0xF;
 	div = UART_FDR_REG & 0xF;
@@ -213,8 +239,8 @@ void __init lpc31xx_init(void)
 	/* Disable ring oscillators used by Random number generators */
 	SYS_RNG_OSC_CFG = 0;
 
+	/* fixme */
 #if 0
-	/* fix me */
 	/* Mux I2S signals based on selected channel */
 #if defined (CONFIG_SND_I2S_TX0_MASTER)
 	/* I2S TX0 WS, DATA */
@@ -264,22 +290,17 @@ static int __init lpc31xx_init_console(void)
  	 */
 	memset(&up, 0, sizeof(up));
 
+	lpc31xx_uart_init();
+	up.uartclk = platform_serial_ports[0].uartclk;
+	up.irq = platform_serial_ports[0].irq;
+
 	up.membase = (char *) io_p2v(UART_PHYS);
 	up.mapbase = (unsigned long)UART_PHYS,
-	up.irq = IRQ_UART;
-	up.uartclk = XTAL_CLOCK;
-	/* check what FDR bootloader is using */
-	mul = (UART_FDR_REG >> 4) & 0xF;
-	div = UART_FDR_REG & 0xF;
-	if (div != 0)  {
-		up.uartclk = (XTAL_CLOCK * mul) / (mul + div);
-	}
 	up.regshift = 2;
 	up.iotype = UPIO_MEM;
 	up.type	= PORT_NXP16750;
 	up.flags = UPF_BOOT_AUTOCONF | UPF_BUGGY_UART | UPF_SKIP_TEST;
 	up.line	= 0;
-	platform_serial_ports[0].uartclk = up.uartclk;
 	if (early_serial_setup(&up))
 		printk(serr, up.line);
 
