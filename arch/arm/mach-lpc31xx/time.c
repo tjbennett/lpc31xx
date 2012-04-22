@@ -148,3 +148,4 @@ struct sys_timer lpc31xx_timer = {
 	.suspend = lpc31xx_timer_suspend,
 	.resume = lpc31xx_timer_resume,
 };
+
