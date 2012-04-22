@@ -1,10 +1,10 @@
 # LPC313X Platform Support
-snd-soc-lpc313x-objs := lpc313x-pcm.o
-snd-soc-lpc313x-i2s-objs := lpc313x-i2s.o
+snd-soc-lpc31xx-objs := lpc31xx-pcm.o
+snd-soc-lpc31xx-i2s-objs := lpc31xx-i2s.o
 
-obj-$(CONFIG_SND_LPC313X_SOC) += snd-soc-lpc313x.o
-obj-$(CONFIG_SND_LPC315X_SOC) += snd-soc-lpc313x.o
-obj-$(CONFIG_SND_LPC313X_SOC_I2S) += snd-soc-lpc313x-i2s.o lpc313x-i2s-clocking.o
+obj-$(CONFIG_SND_LPC313X_SOC) += snd-soc-lpc31xx.o
+obj-$(CONFIG_SND_LPC315X_SOC) += snd-soc-lpc31xx.o
+obj-$(CONFIG_SND_LPC313X_SOC_I2S) += snd-soc-lpc31xx-i2s.o lpc31xx-i2s-clocking.o
 
 # LPC3XXX Machine Support
 snd-soc-ea3131-uda1380-objs := ea3131-uda1380.o
