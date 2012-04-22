@@ -274,7 +274,7 @@ void __init lpc313x_init_irq(void)
 
 		irq_set_chip(irq, &lpc313x_evtr_chip);
 		set_irq_flags(irq, IRQF_VALID);
-		/* configure the interrupt senstivity */
+		/* configure the interrupt sensitivity */
 		switch (irq_2_event[irq - IRQ_EVT_START].type) {
 			case EVT_ACTIVE_LOW:
 				EVRT_APR(bank) &= ~_BIT(bit_pos);
@@ -299,6 +299,7 @@ void __init lpc313x_init_irq(void)
 			case EVT_BOTH_EDGE:
 				EVRT_ATR(bank) |= _BIT(bit_pos);
 				irq_set_handler(irq, handle_edge_irq);
+				break;
 			default:
 				printk("Invalid Event type.\r\n");
 				break;
@@ -345,7 +346,7 @@ void __init lpc313x_init_irq(void)
 	irq_set_chained_handler (IRQ_EVT_ROUTER3, router3_handler);
 #endif
 
-	/* Set the priority treshold to 0, i.e. don't mask any interrupt */
+	/* Set the priority threshold to 0, i.e. don't mask any interrupt */
 	/* on the basis of priority level, for both targets (IRQ/FIQ)    */
 	INTC_IRQ_PRI_MASK = 0;
 	INTC_FIQ_PRI_MASK = 0;

@@ -143,24 +143,9 @@
                   
 #define GPIO_UART_RXD         (IOCONF_UART | 0)
 #define GPIO_UART_TXD         (IOCONF_UART | 1)
+
                 
-extern int lpc313x_gpio_direction_output(unsigned gpio, int value);
-
-static inline int lpc313x_gpio_direction_input(unsigned gpio)
-{
-	unsigned long flags;
-	int port = (gpio & GPIO_PORT_MASK);
-	int pin = 1 << (gpio & GPIO_PIN_MASK);
-
-	raw_local_irq_save(flags);
-
-	GPIO_M1_RESET(port) = pin; 
-	GPIO_M0_RESET(port) = pin;
-
-	raw_local_irq_restore(flags);
-	return 0;
-}
-
+#if 0
 static inline int lpc313x_gpio_ip_driven(unsigned gpio)
 {
 	unsigned long flags;
@@ -175,31 +160,7 @@ static inline int lpc313x_gpio_ip_driven(unsigned gpio)
 	raw_local_irq_restore(flags);
 	return 0;
 }
-
-
-static inline int lpc313x_gpio_get_value(unsigned gpio)
-{
-	return (GPIO_STATE(gpio & GPIO_PORT_MASK) & (1 << (gpio & GPIO_PIN_MASK)));
-}
-
-static inline void lpc313x_gpio_set_value(unsigned gpio, int value)
-{
-	unsigned long flags;
-	int port = (gpio & GPIO_PORT_MASK);
-	int pin = 1 << (gpio & GPIO_PIN_MASK);
-
-	raw_local_irq_save(flags);
-
-	GPIO_M1_SET(port) = pin; 
-
-	if(value) {
-		GPIO_M0_SET(port) = pin;
-	} else {
-		GPIO_M0_RESET(port) = pin;
-	}
-
-	raw_local_irq_restore(flags);
-}
+#endif
 
 
 #ifdef CONFIG_GPIOLIB
