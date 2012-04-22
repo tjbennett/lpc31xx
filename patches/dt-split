@@ -1,5 +1,5 @@
 Bottom: 9bfee5c4334aa13f6e3403d835317806dead86ff
-Top:    f2118f15eda09f6c8da36bf4b8389f6e83c461dd
+Top:    bfd7637cee2ea17ac751c5a33f8ddf2ec1416466
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-21 13:42:00 -0400
 
@@ -541,3 +541,711 @@ index 096fe21..e668c07 100644
 -		interrupts = <24>;
 -	};
  };
+diff --git a/arch/arm/mach-lpc31xx/evtr.c b/arch/arm/mach-lpc31xx/evtr.c
+index a331f15..93a418c 100644
+--- a/arch/arm/mach-lpc31xx/evtr.c
++++ b/arch/arm/mach-lpc31xx/evtr.c
+@@ -38,6 +38,16 @@
+ #include <mach/clock.h>
+ 
+ #define IRQ_EVT_START   NR_IRQ_CPU
++static struct irq_domain *evtr_domain;
++struct event_data {
++	int event;
++	int group;
++	int edge;
++	int virq;
++};
++
++static struct event_data *events;
++static int num_events;
+ 
+ /* System specific IRQs */
+ /* event PIN or internal signal */
+@@ -190,7 +200,7 @@ typedef enum
+ 
+ /* structure to map board IRQ to event pin */
+ typedef struct {
+-	u32 irq;
++	uint32_t irq;
+ 	EVENT_T event_pin;
+ 	EVENT_TYPE_T type;
+ } IRQ_EVENT_MAP_T;
+@@ -347,32 +357,32 @@ static IRQ_EVENT_MAP_T irq_2_event[] = BOARD_IRQ_EVENT_MAP;
+ 
+ static void evt_mask_irq(struct irq_data *data)
+ {
+-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
+-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
++	uint32_t bank = EVT_GET_BANK(irq_2_event[data->hwirq].event_pin);
++	uint32_t bit_pos = irq_2_event[data->hwirq].event_pin & 0x1F;
+ 
+ 	EVRT_MASK_CLR(bank) = _BIT(bit_pos);
+ }
+ 
+ static void evt_unmask_irq(struct irq_data *data)
+ {
+-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
+-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
++	uint32_t bank = EVT_GET_BANK(irq_2_event[data->hwirq].event_pin);
++	uint32_t bit_pos = irq_2_event[data->hwirq].event_pin & 0x1F;
+ 
+ 	EVRT_MASK_SET(bank) = _BIT(bit_pos);
+ }
+ 
+ static void evt_ack_irq(struct irq_data *data)
+ {
+-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
+-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
++	uint32_t bank = EVT_GET_BANK(irq_2_event[data->hwirq].event_pin);
++	uint32_t bit_pos = irq_2_event[data->hwirq].event_pin & 0x1F;
+ 	//EVRT_MASK_CLR(bank) = _BIT(bit_pos);
+ 	EVRT_INT_CLR(bank) = _BIT(bit_pos);
+ }
+ 
+ static int evt_set_type(struct irq_data *data, unsigned int flow_type)
+ {
+-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
+-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
++	uint32_t bank = EVT_GET_BANK(irq_2_event[data->hwirq].event_pin);
++	uint32_t bit_pos = irq_2_event[data->hwirq].event_pin & 0x1F;
+ 
+ 	switch (flow_type) {
+ 	case IRQ_TYPE_EDGE_RISING:
+@@ -403,8 +413,8 @@ static int evt_set_type(struct irq_data *data, unsigned int flow_type)
+ 
+ static int evt_set_wake(struct irq_data *data, unsigned int on)
+ {
+-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
+-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
++	uint32_t bank = EVT_GET_BANK(irq_2_event[data->hwirq].event_pin);
++	uint32_t bit_pos = irq_2_event[data->hwirq].event_pin & 0x1F;
+ 
+ 	if (on)
+ 		/* enable routing to CGU_WAKEUP */
+@@ -421,7 +431,7 @@ static int set_input(unsigned irq);
+ unsigned int evt_startup(struct irq_data *data)
+ {
+ 	evt_unmask_irq(data);
+-	return set_input(data->irq);
++	return set_input(data->hwirq);
+ }
+ 
+ static struct irq_chip lpc31xx_evtr_chip = {
+@@ -438,46 +448,31 @@ static struct irq_chip lpc31xx_evtr_chip = {
+ 
+ #define ROUTER_HDLR(n) \
+ 	static void router##n##_handler (unsigned int irq, struct irq_desc *desc) { \
+-		u32 status, bank, bit_pos; \
+-		if (IRQ_EVTR##n##_START == IRQ_EVTR##n##_END) { \
+-			/* translate IRQ number */ \
+-			irq = IRQ_EVTR##n##_START; \
+-			generic_handle_irq(irq); \
+-		} else { \
+-			for (irq = IRQ_EVTR##n##_START; irq <= IRQ_EVTR##n##_END; irq++) {  \
+-				/* compute bank & bit position for the event_pin */ \
+-				bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin); \
+-				bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F; \
++		uint32_t i, status, bank, bit_pos; \
++		for (i = 0; i < num_events; i++) { \
++			if (events[i].group == n) { \
++				bank = EVT_GET_BANK(events[i].event); \
++				bit_pos = events[i].event & 0x1F; \
+ 				status = EVRT_OUT_PEND(n, bank); \
+ 				if (status & _BIT(bit_pos)) { \
+-					generic_handle_irq(irq); \
++					generic_handle_irq(events[i].virq); \
++					return; \
+ 				} \
+ 			} \
+ 		} \
+ 	}
+ 
+ 
+-#if IRQ_EVTR0_END
+ ROUTER_HDLR(0)
+-#endif /* IRQ_EVTR0_END */
+-
+-#if IRQ_EVTR1_END
+ ROUTER_HDLR(1)
+-#endif /* IRQ_EVTR1_END */
+-
+-#if IRQ_EVTR2_END
+ ROUTER_HDLR(2)
+-#endif /* IRQ_EVTR2_END */
+-
+-#if IRQ_EVTR3_END
+ ROUTER_HDLR(3)
+-#endif /* IRQ_EVTR3_END */
+ 
+ void __init lpc31xx_init_evtr(void)
+ {
+ 	unsigned int irq;
+ 	int i, j, v;
+-	u32 bank, bit_pos;
++	uint32_t bank, bit_pos;
+ 
+ 	/* mask all external events */
+ 	for (i = 0; i < EVT_MAX_VALID_BANKS; i++)
+@@ -605,15 +600,6 @@ int event_to_gpioreg[] = {
+ 	0x000,0x000,0x000,0x000,0x000,0x000,0x000,0x000,
+ };
+ 
+-struct event_data {
+-	int event;
+-	int group;
+-	int edge;
+-};
+-
+-static struct event_data *events;
+-static int num_events;
+-
+ extern int lpc3131_reg_to_gpio(unsigned index, unsigned gpio);
+ 
+ /* when a gpio pin is request as an interrupt source,
+@@ -623,7 +609,7 @@ static int set_input(unsigned irq)
+ {
+ 	int ret, reg, gpio, event;
+ 
+-	event = events[irq - 30].event;
++	event = events[irq].event;
+ 	reg  = event_to_gpioreg[event];
+ 	if (!reg) /* not a gpio pin */
+ 		return 0;
+@@ -635,23 +621,86 @@ static int set_input(unsigned irq)
+ 	return gpio_direction_input(gpio);
+ }
+ 
+-int event_to_irq(int event)
++int lpc31xx_event_to_irq(int event)
+ {
+ 	int i;
+ 	for (i = 0; i < num_events; i++) {
+ 		if (events[i].event == event) {
+-			return i + 30; /* fixme */
++			return i; /* fixme */
+ 		}
+ 	}
+ 	return -EINVAL;
+ }
+-EXPORT_SYMBOL(event_to_irq);
++EXPORT_SYMBOL(lpc31xx_event_to_irq);
++
++int lpc31xx_set_cgu_wakeup(int enable, int event)
++{
++	uint32_t bank = EVT_GET_BANK(event);
++	uint32_t bit_pos = event & 0x1F;
++
++	if (enable)
++		EVRT_OUT_MASK_SET(4, bank) = _BIT(bit_pos);
++	else
++		EVRT_OUT_MASK_CLR(4, bank) = _BIT(bit_pos);
++	return 0;
++}
++EXPORT_SYMBOL(lpc31xx_set_cgu_wakeup);
++
+ 
+ static const struct of_device_id evtr_of_match[] __initconst = {
+ 	{ .compatible = "nxp,lpc31xx-evtr", },
+ 	{},
+ };
+ 
++static int evtr_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t hw)
++{
++	uint32_t bank = EVT_GET_BANK(events[hw].event);
++	uint32_t bit_pos = events[hw].event & 0x1F;
++	printk("..mapping hw %ld to virq %d\n", hw, virq);
++
++	irq_set_chip(virq, &lpc31xx_evtr_chip);
++	set_irq_flags(virq, IRQF_VALID);
++	events[hw].virq = virq;
++	EVRT_OUT_MASK_SET(events[hw].group, bank) = _BIT(bit_pos);
++
++	switch (events[hw].edge) {
++	case EVT_ACTIVE_LOW:
++		EVRT_APR(bank) &= ~_BIT(bit_pos);
++		EVRT_ATR(bank) &= ~_BIT(bit_pos);
++		irq_set_handler(virq, handle_level_irq);
++		break;
++	case EVT_ACTIVE_HIGH:
++		EVRT_APR(bank) |= _BIT(bit_pos);
++		EVRT_ATR(bank) &= ~_BIT(bit_pos);
++		irq_set_handler(virq, handle_level_irq);
++		break;
++	case EVT_FALLING_EDGE:
++		EVRT_APR(bank) &= ~_BIT(bit_pos);
++		EVRT_ATR(bank) |= _BIT(bit_pos);
++		irq_set_handler(virq, handle_edge_irq);
++		break;
++	case EVT_RISING_EDGE:
++		EVRT_APR(bank) |= _BIT(bit_pos);
++		EVRT_ATR(bank) |= _BIT(bit_pos);
++		irq_set_handler(virq, handle_edge_irq);
++		break;
++	case EVT_BOTH_EDGE:
++		EVRT_ATR(bank) |= _BIT(bit_pos);
++		irq_set_handler(virq, handle_edge_irq);
++		break;
++	default:
++		printk("Invalid Event type.\r\n");
++		break;
++	}
++	return 0;
++}
++
++static struct irq_domain_ops evtr_irq_ops = {
++	.map	= evtr_irq_map,
++	.xlate	= irq_domain_xlate_twocell,
++};
++
++
+ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
+ {
+ 	const __be32 *ip;
+@@ -660,7 +709,7 @@ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
+ 
+ 	printk("###### Event router probe ######\n");
+ 
+-	irq_domain_generate_simple(evtr_of_match, 0x13000000, 30);
++
+ 
+ 	ip = of_get_property(np, "#event-cells", NULL);
+ 	if (!ip)
+@@ -679,6 +728,11 @@ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
+ 		printk("group %d bit %02x edge %d\n", events[i].group, events[i].event, events[i].edge);
+ 		//set_input(events[i].event);
+ 	}
++
++	evtr_domain = irq_domain_add_linear(np, num_events, &evtr_irq_ops, NULL);
++	if (!evtr_domain)
++		panic("Unable to add lpc31xx irq domain (DT)\n");
++
+ 	return 0;
+ }
+ 
+diff --git a/arch/arm/mach-lpc31xx/generic.c b/arch/arm/mach-lpc31xx/generic.c
+index d257d47..c61e3da 100644
+--- a/arch/arm/mach-lpc31xx/generic.c
++++ b/arch/arm/mach-lpc31xx/generic.c
+@@ -242,7 +242,8 @@ void __init lpc31xx_init(void)
+ #endif
+ 	lpc31xx_uart_init();
+ 
+-	return platform_add_devices(devices, ARRAY_SIZE(devices));
++	platform_add_devices(devices, ARRAY_SIZE(devices));
++	return;
+ }
+ 
+ 
+diff --git a/arch/arm/mach-lpc31xx/include/mach/registers.h b/arch/arm/mach-lpc31xx/include/mach/registers.h
+index 456f5c6..57adc03 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/registers.h
++++ b/arch/arm/mach-lpc31xx/include/mach/registers.h
+@@ -28,12 +28,6 @@
+ /***********************************************************************
+  * Interrupt controller register definitions
+  **********************************************************************/
+-#define INTC_IRQ_PRI_MASK     __REG(INTC_PHYS + 0x000)
+-#define INTC_FIQ_PRI_MASK     __REG(INTC_PHYS + 0x004)
+-#define INTC_IRQ_VEC_BASE     __REG(INTC_PHYS + 0x100)
+-#define INTC_FIQ_VEC_BASE     __REG(INTC_PHYS + 0x104)
+-#define INTC_REQ_REG(irq)     __REG(INTC_PHYS + 0x400 + ((irq) << 2))
+-
+ #define INTC_REQ_PEND         _BIT(31)
+ #define INTC_REQ_SET_SWINT    _BIT(30)
+ #define INTC_REQ_CLR_SWINT    _BIT(29)
+@@ -95,11 +89,6 @@
+ /***********************************************************************
+  * Timer register definitions
+  **********************************************************************/
+-#define TIMER_LOAD(base)      __REG ((base) + 0x00)
+-#define TIMER_VALUE(base)     __REG ((base) + 0x04)
+-#define TIMER_CONTROL(base)   __REG ((base) + 0x08)
+-#define TIMER_CLEAR(base)     __REG ((base) + 0x0c)
+-
+ #define TM_CTRL_ENABLE    _BIT(7)
+ #define TM_CTRL_MODE      _BIT(6)
+ #define TM_CTRL_PERIODIC  _BIT(6)
+diff --git a/arch/arm/mach-lpc31xx/irq.c b/arch/arm/mach-lpc31xx/irq.c
+index cf172f9..1f30cf7 100644
+--- a/arch/arm/mach-lpc31xx/irq.c
++++ b/arch/arm/mach-lpc31xx/irq.c
+@@ -22,54 +22,83 @@
+  */
+ 
+ #include <linux/init.h>
++#include <linux/io.h>
+ #include <linux/list.h>
+ #include <linux/timer.h>
+ #include <linux/of_irq.h>
+ #include <linux/irqdomain.h>
++#include <linux/of_address.h>
+ 
+-#include <mach/hardware.h>
+ #include <asm/irq.h>
+ #include <asm/mach/irq.h>
++
++#include <mach/hardware.h>
+ #include <mach/irqs.h>
+ #include <mach/clock.h>
+ 
+-/* Macros to compute the bank based on EVENT_T */
+-#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
+-#define EVT_arm926_nirq		0x6C
++/***********************************************************************
++ * Interrupt controller register definitions
++ **********************************************************************/
++#define INTC_IRQ_PRI_MASK     0x000
++#define INTC_FIQ_PRI_MASK     0x004
++#define INTC_IRQ_VEC_BASE     0x100
++#define INTC_FIQ_VEC_BASE     0x104
++#define INTC_REQ_REG(irq)     (0x400 + ((irq) << 2))
++
++#define INTC_REQ_PEND         _BIT(31)
++#define INTC_REQ_SET_SWINT    _BIT(30)
++#define INTC_REQ_CLR_SWINT    _BIT(29)
++#define INTC_REQ_WE_PRIO_LVL  _BIT(28)
++#define INTC_REQ_WE_TARGET    _BIT(27)
++#define INTC_REQ_WE_ENABLE    _BIT(26)
++#define INTC_REQ_WE_ACT_LOW   _BIT(25)
++#define INTC_REQ_ACT_LOW      _BIT(17)
++#define INTC_REQ_ENABLE       _BIT(16)
++#define INTC_REQ_TARGET(n)    _SBF(8, ((n) & 0x3F))
++#define INTC_REQ_PRIO_LVL(n)  ((n) & 0xFF)
++#define INTC_REQ_TARGET_IRQ   (INTC_REQ_WE_TARGET)
++#define INTC_REQ_TARGET_FIQ   (INTC_REQ_WE_TARGET | _BIT(8))
++
++static struct irq_domain *intc_domain;
++static void __iomem *intc_regs;
++#define intc_read(reg) \
++	__raw_readl(intc_regs + reg)
++#define intc_write(reg, value) \
++	__raw_writel(value, intc_regs + reg);
+ 
+-extern void __init lpc31xx_init_evtr(void);
++#define EVT_arm926_nirq		0x6C
+ 
+ static void intc_mask_irq(struct irq_data *data)
+ {
+-	INTC_REQ_REG(data->irq) = INTC_REQ_WE_ENABLE;
++	if (data->hwirq == 10)
++		printk("Mask UART IRQ\n");
++	intc_write(INTC_REQ_REG(data->hwirq), INTC_REQ_WE_ENABLE);
+ }
+ 
+ static void intc_unmask_irq(struct irq_data *data)
+ {
+-	INTC_REQ_REG(data->irq) = INTC_REQ_ENABLE | INTC_REQ_WE_ENABLE;
++	if (data->hwirq == 10)
++		printk("Unmask UART IRQ\n");
++	intc_write(INTC_REQ_REG(data->hwirq), INTC_REQ_ENABLE | INTC_REQ_WE_ENABLE);
+ }
+ 
++extern int lpc31xx_set_cgu_wakeup(int enable, int event);
++
+ static int intc_set_wake(struct irq_data *data, unsigned int on)
+ {
+-	static u32 wake_ints = 0;
++	static uint32_t wake_ints = 0;
+ 
+ 	if (on)
+ 		/* save the irqs which wake */
+-		wake_ints |= _BIT(data->irq);
++		wake_ints |= _BIT(data->hwirq);
+ 	else
+ 		/* clear the irqs which don't wake */
+-		wake_ints &= ~_BIT(data->irq);
++		wake_ints &= ~_BIT(data->hwirq);
+ 
+ 	/* Note: the clocks to corresponding blocks shouldn't be suspended
+ 	 * by individual drivers for this logic to work.
+ 	 */
+-	if (wake_ints) {
+-		/* enable ARM_IRQ routing to CGU_WAKEUP */
+-		EVRT_OUT_MASK_SET(4, EVT_GET_BANK(EVT_arm926_nirq)) = _BIT((EVT_arm926_nirq & 0x1F));
+-	} else {
+-		/* disable ARM_IRQ routing to CGU_WAKEUP */
+-		EVRT_OUT_MASK_CLR(4, EVT_GET_BANK(EVT_arm926_nirq)) = _BIT((EVT_arm926_nirq & 0x1F));
+-	}
++	lpc31xx_set_cgu_wakeup(EVT_arm926_nirq, wake_ints);
+ 
+ 	//printk("wake on irq=%d value=%d 0x%08x/0x%08x/0x%08x 0x%08x/0x%08x\r\n", irq, value, 
+ 	//	EVRT_MASK(3), EVRT_APR(3), EVRT_ATR(3),
+@@ -91,50 +120,64 @@ static const struct of_device_id intc_of_match[] __initconst = {
+ 	{},
+ };
+ 
++static int intc_irq_map(struct irq_domain *h, unsigned int virq,
++							irq_hw_number_t hw)
++{
++	printk("mapping hw %ld to virq %d\n", hw, virq);
++	/* Set the initial control values */
++	intc_write(INTC_REQ_REG(hw), INTC_REQ_WE_ENABLE);
++
++	/* Initialize as high-active, Disable the interrupt,
++	* Set target to IRQ , Set priority level to 1 (= lowest) for
++	* all the interrupt lines */
++	intc_write(INTC_REQ_REG(hw), (INTC_REQ_WE_ACT_LOW |
++		INTC_REQ_WE_ENABLE |
++		INTC_REQ_TARGET_IRQ |
++		INTC_REQ_PRIO_LVL(1) |
++		INTC_REQ_WE_PRIO_LVL));
++
++	irq_set_chip_and_handler(virq, &lpc31xx_internal_chip, handle_level_irq);
++	set_irq_flags(virq, IRQF_VALID);
++	return 0;
++}
++
++static struct irq_domain_ops intc_irq_ops = {
++	.map	= intc_irq_map,
++	.xlate	= irq_domain_xlate_onecell,
++};
++
+ void __init lpc31xx_init_irq(void)
+ {
+-	unsigned int irq;
++	struct device_node *node;
+ 
+-	irq_domain_generate_simple(intc_of_match, 0x60000000, 0);
++	/* Remap the necessary zones */
++	node = of_find_matching_node(NULL, intc_of_match);
++	intc_regs = of_iomap(node, 0);
++	if (!intc_regs)
++		panic(__FILE__	": find_and_map failed on 'lpc31xx-intc'");
+ 
+ 	/* enable clock to interrupt controller */
+ 	cgu_clk_en_dis(CGU_SB_AHB2INTC_CLK_ID, 1);
+ 	cgu_clk_en_dis(CGU_SB_INTC_CLK_ID, 1);
+-	/* enable clock to Event router */
+-	cgu_clk_en_dis(CGU_SB_EVENT_ROUTER_PCLK_ID, 1);
+ 
+ 	/* Set the vector base (we don't use direct vectoring, so this is 0) */
+-	INTC_IRQ_VEC_BASE = 0x00000000;
+-	INTC_FIQ_VEC_BASE = 0x00000000;
++	intc_write(INTC_IRQ_VEC_BASE, 0x00000000);
++	intc_write(INTC_FIQ_VEC_BASE, 0x00000000);
+ 
+ 	/* mask all interrupt by setting high priority until init is done*/
+-	INTC_IRQ_PRI_MASK = 0xFF;
+-	INTC_FIQ_PRI_MASK = 0xFF;
+-
+-	/* Clear and disable all interrupts. Start from index 1 since 0 is unused.*/
+-	for (irq = 1; irq < NR_IRQ_CPU; irq++) {
+-		/* Set the initial control values */
+-		INTC_REQ_REG(irq) = INTC_REQ_WE_ENABLE;
+-
+-		/* Initialize as high-active, Disable the interrupt,
+-		* Set target to IRQ , Set priority level to 1 (= lowest) for
+-		* all the interrupt lines */
+-		INTC_REQ_REG(irq) = INTC_REQ_WE_ACT_LOW |
+-			INTC_REQ_WE_ENABLE |
+-			INTC_REQ_TARGET_IRQ |
+-			INTC_REQ_PRIO_LVL(1) |
+-			INTC_REQ_WE_PRIO_LVL;
+-
+-		irq_set_chip_and_handler(irq, &lpc31xx_internal_chip,
+-					 handle_level_irq);
+-		set_irq_flags(irq, IRQF_VALID);
+-	}
+-	lpc31xx_init_evtr();
++	intc_write(INTC_IRQ_PRI_MASK, 0xFF);
++	intc_write(INTC_FIQ_PRI_MASK, 0xFF);
++
++	intc_domain = irq_domain_add_linear(node, NR_IRQ_CPU, &intc_irq_ops, NULL);
++	if (!intc_domain)
++		panic("Unable to add lpc31xx irq domain (DT)\n");
++
++	irq_set_default_host(intc_domain);
+ 
+ 	/* Set the priority threshold to 0, i.e. don't mask any interrupt */
+ 	/* on the basis of priority level, for both targets (IRQ/FIQ)    */
+-	INTC_IRQ_PRI_MASK = 0;
+-	INTC_FIQ_PRI_MASK = 0;
++	intc_write(INTC_IRQ_PRI_MASK, 0);
++	intc_write(INTC_FIQ_PRI_MASK, 0);
+ 
+ }
+ 
+diff --git a/arch/arm/mach-lpc31xx/time.c b/arch/arm/mach-lpc31xx/time.c
+index 7fc7ecc..559ee67 100644
+--- a/arch/arm/mach-lpc31xx/time.c
++++ b/arch/arm/mach-lpc31xx/time.c
+@@ -3,7 +3,7 @@
+  *  Author:	Durgesh Pattamatta
+  *  Copyright (C) 2009 NXP semiconductors
+  *
+- *  Timer driver for LPC31xx
++ *  Timer driver for LPC31xx & LPC315x.
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+@@ -25,21 +25,43 @@
+ #include <linux/interrupt.h>
+ #include <linux/irq.h>
+ #include <linux/time.h>
++#include <linux/of_address.h>
++#include <linux/of_irq.h>
+ 
+-#include <mach/hardware.h>
+ #include <asm/io.h>
+ #include <asm/irq.h>
+ #include <asm/leds.h>
+-
+ #include <asm/mach/time.h>
++
++#include <mach/hardware.h>
+ #include <mach/gpio.h>
+ #include <mach/board.h>
+-//#include <mach/cgu.h>
+ 
++/***********************************************************************
++ * Timer register definitions
++ **********************************************************************/
++#define TIMER_LOAD      0x00
++#define TIMER_VALUE     0x04
++#define TIMER_CONTROL   0x08
++#define TIMER_CLEAR     0x0c
++
++#define TM_CTRL_ENABLE    _BIT(7)
++#define TM_CTRL_MODE      _BIT(6)
++#define TM_CTRL_PERIODIC  _BIT(6)
++#define TM_CTRL_PS1       _SBF(2, 0)
++#define TM_CTRL_PS16      _SBF(2, 1)
++#define TM_CTRL_PS256     _SBF(2, 2)
++#define TM_CTRL_PS_MASK   _SBF(2, 0x3)
++
++static void __iomem *timer_regs;
++#define timer_read(reg) \
++	__raw_readl(timer_regs + reg)
++#define timer_write(reg, value) \
++	__raw_writel(value, timer_regs + reg);
+ 
+ static irqreturn_t lpc31xx_timer_interrupt(int irq, void *dev_id)
+ {
+-	TIMER_CLEAR(TIMER0_PHYS) = 0;
++	timer_write(TIMER_CLEAR, 0);
+ 	timer_tick();
+ 	return IRQ_HANDLED;
+ }
+@@ -50,43 +72,75 @@ static struct irqaction lpc31xx_timer_irq = {
+ 	.handler	= lpc31xx_timer_interrupt,
+ };
+ 
+-static void __init lpc31xx_timer_init (void)
+-{
+-	/* Switch on needed Timer clocks & switch off others*/
+-	cgu_clk_en_dis(CGU_SB_TIMER0_PCLK_ID, 1);
+-	cgu_clk_en_dis(CGU_SB_TIMER1_PCLK_ID, 0);
+-	cgu_clk_en_dis(CGU_SB_TIMER2_PCLK_ID, 0);
+-	cgu_clk_en_dis(CGU_SB_TIMER3_PCLK_ID, 0);
+-
+-	/* Stop/disable all timers */
+-	TIMER_CONTROL(TIMER0_PHYS) = 0;
+-
+-	TIMER_LOAD(TIMER0_PHYS) = LATCH;
+-	TIMER_CONTROL(TIMER0_PHYS) = (TM_CTRL_ENABLE | TM_CTRL_PERIODIC);
+-	TIMER_CLEAR(TIMER0_PHYS) = 0;
+-	setup_irq (IRQ_TIMER0, &lpc31xx_timer_irq);
+-}
+-
+ /*!
+  * Returns number of us since last clock interrupt.  Note that interrupts
+  * will have been disabled by do_gettimeoffset()
+  */
+ static unsigned long lpc31xx_gettimeoffset(void)
+ {
+-	u32 elapsed = LATCH - TIMER_VALUE(TIMER0_PHYS);
++	u32 elapsed = LATCH - timer_read(TIMER_VALUE);
+ 	return ((elapsed * 100) / (XTAL_CLOCK / 20000));
+ }
+ 
+ static void lpc31xx_timer_suspend(void)
+ {
+-	TIMER_CONTROL(TIMER0_PHYS) &= ~TM_CTRL_ENABLE;	/* disable timers */
++	timer_write(TIMER_CONTROL, timer_read(TIMER_CONTROL) & ~TM_CTRL_ENABLE); /* disable timers */
+ }
+ 
+ static void lpc31xx_timer_resume(void)
+ {
+-	TIMER_CONTROL(TIMER0_PHYS) |= TM_CTRL_ENABLE;	/* enable timers */
++	timer_write(TIMER_CONTROL, timer_read(TIMER_CONTROL) | TM_CTRL_ENABLE);	/* enable timers */
+ }
+ 
++static struct of_device_id timer_ids[] = {
++	{ .compatible = "nxp,lpc31xx-timer" },
++	{ /* sentinel */ }
++};
++
++static void __init lpc31xx_timer_init(void)
++{
++	struct device_node *node;
++	int ret;
++
++	node = of_find_matching_node(NULL, timer_ids);
++	if (!node)
++		goto err;
++
++	timer_regs = of_iomap(node, 0);
++	if (!timer_regs)
++		goto node_err;
++
++	/* Get the interrupts property */
++	ret = irq_of_parse_and_map(node, 0);
++	if (!ret) {
++		pr_crit("LPC31xx: Timer -  unable to get IRQ from DT\n");
++		goto ioremap_err;
++	}
++	of_node_put(node);
++
++	/* Switch on needed Timer clocks & switch off others*/
++	cgu_clk_en_dis(CGU_SB_TIMER0_PCLK_ID, 1);
++	cgu_clk_en_dis(CGU_SB_TIMER1_PCLK_ID, 0);
++	cgu_clk_en_dis(CGU_SB_TIMER2_PCLK_ID, 0);
++	cgu_clk_en_dis(CGU_SB_TIMER3_PCLK_ID, 0);
++
++	/* Stop/disable all timers */
++	timer_write(TIMER_CONTROL, 0);
++
++	timer_write(TIMER_LOAD, LATCH);
++	timer_write(TIMER_CONTROL, (TM_CTRL_ENABLE | TM_CTRL_PERIODIC));
++	timer_write(TIMER_CLEAR, 0);
++	setup_irq (IRQ_TIMER0, &lpc31xx_timer_irq);
++
++	return;
++
++ioremap_err:
++	iounmap(timer_regs);
++node_err:
++	of_node_put(node);
++err:
++	return;
++}
+ 
+ struct sys_timer lpc31xx_timer = {
+ 	.init = lpc31xx_timer_init,
+@@ -94,3 +148,4 @@ struct sys_timer lpc31xx_timer = {
+ 	.suspend = lpc31xx_timer_suspend,
+ 	.resume = lpc31xx_timer_resume,
+ };
++
+diff --git a/drivers/gpio/gpio-lpc31xx.c b/drivers/gpio/gpio-lpc31xx.c
+index 0f25f73..0c5af9e 100644
+--- a/drivers/gpio/gpio-lpc31xx.c
++++ b/drivers/gpio/gpio-lpc31xx.c
+@@ -156,14 +156,14 @@ static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int va
+ 		*gpc(base, GPIO_M0_RESET) = pin;
+ }
+ 
+-extern int event_to_irq(int event);
++extern int lpc31xx_event_to_irq(int event);
+ 
+ static int lpc3131_gpio_to_irq(struct gpio_chip *gc, unsigned gpio)
+ {
+ 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(gc);
+ 	struct lpc31xx_gpio_chip *chip = container_of(mm_gc, struct lpc31xx_gpio_chip, mmchip);
+ 
+-	return event_to_irq(gpio_evt[chip->index].evt[gpio]);
++	return lpc31xx_event_to_irq(gpio_evt[chip->index].evt[gpio]);
+ }
+ 
+ int lpc3131_reg_to_gpio(unsigned index, unsigned gpio)
