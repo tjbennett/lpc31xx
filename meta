@@ -1,40 +1,40 @@
 Version: 1
-Previous: ddef4ab70c528391d4deb41426c7baba50acb319
-Head: 1f23c95722dec0ad2f44d9529ed73859415c496c
+Previous: e757bab8ef89c919f5f4cbf335c7eb000c34d2de
+Head: e865bae9d78655db76260537830e916b6fc28d39
 Applied:
-  roland-dt-1.patch: cadcaf8f210fa1e31eb98c88d9020d8537f44510
-  base.patch: 87371c595602b0653b9aa06b5371926af14d9bea
-  defconfigs.patch: 53029f3182e70d6f6f0aac4b62ffcd470c8499bc
-  nand.patch: cb58b8d26c4794cf8e8c70544e4326be54bb4753
-  spi.patch: 29c8f7fd43e48ffbe2307315413befd15c2751b4
-  mmc.patch: 0deabded700ebe76ed09aa6a77d521a567716c85
-  watchdog.patch: d5459a10b156d34cd881f7c1c23a782af6d99e5e
-  sound.patch: a9879083e8824b7a5ae87e7248421628784ba98a
-  usb.patch: 303ce1b9915495bf919b58c05c84661e4c9e9743
-  gadget.patch: 05c5d9cae30ca6124781bdfd0eb61841561bd63e
-  old8250.patch: 4b4813e8d71c32283d79e5dd1e9b183cf6f204ff
-  video.patch: 8ca1517d2815f4ce1f6951dfc3cc146c1abed717
-  phys.patch: a57607bd0fb068d972a42d86983c6365b0dd9e8e
-  mmc-stop-fix.patch: 6389aef85a6e5974551a4e6d2a46da1f167cfca3
-  remove-config-noise.patch: 2ec8730bb59697d5a78fc07b1809445f977b628f
-  NXP-DMA-fixes.patch: 21bc78ab5de33d7d8b431f9504d620c485892399
-  NXP-uart-dma.patch: 48e04a1aef3e23f8263d4bc670e7c4c241136fcf
-  nxp-nand-dma.patch: babd7e792aa1b24e0d9a00098d890772b5998af9
-  nxp-audio-analog.patch: a7d2ebe7eae9ad8e1cdd46fec849a2d5e7b1d6ba
-  reset.patch: 44020974c5df7545772e30301da65114aa112f94
-  adc-registers.patch: 520e8f5bcdd988e8e20f0dd6f79328775af20e70
-  adc-pwm.patch: 0fb96f516420ffeaa4af54935bcb01b9ca05fdc4
-  device-trees.patch: 9853cf69063283e67864d27c43dd43ae51287cd6
-  dma.patch: 18792ec44b644ccbf178fd5a8d19bc94c04e7860
-  irq.patch: 8475f329e5395685815c558077e231e8ae1472fb
-  mmc-dma.patch: 9d9fdbff0aa9e71338429a84614161cb32b7caa6
-  nand-dma.patch: 2884bb4f45d179f8a03934ea7674cc27c31ff014
-  i2s-dma.patch: 7eeb5703a0c2ac781ed63174c3d98b72efde4f7e
-  v34-fixes.patch: b2fbaaec979bbabc37f3df74897b74e79455ce33
-  rename.patch: d69a14981f0adc7468e1258bd7a46f5bacf55545
-  symbol-rename.patch: 787c5b356e6207df65d01a1c265f1d84035d85ff
-  dt-split: 29a2f73d7b0658d87be7f7572d158b4cb1e09a61
-  evtr: cd6524d1f5333c92a35f12ceb9e8a63c7326e037
-  intc: 1f23c95722dec0ad2f44d9529ed73859415c496c
+  roland-dt-1.patch: fdd5d5d4094ddaebdfd597022100ac5ce9bd25e7
+  base.patch: 84572d10a50c1c38f9f59ea106fd70d419596520
+  defconfigs.patch: 604de24a4b1d3de58dc17252b0b9414241fb728e
+  nand.patch: e046bed5f7952b83b8b850fe90ebfb20c7bf2b01
+  spi.patch: 526fb08099eb25dd2a32c3504ccb5177b4dee693
+  mmc.patch: 96cc23f090769c374328423bc0efbf050bbfc7c2
+  watchdog.patch: cd5367ae5a4e4af1622dbf6c64d5223f40033cfb
+  sound.patch: c5c746ce82d402bd08e62494d1b2c4d84a2e7f18
+  usb.patch: b86ab695e53cad9b902548efaf933a8582e78a5d
+  gadget.patch: 064360fbb7de35924f610fd2a2e0dac689a297f2
+  old8250.patch: 618b6c6c50bf3ad0dc5fe7df740613f2daced945
+  video.patch: 8f8335e370f0cd8b3f315b0564b566776b8d8b26
+  phys.patch: b733c3982631e4c7ff049b7617a156da89898915
+  mmc-stop-fix.patch: 41a772576de2b48475ecd00cec98339462c9a724
+  remove-config-noise.patch: d7b53694b063d0a40593d811803b3f9fa3706030
+  NXP-DMA-fixes.patch: 6f4ead9726b65157c6eff078a0070d67cac1c753
+  NXP-uart-dma.patch: 1dd1a60660afec6b5d640e45bdf4df79a9a4d13c
+  nxp-nand-dma.patch: b46c11e214259ed067523b2b56d6f87f4a174ae2
+  nxp-audio-analog.patch: 464375ad7e35e10f1db57928777a92e827ba1fe5
+  reset.patch: 0c4cccd0c07598b5f52791b0ceb989458532bc12
+  adc-registers.patch: 5ccc7a60e896bb8b0e2589215448e717249b8600
+  adc-pwm.patch: ba956e2a80f45ef21b4b4bfb57fcca98a82f054b
+  device-trees.patch: 2b7f731823f33c6d05b8c7c57a66965b1c9bac8e
+  dma.patch: 70762e35536712dd794ed65782e93faf155fe6ef
+  irq.patch: 7f68c724012c9c33f4b6d1ac7a1f2befe3fad74e
+  mmc-dma.patch: 26f949426bd56ed80570e12eaab76196a0e1c11b
+  nand-dma.patch: a2fed82e5aeb01a69b51a5fe706fb3e22f03bfbc
+  i2s-dma.patch: 28e531dbd1c82d3e1357e587e583e7ee1be41d55
+  v34-fixes.patch: 581cadac03e213bb4c5d7eda637601058fbbb775
+  rename.patch: 77350f835e539c1d7d5622b279615c6e37f9804b
+  symbol-rename.patch: 33cd8317f49b0005622d70a4dbd4d4c24aa7da58
+  dt-split: 4e8ae018f4d87b42af67aabbeabdd5bb792bcc02
+  evtr: 445133d115e23f6aa253345b462c795fe9e5cbed
+  intc: e865bae9d78655db76260537830e916b6fc28d39
 Unapplied:
 Hidden:

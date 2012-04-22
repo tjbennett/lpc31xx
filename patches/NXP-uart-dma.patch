@@ -1,7 +1,7 @@
-Bottom: 5891ac9e2c7da772b39a1265aeb2d8ec1ad61e80
-Top:    28e8e337ef624d27f1e0dcb6b6a9e985513380ed
+Bottom: c252b1ff30906781f41c6021b390a15ead654260
+Top:    cf2934490bc1bdc95ac27f952b319448e453cea9
 Author: Bangaragiri G <bangaragiri.g@nxp.com>
-Date:   2012-03-19 23:01:41 -0400
+Date:   2012-04-21 23:43:48 -0400
 
 arm:lpc313x: UART DMA support fixes
 

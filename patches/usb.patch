@@ -1,7 +1,7 @@
-Bottom: 3362eb1f317f68b13c1af316e63605830a1acda4
-Top:    c45e1fd78278f757f8d0a24d599a3d39b46f2766
+Bottom: c8067f4682e137f24f7847b27611f4a762bebd74
+Top:    6c40f59fd6866fc1ffec204c5c01188298d40c27
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-03-19 23:01:39 -0400
+Date:   2012-04-21 23:43:47 -0400
 
 USB support for lpc31xx
 
@@ -97,7 +97,7 @@ index 76316a3..2681475 100644
  	default y if MICROBLAZE
  	default y if SPARC_LEON
 diff --git a/drivers/usb/core/hub.c b/drivers/usb/core/hub.c
-index a2aa9d6..fba719e 100644
+index ec6c97d..a5e596a 100644
 --- a/drivers/usb/core/hub.c
 +++ b/drivers/usb/core/hub.c
 @@ -1334,7 +1334,7 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
@@ -109,7 +109,7 @@ index a2aa9d6..fba719e 100644
  		return -ENODEV;
  	}
  #endif
-@@ -1745,7 +1745,7 @@ static void announce_device(struct usb_device *udev)
+@@ -1742,7 +1742,7 @@ static void announce_device(struct usb_device *udev)
  static inline void announce_device(struct usb_device *udev) { }
  #endif
  
@@ -118,7 +118,7 @@ index a2aa9d6..fba719e 100644
  #include "otg_whitelist.h"
  #endif
  
-@@ -1819,8 +1819,16 @@ static int usb_enumerate_device_otg(struct usb_device *udev)
+@@ -1816,8 +1816,16 @@ static int usb_enumerate_device_otg(struct usb_device *udev)
  		err = -ENOTSUPP;
  		goto fail;
  	}
@@ -242,10 +242,10 @@ index 0982bcc..232d25e 100644
 +
 +
 diff --git a/drivers/usb/host/ehci-hcd.c b/drivers/usb/host/ehci-hcd.c
-index 806cc95..8133b12 100644
+index 4a3bc5b..93d398c 100644
 --- a/drivers/usb/host/ehci-hcd.c
 +++ b/drivers/usb/host/ehci-hcd.c
-@@ -1358,6 +1358,11 @@ MODULE_LICENSE ("GPL");
+@@ -1363,6 +1363,11 @@ MODULE_LICENSE ("GPL");
  #define PLATFORM_DRIVER		ehci_grlib_driver
  #endif
  

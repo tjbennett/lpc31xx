@@ -1,7 +1,7 @@
-Bottom: 6258cf329da537b91ba0e5fe827beeb6cd6bdde1
-Top:    3362eb1f317f68b13c1af316e63605830a1acda4
+Bottom: 59c7fb0a6110cef2aa2284d5c41c1e781975de04
+Top:    c8067f4682e137f24f7847b27611f4a762bebd74
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-03-19 23:01:39 -0400
+Date:   2012-04-21 23:43:46 -0400
 
 sound support for lpc3xx
 
@@ -94,7 +94,7 @@ index 2feaf37..4129ddc 100644
  obj-$(CONFIG_SND_SOC)	+= txx9/
 +obj-$(CONFIG_SND_SOC)	+= lpc313x/
 diff --git a/sound/soc/codecs/Kconfig b/sound/soc/codecs/Kconfig
-index 6508e8b..1eb1510 100644
+index 59d8efa..9b76e0b 100644
 --- a/sound/soc/codecs/Kconfig
 +++ b/sound/soc/codecs/Kconfig
 @@ -50,6 +50,7 @@ config SND_SOC_ALL_CODECS
@@ -105,7 +105,7 @@ index 6508e8b..1eb1510 100644
  	select SND_SOC_TLV320AIC23 if I2C
  	select SND_SOC_TLV320AIC26 if SPI_MASTER
  	select SND_SOC_TLV320AIC32X4 if I2C
-@@ -282,6 +283,9 @@ config SND_SOC_TWL6040
+@@ -281,6 +282,9 @@ config SND_SOC_TWL6040
  config SND_SOC_UDA134X
         tristate
  

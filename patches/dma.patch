@@ -1,7 +1,7 @@
-Bottom: 82ee4eed625006070d0dbfbb12422b4c93e994bd
-Top:    af1b83d60d1a824444cb657c6f63fdf2590c5c66
+Bottom: 712b48c76319c8416fd3025c1e296ac4bfa04e19
+Top:    db4ec08f313d8296bae5b429412bbcc00f7ed015
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-04-10 00:01:59 -0400
+Date:   2012-04-21 23:43:50 -0400
 
 DMA rework
 
@@ -548,10 +548,10 @@ index 4ff6533..5dc8f90 100644
  	INTC_IRQ_PRI_MASK = 0;
  	INTC_FIQ_PRI_MASK = 0;
 diff --git a/drivers/dma/Kconfig b/drivers/dma/Kconfig
-index cf9da36..ffd51fd 100644
+index ef378b5..58948eb 100644
 --- a/drivers/dma/Kconfig
 +++ b/drivers/dma/Kconfig
-@@ -244,6 +244,13 @@ config MXS_DMA
+@@ -243,6 +243,13 @@ config MXS_DMA
  	  Support the MXS DMA engine. This engine including APBH-DMA
  	  and APBX-DMA is integrated into Freescale i.MX23/28 chips.
  

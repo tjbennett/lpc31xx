@@ -1,7 +1,7 @@
-Bottom: c45e1fd78278f757f8d0a24d599a3d39b46f2766
-Top:    9391f4096c736c2396d49d0493ca5fcfe1f40c9f
+Bottom: 6c40f59fd6866fc1ffec204c5c01188298d40c27
+Top:    73fcbad949d9cb4df170d4994795e9e5e9eb0fef
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-03-19 23:01:40 -0400
+Date:   2012-04-21 23:43:47 -0400
 
 USB Gadget support for lpc31xx
 
@@ -95,7 +95,7 @@ index 0000000..68d862b
 +{
 +}
 diff --git a/drivers/usb/gadget/fsl_udc_core.c b/drivers/usb/gadget/fsl_udc_core.c
-index 5f94e79..ac9b162 100644
+index 55abfb6..0b7740c 100644
 --- a/drivers/usb/gadget/fsl_udc_core.c
 +++ b/drivers/usb/gadget/fsl_udc_core.c
 @@ -17,7 +17,9 @@
@@ -189,7 +189,7 @@ index 5f94e79..ac9b162 100644
  			spin_lock(&udc->lock);
  
  		} else if ((setup->bRequestType & (USB_RECIP_MASK
-@@ -2452,7 +2465,6 @@ static int __init fsl_udc_probe(struct platform_device *pdev)
+@@ -2459,7 +2472,6 @@ static int __init fsl_udc_probe(struct platform_device *pdev)
  			goto err_kfree;
  		}
  	}
@@ -197,7 +197,7 @@ index 5f94e79..ac9b162 100644
  	dr_regs = ioremap(res->start, resource_size(res));
  	if (!dr_regs) {
  		ret = -ENOMEM;
-@@ -2493,6 +2505,11 @@ static int __init fsl_udc_probe(struct platform_device *pdev)
+@@ -2500,6 +2512,11 @@ static int __init fsl_udc_probe(struct platform_device *pdev)
  	/* DEN is bidirectional ep number, max_ep doubles the number */
  	udc_controller->max_ep = (dccparams & DCCPARAMS_DEN_MASK) * 2;
  
@@ -209,7 +209,7 @@ index 5f94e79..ac9b162 100644
  	udc_controller->irq = platform_get_irq(pdev, 0);
  	if (!udc_controller->irq) {
  		ret = -ENODEV;
-@@ -2618,6 +2635,12 @@ static int __exit fsl_udc_remove(struct platform_device *pdev)
+@@ -2625,6 +2642,12 @@ static int __exit fsl_udc_remove(struct platform_device *pdev)
  
  	fsl_udc_clk_release();
  
