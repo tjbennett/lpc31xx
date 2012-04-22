@@ -90,7 +90,8 @@ static struct plat_serial8250_port platform_serial_ports[] = {
 	{
 		.membase = (void *)io_p2v(UART_PHYS),
 		.mapbase = (unsigned long)UART_PHYS,
-		.irq = IRQ_UART,
+		//.irq = IRQ_UART,
+		.irq = 13,
 		.uartclk = XTAL_CLOCK,
 		.regshift = 2,
 		.iotype = UPIO_MEM,
@@ -266,7 +267,8 @@ static int __init lpc31xx_init_console(void)
 
 	up.membase = (char *) io_p2v(UART_PHYS);
 	up.mapbase = (unsigned long)UART_PHYS,
-	up.irq = IRQ_UART;
+//	up.irq = IRQ_UART;
+	up.irq = 13;
 	up.uartclk = XTAL_CLOCK;
 	/* check what FDR bootloader is using */
 	mul = (UART_FDR_REG >> 4) & 0xF;
