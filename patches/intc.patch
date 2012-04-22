@@ -1,5 +1,5 @@
 Bottom: 9b620f86d9d3911a5542026c9b455c2d25bcd790
-Top:    300165e6eb541db81cdb4053ae56d5e327b4a009
+Top:    6a0ebb480816ac35d07b46efb7b6739bbfa30628
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-21 23:43:52 -0400
 
@@ -369,16 +369,3 @@ index d16dfc9..d17779d 100644
 +	setup_irq (irq, &lpc31xx_timer_irq);
  
  	return;
- 
-diff --git a/drivers/i2c/busses/i2c-pnx.c b/drivers/i2c/busses/i2c-pnx.c
-index 855c534..ffeaceb 100644
---- a/drivers/i2c/busses/i2c-pnx.c
-+++ b/drivers/i2c/busses/i2c-pnx.c
-@@ -718,6 +718,7 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
- 		dev_err(&pdev->dev, "Failed to get IRQ from platform resource\n");
- 		goto out_irq;
- 	}
-+	printk("i2c_pnx_probe irq is %d\n", alg_data->irq);
- 	ret = request_irq(alg_data->irq, i2c_pnx_interrupt,
- 			0, pdev->name, alg_data);
- 	if (ret)
