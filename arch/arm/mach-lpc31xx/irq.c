@@ -34,6 +34,8 @@
 #include <mach/irqs.h>
 #include <mach/clock.h>
 
+#define NR_IRQ_CPU	30	/* IRQs directly recognized by CPU */
+
 /* Macros to compute the bank based on EVENT_T */
 #define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
 #define EVT_arm926_nirq		0x6C
@@ -81,7 +83,7 @@ static int intc_set_wake(struct irq_data *data, unsigned int on)
 
 static struct irq_chip lpc31xx_internal_chip = {
 	.name = "INTC",
-	.irq_ack = intc_mask_irq,
+	//.irq_ack = intc_mask_irq,
 	.irq_mask = intc_mask_irq,
 	.irq_unmask = intc_unmask_irq,
 	.irq_set_wake = intc_set_wake,
@@ -106,8 +108,7 @@ static int intc_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t
 		INTC_REQ_PRIO_LVL(1) |
 		INTC_REQ_WE_PRIO_LVL;
 
-	irq_set_chip_and_handler(virq, &lpc31xx_internal_chip,
-				 handle_level_irq);
+	irq_set_chip_and_handler(virq, &lpc31xx_internal_chip, handle_level_irq);
 	set_irq_flags(virq, IRQF_VALID);
 
 	printk("intc hw=%ld virq=%d\n", hw, virq);
@@ -138,7 +139,9 @@ void __init lpc31xx_init_irq(void)
 	INTC_FIQ_PRI_MASK = 0xFF;
 
 	node = of_find_matching_node_by_address(NULL, intc_of_match, INTC_PHYS);
-	intc_domain = irq_domain_add_linear(node, NR_IRQ_CPU, &intc_ops, NULL);
+	intc_domain = irq_domain_add_legacy(node, NR_IRQ_CPU, 0, 0, &intc_ops, NULL);
+
+	irq_set_default_host(intc_domain);
 
 	/* Set the priority threshold to 0, i.e. don't mask any interrupt */
 	/* on the basis of priority level, for both targets (IRQ/FIQ)    */

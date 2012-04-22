@@ -37,6 +37,11 @@
 #include <mach/irqs.h>
 #include <mach/clock.h>
 
+#define IRQ_EVT_ROUTER0	1	/*interrupts from Event router 0*/
+#define IRQ_EVT_ROUTER1	2	/*interrupts from Event router 1*/
+#define IRQ_EVT_ROUTER2	3	/*interrupts from Event router 2*/
+#define IRQ_EVT_ROUTER3	4	/*interrupts from Event router 3*/
+
 /* External interrupt type enumerations */
 typedef enum
 {
@@ -257,8 +262,6 @@ static int evtr_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t
 {
 	uint32_t bank, bit_pos;
 	/* compute bank & bit position for the event_pin */
-	//bank = EVT_GET_BANK(irq_2_event[irq].event_pin);
-	//bit_pos = irq_2_event[irq].event_pin & 0x1F;
 	bank = EVT_GET_BANK(events[hw].event);
 	bit_pos = events[hw].event & 0x1F;
 
@@ -310,7 +313,6 @@ static struct irq_domain_ops evtr_ops = {
 
 static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
 {
-	unsigned int irq;
 	int i, j;
 	const __be32 *ip;
 	struct device_node *np = pdev->dev.of_node;
@@ -333,7 +335,6 @@ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
 		events[i].event = be32_to_cpup(ip++);
 		events[i].edge = be32_to_cpup(ip++);
 		printk("group %d bit %02x edge %d\n", events[i].group, events[i].event, events[i].edge);
-		//set_input(events[i].event);
 	}
 
 	/* mask all external events */
@@ -350,7 +351,8 @@ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
 			EVRT_OUT_MASK_CLR(j,i) = 0xFFFFFFFF;
 		}
 	}
-	evtr_domain = irq_domain_add_linear(np, num_events, &evtr_ops, NULL);
+	//evtr_domain = irq_domain_add_linear(np, num_events, &evtr_ops, NULL);
+	evtr_domain = irq_domain_add_legacy(np, num_events, 30, 0, &evtr_ops, NULL);
 
 	/* for power management. Wake from internal irqs */
 	EVRT_APR(3) &= ~_BIT(12);

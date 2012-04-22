@@ -718,6 +718,7 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to get IRQ from platform resource\n");
 		goto out_irq;
 	}
+	printk("i2c_pnx_probe irq is %d\n", alg_data->irq);
 	ret = request_irq(alg_data->irq, i2c_pnx_interrupt,
 			0, pdev->name, alg_data);
 	if (ret)
