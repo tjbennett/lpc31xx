@@ -31,6 +31,8 @@
 #include <linux/io.h>
 #include <asm/cacheflush.h>
 
+#include <mach/hardware.h>
+
 
 #define LPC313x_ISRAM_VA io_p2v(ISRAM0_PHYS)
 
