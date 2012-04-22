@@ -1,5 +1,5 @@
 Bottom: 9b620f86d9d3911a5542026c9b455c2d25bcd790
-Top:    532db155b01f6147e2de0552ef68db50245041d1
+Top:    5a1eb1afcd197d6213048d4a910fc81f3c5320c2
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-21 23:43:52 -0400
 
@@ -9,7 +9,7 @@ intr domain irq
 ---
 
 diff --git a/arch/arm/mach-lpc31xx/evtr.c b/arch/arm/mach-lpc31xx/evtr.c
-index 853f04d..463558b 100644
+index 853f04d..b1c8985 100644
 --- a/arch/arm/mach-lpc31xx/evtr.c
 +++ b/arch/arm/mach-lpc31xx/evtr.c
 @@ -28,8 +28,10 @@
@@ -130,7 +130,7 @@ index 853f04d..463558b 100644
  		break;
  	default:
  		return -EINVAL;
-@@ -161,13 +196,13 @@ static int evt_set_wake(struct irq_data *data, unsigned int on)
+@@ -161,17 +196,17 @@ static int evt_set_wake(struct irq_data *data, unsigned int on)
  	uint32_t bank = EVT_GET_BANK(events[data->hwirq].event);
  	uint32_t bit_pos = events[data->hwirq].event & 0x1F;
  
@@ -149,6 +149,20 @@ index 853f04d..463558b 100644
  	return 0;
  }
  
+-extern int lpc3131_reg_to_gpio(unsigned index, unsigned gpio);
++extern int lpc31xx_reg_to_gpio(unsigned index, unsigned gpio);
+ 
+ /* when a gpio pin is request as an interrupt source,
+  * make sure it is input mode
+@@ -186,7 +221,7 @@ static int set_input(unsigned virq)
+ 			reg  = event_to_gpioreg[event];
+ 			if (!reg) /* not a gpio pin */
+ 				return -EINVAL;
+-			gpio = lpc3131_reg_to_gpio(reg >> 5, reg & 0x1F);
++			gpio = lpc31xx_reg_to_gpio(reg >> 5, reg & 0x1F);
+ 			printk("setting to input %d\n", gpio);
+ 			ret = gpio_request(gpio, "IRQ");
+ 			if (ret)
 @@ -222,7 +257,7 @@ static struct irq_chip lpc31xx_evtr_chip = {
  			/* compute bank & bit position for the event_pin */ \
  			bank = EVT_GET_BANK(events[i].event); \
@@ -167,16 +181,32 @@ index 853f04d..463558b 100644
  {
  	int i;
  	for (i = 0; i < num_events; i++) {
-@@ -246,7 +281,7 @@ int event_to_irq(int event)
+@@ -246,7 +281,23 @@ int event_to_irq(int event)
  	}
  	return -EINVAL;
  }
 -EXPORT_SYMBOL(event_to_irq);
 +EXPORT_SYMBOL(lpc31xx_event_to_irq);
++
++int lpc31xx_set_cgu_wakeup(int enable, int event)
++{
++	uint32_t bank = EVT_GET_BANK(event);
++	uint32_t bit_pos = event & 0x1F;
++
++	if (!evtr_regs)
++		return -EAGAIN;
++
++	if (enable)
++		evtr_write(EVTR_OUT_MASK_SET(4, bank), _BIT(bit_pos))
++	else
++		evtr_write(EVTR_OUT_MASK_CLR(4, bank), _BIT(bit_pos))
++	return 0;
++}
++EXPORT_SYMBOL(lpc31xx_set_cgu_wakeup);
  
  static const struct of_device_id evtr_of_match[] __initconst = {
  	{ .compatible = "nxp,lpc31xx-evtr", },
-@@ -257,8 +292,6 @@ static int evtr_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t
+@@ -257,8 +308,6 @@ static int evtr_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t
  {
  	uint32_t bank, bit_pos;
  	/* compute bank & bit position for the event_pin */
@@ -185,7 +215,7 @@ index 853f04d..463558b 100644
  	bank = EVT_GET_BANK(events[hw].event);
  	bit_pos = events[hw].event & 0x1F;
  
-@@ -266,35 +299,35 @@ static int evtr_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t
+@@ -266,38 +315,38 @@ static int evtr_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t
  	set_irq_flags(virq, IRQF_VALID);
  	/* configure the interrupt sensitivity */
  	switch (events[hw].edge) {
@@ -245,11 +275,16 @@ index 853f04d..463558b 100644
 +		break;
  	}
 -	EVRT_OUT_MASK_SET(events[hw].group, bank) = _BIT(bit_pos);
+-	printk("evtr hw=%ld virq=%d Event=0x%02x bank:%d bit:%02d type:%d vector %d\n", hw, virq,
 +	evtr_write(EVTR_OUT_MASK_SET(events[hw].group, bank), _BIT(bit_pos));
- 	printk("evtr hw=%ld virq=%d Event=0x%02x bank:%d bit:%02d type:%d vector %d\n", hw, virq,
++	/*printk("evtr hw=%ld virq=%d Event=0x%02x bank:%d bit:%02d type:%d vector %d\n", hw, virq,
  		events[hw].event, bank,
- 		bit_pos, events[hw].edge, events[hw].group);
-@@ -310,13 +343,14 @@ static struct irq_domain_ops evtr_ops = {
+-		bit_pos, events[hw].edge, events[hw].group);
++		bit_pos, events[hw].edge, events[hw].group); */
+ 	events[hw].virq = virq;
+ 
+ 	return 0;
+@@ -310,13 +359,14 @@ static struct irq_domain_ops evtr_ops = {
  
  static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
  {
@@ -266,7 +301,7 @@ index 853f04d..463558b 100644
  
  	ip = of_get_property(np, "#event-cells", NULL);
  	if (!ip)
-@@ -332,30 +366,31 @@ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
+@@ -332,30 +382,31 @@ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
  		events[i].group = be32_to_cpup(ip++);
  		events[i].event = be32_to_cpup(ip++);
  		events[i].edge = be32_to_cpup(ip++);
@@ -506,7 +541,7 @@ index 456f5c6..beb6f77 100644
   * WDT register definitions
   **********************************************************************/
 diff --git a/arch/arm/mach-lpc31xx/irq.c b/arch/arm/mach-lpc31xx/irq.c
-index 8de96b1..9c2e364 100644
+index 8de96b1..623cdfb 100644
 --- a/arch/arm/mach-lpc31xx/irq.c
 +++ b/arch/arm/mach-lpc31xx/irq.c
 @@ -26,6 +26,8 @@
@@ -633,7 +668,7 @@ index 8de96b1..9c2e364 100644
 +	irq_set_chip_and_handler(virq, &lpc31xx_internal_chip, handle_level_irq);
 +	set_irq_flags(virq, IRQF_VALID);
 +
-+	printk("intc hw=%ld virq=%d\n", hw, virq);
++	//printk("intc hw=%ld virq=%d\n", hw, virq);
 +	return 0;
 +}
 +
@@ -737,3 +772,105 @@ index d16dfc9..d17779d 100644
 +	setup_irq (irq, &lpc31xx_timer_irq);
  
  	return;
+ 
+diff --git a/arch/arm/mach-lpc31xx/usb.c b/arch/arm/mach-lpc31xx/usb.c
+index 35c7186..4596c65 100644
+--- a/arch/arm/mach-lpc31xx/usb.c
++++ b/arch/arm/mach-lpc31xx/usb.c
+@@ -45,6 +45,9 @@
+ #include <mach/board.h>
+ #include <mach/gpio.h>
+ 
++#define EVRT_RSR(bank)       __REG (EVTR_PHYS + 0xD20 + ((bank) << 2))
++
++
+ /****************************************************************************
+ * USBOTG register definition
+ ****************************************************************************/
+diff --git a/drivers/gpio/gpio-lpc31xx.c b/drivers/gpio/gpio-lpc31xx.c
+index 0f25f73..aa51274 100644
+--- a/drivers/gpio/gpio-lpc31xx.c
++++ b/drivers/gpio/gpio-lpc31xx.c
+@@ -102,7 +102,7 @@ static int inline *gpc(void __iomem *base, int reg)
+ 	return (int *)(base + reg);
+ }
+ 
+-static int lpc3131_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
++static int lpc31xx_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
+ {
+ 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
+ 	void __iomem *base = mm_gc->regs;
+@@ -116,7 +116,7 @@ static int lpc3131_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
+ 	return 0;
+ }
+ 
+-static int lpc3131_gpio_direction_output(struct gpio_chip *chip, unsigned gpio, int value)
++static int lpc31xx_gpio_direction_output(struct gpio_chip *chip, unsigned gpio, int value)
+ {
+ 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
+ 	int __iomem *base = mm_gc->regs;
+@@ -133,7 +133,7 @@ static int lpc3131_gpio_direction_output(struct gpio_chip *chip, unsigned gpio,
+ 	return 0;
+ }
+ 
+-static int lpc3131_gpio_get_value(struct gpio_chip *chip, unsigned gpio)
++static int lpc31xx_gpio_get_value(struct gpio_chip *chip, unsigned gpio)
+ {
+ 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
+ 	int __iomem *base = mm_gc->regs;
+@@ -144,7 +144,7 @@ static int lpc3131_gpio_get_value(struct gpio_chip *chip, unsigned gpio)
+ 	return value;
+ }
+ 
+-static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int value)
++static void lpc31xx_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int value)
+ {
+ 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
+ 	int __iomem *base = mm_gc->regs;
+@@ -156,24 +156,24 @@ static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int va
+ 		*gpc(base, GPIO_M0_RESET) = pin;
+ }
+ 
+-extern int event_to_irq(int event);
++extern int lpc31xx_event_to_irq(int event);
+ 
+-static int lpc3131_gpio_to_irq(struct gpio_chip *gc, unsigned gpio)
++static int lpc31xx_gpio_to_irq(struct gpio_chip *gc, unsigned gpio)
+ {
+ 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(gc);
+ 	struct lpc31xx_gpio_chip *chip = container_of(mm_gc, struct lpc31xx_gpio_chip, mmchip);
+ 
+-	return event_to_irq(gpio_evt[chip->index].evt[gpio]);
++	return lpc31xx_event_to_irq(gpio_evt[chip->index].evt[gpio]);
+ }
+ 
+-int lpc3131_reg_to_gpio(unsigned index, unsigned gpio)
++int lpc31xx_reg_to_gpio(unsigned index, unsigned gpio)
+ {
+ 	struct lpc31xx_gpio_chip *chip;
+ 
+ 	chip = gpio_evt[index].chip;
+ 	return chip->mmchip.gc.base + gpio;
+ }
+-EXPORT_SYMBOL(lpc3131_reg_to_gpio);
++EXPORT_SYMBOL(lpc31xx_reg_to_gpio);
+ 
+ 
+ static int lpc31xx_gpiochip_remove(struct platform_device *ofdev)
+@@ -198,11 +198,11 @@ static int __devinit lpc31xx_simple_gpiochip_probe(struct platform_device *pdev)
+ 
+ 	gc = &chip->mmchip.gc;
+ 	gc->ngpio            = gpio_evt[chip->index].count;
+-	gc->direction_input  = lpc3131_gpio_direction_input;
+-	gc->direction_output = lpc3131_gpio_direction_output;
+-	gc->get              = lpc3131_gpio_get_value;
+-	gc->set              = lpc3131_gpio_set_value;
+-	gc->to_irq	     = lpc3131_gpio_to_irq;
++	gc->direction_input  = lpc31xx_gpio_direction_input;
++	gc->direction_output = lpc31xx_gpio_direction_output;
++	gc->get              = lpc31xx_gpio_get_value;
++	gc->set              = lpc31xx_gpio_set_value;
++	gc->to_irq	     = lpc31xx_gpio_to_irq;
+ 
+ 	ret = of_mm_gpiochip_add(pdev->dev.of_node, &chip->mmchip);
+ 	if (ret)
