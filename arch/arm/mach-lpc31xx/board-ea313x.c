@@ -145,7 +145,7 @@ DT_MACHINE_START(EA313X, "NXP EA3131 (Device Tree Support)")
 	.timer		= &lpc31xx_timer,
 	.init_machine	= ea3131_dt_init,
 	.dt_compat	= ea3131_dt_match,
-	.restart	= arch_reset,
+	.restart	= lpc31xx_arch_reset,
 MACHINE_END
 
 
