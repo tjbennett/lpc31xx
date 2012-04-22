@@ -40,7 +40,7 @@ static void __init lpc31xx_dt_init(void)
 
 void __init lpc31xx_dt_init_common(struct of_dev_auxdata* auxdata)
 {
-	lpc313x_init();
+	lpc31xx_init();
 	of_platform_populate(NULL, of_default_bus_match_table,
 			     auxdata, NULL);
 }
@@ -58,10 +58,10 @@ static const char *lpc31xx_dt_match[] __initconst = {
 };
 
 DT_MACHINE_START(EA313X, "NXP LPC31xx (Device Tree Support)")
-	.map_io		= lpc313x_map_io,
+	.map_io		= lpc31xx_map_io,
 	.init_early	= lpc31xx_init_early,
 	.init_irq	= lpc31xx_init_irq,
-	.timer		= &lpc313x_timer,
+	.timer		= &lpc31xx_timer,
 	.init_machine	= lpc31xx_dt_init,
 	.dt_compat	= lpc31xx_dt_match,
 	.restart	= arch_reset,

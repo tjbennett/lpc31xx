@@ -1,5 +1,5 @@
 /*
- * LPC313x & LPC315x EHCI Host Controller Driver
+ * LPC31xx EHCI Host Controller Driver
  *
  * Author: Durgesh Pattamatta <durgesh.pattamatta@nxp.com>
  *
@@ -46,7 +46,7 @@ static int lpc_ehci_init(struct usb_hcd *hcd)
 
 	ehci_port_power(ehci, 0);
 	/* board vbus power */
-	//lpc313x_vbus_power(0);
+	//lpc31xx_vbus_power(0);
 
 	return retval;
 }
@@ -77,7 +77,7 @@ static const struct hc_driver lpc_ehci_hc_driver = {
 	.clear_tt_buffer_complete = ehci_clear_tt_buffer_complete,
 };
 
-struct fsl_usb2_platform_data lpc313x_fsl_config = {
+struct fsl_usb2_platform_data lpc31xx_fsl_config = {
 #if defined(CONFIG_USB_OTG) || (defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_GADGET_FSL_USB2))
 	.operating_mode = FSL_USB2_DR_OTG,
 #elif defined(CONFIG_USB_GADGET_FSL_USB2) && !defined(CONFIG_USB_EHCI_HCD)
@@ -101,7 +101,7 @@ static int lpc_ehci_probe(struct platform_device *pdev)
 		return -ENODEV;
 
 	/* Need platform data for setup */
-	pdata = &lpc313x_fsl_config;
+	pdata = &lpc31xx_fsl_config;
 	if (!pdata) {
 		dev_err(&pdev->dev,
 			"No platform data for %s.\n", dev_name(&pdev->dev));
@@ -267,7 +267,7 @@ static int lpc_ehci_suspend(struct device *dev, pm_message_t state)
 	/* put the device in idele mode */
 	writel(0, (hcd->regs + 0x1a8));
 	/* board vbus power */
-	//lpc313x_vbus_power(0);
+	//lpc31xx_vbus_power(0);
 
 	return 0;
 }
@@ -299,7 +299,7 @@ static int lpc_ehci_resume(struct device *dev)
 	ehci_writel(ehci, tmp, &ehci->regs->command);
 
 	/* board vbus power */
-	//lpc313x_vbus_power(1);
+	//lpc31xx_vbus_power(1);
 
 
 	usb_hcd_resume_root_hub(hcd);
@@ -309,17 +309,17 @@ static int lpc_ehci_resume(struct device *dev)
 #endif				/* CONFIG_USB_OTG */
 /**
  * FIXME: This should get into a common header
- * currently declared in arch/arm/mach-lpc313x/usb.c
+ * currently declared in arch/arm/mach-lpc31xx/usb.c
  **/
 #define USB_DEV_PORTSC1			__REG(USBOTG_PHYS + 0x184)
 #define USBPRTS_PLPSCD	_BIT(23)
-static int lpc313x_ehci_suspend(struct platform_device *pdev, pm_message_t state)
+static int lpc31xx_ehci_suspend(struct platform_device *pdev, pm_message_t state)
 {
 #ifdef CONFIG_PM
 #define IRQ_VBUS_OVRC  32  /* Detect VBUS over current - Host mode */
 	disable_irq(IRQ_VBUS_OVRC);
 	/* Shutoff vbus power */
-	lpc313x_vbus_power(0);
+	lpc31xx_vbus_power(0);
 	/* Bring PHY to low power state */
 	USB_DEV_PORTSC1 |= USBPRTS_PLPSCD;
 	/* Bring PLL to low power state */
@@ -334,7 +334,7 @@ static int lpc313x_ehci_suspend(struct platform_device *pdev, pm_message_t state
 #define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
 #define EVT_usb_atx_pll_lock	0x79
 
-static int lpc313x_ehci_resume(struct platform_device * pdev)
+static int lpc31xx_ehci_resume(struct platform_device * pdev)
 {
 #ifdef CONFIG_PM
 	u32 bank = EVT_GET_BANK(EVT_usb_atx_pll_lock);
@@ -353,7 +353,7 @@ static int lpc313x_ehci_resume(struct platform_device * pdev)
 	}
 	/* Bring PHY to active state */
 	USB_DEV_PORTSC1 &= ~USBPRTS_PLPSCD;
-	lpc313x_vbus_power(1);
+	lpc31xx_vbus_power(1);
 	enable_irq(IRQ_VBUS_OVRC);
 #endif
 	return 0;
@@ -370,8 +370,8 @@ MODULE_DEVICE_TABLE(of, ehci_lpc_of_match);
 static struct platform_driver ehci_lpc_driver = {
 	.probe = lpc_ehci_probe,
 	.remove = lpc_ehci_remove,
-	.suspend = lpc313x_ehci_suspend,
-	.resume = lpc313x_ehci_resume,
+	.suspend = lpc31xx_ehci_suspend,
+	.resume = lpc31xx_ehci_resume,
 	.driver = {
 		.name = "lpc-ehci",
 #ifdef CONFIG_USB_OTG

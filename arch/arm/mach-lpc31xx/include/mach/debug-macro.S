@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-lpc313x/include/mach/debug-macro.S
+/* linux/arch/arm/mach-lpc31xx/include/mach/debug-macro.S
  *
  * Debugging macro include header
  *
