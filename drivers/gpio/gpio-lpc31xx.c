@@ -156,14 +156,14 @@ static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int va
 		*gpc(base, GPIO_M0_RESET) = pin;
 }
 
-extern int event_to_irq(int event);
+extern int lpc31xx_event_to_irq(int event);
 
 static int lpc3131_gpio_to_irq(struct gpio_chip *gc, unsigned gpio)
 {
 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(gc);
 	struct lpc31xx_gpio_chip *chip = container_of(mm_gc, struct lpc31xx_gpio_chip, mmchip);
 
-	return event_to_irq(gpio_evt[chip->index].evt[gpio]);
+	return lpc31xx_event_to_irq(gpio_evt[chip->index].evt[gpio]);
 }
 
 int lpc3131_reg_to_gpio(unsigned index, unsigned gpio)
