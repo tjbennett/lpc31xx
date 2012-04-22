@@ -45,6 +45,9 @@
 #include <mach/board.h>
 #include <mach/gpio.h>
 
+#define EVRT_RSR(bank)       __REG (EVTR_PHYS + 0xD20 + ((bank) << 2))
+
+
 /****************************************************************************
 * USBOTG register definition
 ****************************************************************************/

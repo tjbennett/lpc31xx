@@ -24,47 +24,6 @@
 #ifndef __ASM_ARCH_REGISTERS_H
 #define __ASM_ARCH_REGISTERS_H
 
-
-/***********************************************************************
- * Interrupt controller register definitions
- **********************************************************************/
-#define INTC_IRQ_PRI_MASK     __REG(INTC_PHYS + 0x000)
-#define INTC_FIQ_PRI_MASK     __REG(INTC_PHYS + 0x004)
-#define INTC_IRQ_VEC_BASE     __REG(INTC_PHYS + 0x100)
-#define INTC_FIQ_VEC_BASE     __REG(INTC_PHYS + 0x104)
-#define INTC_REQ_REG(irq)     __REG(INTC_PHYS + 0x400 + ((irq) << 2))
-
-#define INTC_REQ_PEND         _BIT(31)
-#define INTC_REQ_SET_SWINT    _BIT(30)
-#define INTC_REQ_CLR_SWINT    _BIT(29)
-#define INTC_REQ_WE_PRIO_LVL  _BIT(28)
-#define INTC_REQ_WE_TARGET    _BIT(27)
-#define INTC_REQ_WE_ENABLE    _BIT(26)
-#define INTC_REQ_WE_ACT_LOW   _BIT(25)
-#define INTC_REQ_ACT_LOW      _BIT(17)
-#define INTC_REQ_ENABLE       _BIT(16)
-#define INTC_REQ_TARGET(n)    _SBF(8, ((n) & 0x3F))
-#define INTC_REQ_PRIO_LVL(n)  ((n) & 0xFF)
-#define INTC_REQ_TARGET_IRQ   (INTC_REQ_WE_TARGET)
-#define INTC_REQ_TARGET_FIQ   (INTC_REQ_WE_TARGET | _BIT(8))
-
-/***********************************************************************
- * Event router register definitions
- **********************************************************************/
-#define EVRT_INT_PEND(bank)  __REG (EVTR_PHYS + 0xC00 + ((bank) << 2))
-#define EVRT_INT_CLR(bank)   __REG (EVTR_PHYS + 0xC20 + ((bank) << 2))
-#define EVRT_INT_SET(bank)   __REG (EVTR_PHYS + 0xC40 + ((bank) << 2))
-#define EVRT_MASK(bank)      __REG (EVTR_PHYS + 0xC60 + ((bank) << 2))
-#define EVRT_MASK_CLR(bank)  __REG (EVTR_PHYS + 0xC80 + ((bank) << 2))
-#define EVRT_MASK_SET(bank)  __REG (EVTR_PHYS + 0xCA0 + ((bank) << 2))
-#define EVRT_APR(bank)       __REG (EVTR_PHYS + 0xCC0 + ((bank) << 2))
-#define EVRT_ATR(bank)       __REG (EVTR_PHYS + 0xCE0 + ((bank) << 2))
-#define EVRT_RSR(bank)       __REG (EVTR_PHYS + 0xD20 + ((bank) << 2))
-#define EVRT_OUT_PEND(vec,bank)     __REG (EVTR_PHYS + 0x1000 + ((vec) << 5) + ((bank) << 2))
-#define EVRT_OUT_MASK(vec,bank)     __REG (EVTR_PHYS + 0x1400 + ((vec) << 5) + ((bank) << 2))
-#define EVRT_OUT_MASK_CLR(vec,bank) __REG (EVTR_PHYS + 0x1800 + ((vec) << 5) + ((bank) << 2))
-#define EVRT_OUT_MASK_SET(vec,bank) __REG (EVTR_PHYS + 0x1C00 + ((vec) << 5) + ((bank) << 2))
-
 /***********************************************************************
  * WDT register definitions
  **********************************************************************/

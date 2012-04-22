@@ -28,14 +28,38 @@
 #include <linux/module.h>
 #include <linux/irqdomain.h>
 #include <linux/of_platform.h>
+#include <linux/of_address.h>
 #include <linux/slab.h>
 #include <linux/gpio.h>
+#include <linux/io.h>
 
 #include <mach/hardware.h>
 #include <asm/irq.h>
 #include <asm/mach/irq.h>
 #include <mach/irqs.h>
 #include <mach/clock.h>
+
+/***********************************************************************
+ * Event router register definitions
+ **********************************************************************/
+#define EVTR_INT_PEND(bank)  (0xC00 + ((bank) << 2))
+#define EVTR_INT_CLR(bank)   (0xC20 + ((bank) << 2))
+#define EVTR_INT_SET(bank)   (0xC40 + ((bank) << 2))
+#define EVTR_MASK(bank)      (0xC60 + ((bank) << 2))
+#define EVTR_MASK_CLR(bank)  (0xC80 + ((bank) << 2))
+#define EVTR_MASK_SET(bank)  (0xCA0 + ((bank) << 2))
+#define EVTR_APR(bank)       (0xCC0 + ((bank) << 2))
+#define EVTR_ATR(bank)       (0xCE0 + ((bank) << 2))
+#define EVTR_RSR(bank)       (0xD20 + ((bank) << 2))
+#define EVTR_OUT_PEND(vec,bank)     (0x1000 + ((vec) << 5) + ((bank) << 2))
+#define EVTR_OUT_MASK(vec,bank)     (0x1400 + ((vec) << 5) + ((bank) << 2))
+#define EVTR_OUT_MASK_CLR(vec,bank) (0x1800 + ((vec) << 5) + ((bank) << 2))
+#define EVTR_OUT_MASK_SET(vec,bank) (0x1C00 + ((vec) << 5) + ((bank) << 2))
+
+#define IRQ_EVT_ROUTER0	1	/*interrupts from Event router 0*/
+#define IRQ_EVT_ROUTER1	2	/*interrupts from Event router 1*/
+#define IRQ_EVT_ROUTER2	3	/*interrupts from Event router 2*/
+#define IRQ_EVT_ROUTER3	4	/*interrupts from Event router 3*/
 
 /* External interrupt type enumerations */
 typedef enum
@@ -79,6 +103,12 @@ static struct irq_domain *evtr_domain;
 static struct event_data *events;
 static int num_events;
 
+static void __iomem *evtr_regs;
+#define evtr_read(reg) \
+	__raw_readl(evtr_regs + reg)
+#define evtr_write(reg, value) \
+	__raw_writel(value, evtr_regs + reg);
+
 /* table to map from event to gpio bit */
 /* mask 0x1E0 reg, mask 0x1F bit */
 int event_to_gpioreg[] = {
@@ -105,7 +135,7 @@ static void evt_mask_irq(struct irq_data *data)
 	uint32_t bank = EVT_GET_BANK(events[data->hwirq].event);
 	uint32_t bit_pos = events[data->hwirq].event& 0x1F;
 
-	EVRT_MASK_CLR(bank) = _BIT(bit_pos);
+	evtr_write(EVTR_MASK_CLR(bank), _BIT(bit_pos));
 }
 
 static void evt_unmask_irq(struct irq_data *data)
@@ -113,7 +143,7 @@ static void evt_unmask_irq(struct irq_data *data)
 	uint32_t bank = EVT_GET_BANK(events[data->hwirq].event);
 	uint32_t bit_pos = events[data->hwirq].event & 0x1F;
 
-	EVRT_MASK_SET(bank) = _BIT(bit_pos);
+	evtr_write(EVTR_MASK_SET(bank), _BIT(bit_pos));
 }
 
 static void evt_ack_irq(struct irq_data *data)
@@ -121,7 +151,7 @@ static void evt_ack_irq(struct irq_data *data)
 	uint32_t bank = EVT_GET_BANK(events[data->hwirq].event);
 	uint32_t bit_pos = events[data->hwirq].event & 0x1F;
 	//EVRT_MASK_CLR(bank) = _BIT(bit_pos);
-	EVRT_INT_CLR(bank) = _BIT(bit_pos);
+	evtr_write(EVTR_INT_CLR(bank), _BIT(bit_pos));
 }
 
 static int evt_set_type(struct irq_data *data, unsigned int flow_type)
@@ -131,23 +161,28 @@ static int evt_set_type(struct irq_data *data, unsigned int flow_type)
 
 	switch (flow_type) {
 	case IRQ_TYPE_EDGE_RISING:
-		EVRT_APR(bank) |= _BIT(bit_pos);
-		EVRT_ATR(bank) |= _BIT(bit_pos);
+		evtr_write(EVTR_APR(bank), evtr_read(EVTR_APR(bank)) | _BIT(bit_pos));
+		evtr_write(EVTR_ATR(bank), evtr_read(EVTR_ATR(bank)) | _BIT(bit_pos));
+		irq_set_handler(data->irq, handle_level_irq);
 		break;
 	case IRQ_TYPE_EDGE_FALLING:
-		EVRT_APR(bank) &= ~_BIT(bit_pos);
-		EVRT_ATR(bank) |= _BIT(bit_pos);
+		evtr_write(EVTR_APR(bank), evtr_read(EVTR_APR(bank)) & ~_BIT(bit_pos));
+		evtr_write(EVTR_ATR(bank), evtr_read(EVTR_ATR(bank)) | _BIT(bit_pos));
+		irq_set_handler(data->irq, handle_level_irq);
 		break;
 	case IRQ_TYPE_EDGE_BOTH:
-		EVRT_ATR(bank) |= _BIT(bit_pos);
+		evtr_write(EVTR_ATR(bank), evtr_read(EVTR_ATR(bank)) | _BIT(bit_pos));
+		irq_set_handler(data->irq, handle_level_irq);
 		break;
 	case IRQ_TYPE_LEVEL_HIGH:
-		EVRT_APR(bank) |= _BIT(bit_pos);
-		EVRT_ATR(bank) &= ~_BIT(bit_pos);
+		evtr_write(EVTR_APR(bank), evtr_read(EVTR_APR(bank)) | _BIT(bit_pos));
+		evtr_write(EVTR_ATR(bank), evtr_read(EVTR_ATR(bank)) &~ _BIT(bit_pos));
+		irq_set_handler(data->irq, handle_level_irq);
 		break;
 	case IRQ_TYPE_LEVEL_LOW:
-		EVRT_APR(bank) &= ~_BIT(bit_pos);
-		EVRT_ATR(bank) &= ~_BIT(bit_pos);
+		evtr_write(EVTR_APR(bank), evtr_read(EVTR_APR(bank)) &~ _BIT(bit_pos));
+		evtr_write(EVTR_ATR(bank), evtr_read(EVTR_ATR(bank)) &~ _BIT(bit_pos));
+		irq_set_handler(data->irq, handle_level_irq);
 		break;
 	default:
 		return -EINVAL;
@@ -161,17 +196,17 @@ static int evt_set_wake(struct irq_data *data, unsigned int on)
 	uint32_t bank = EVT_GET_BANK(events[data->hwirq].event);
 	uint32_t bit_pos = events[data->hwirq].event & 0x1F;
 
-	if (on)
+	if (on) {
 		/* enable routing to CGU_WAKEUP */
-		EVRT_OUT_MASK_SET(4, bank) = _BIT(bit_pos);
-	else
+		evtr_write(EVTR_OUT_MASK_SET(4, bank), _BIT(bit_pos));
+	} else {
 		/* disable routing to CGU_WAKEUP */
-		EVRT_OUT_MASK_CLR(4, bank) = _BIT(bit_pos);
-
+		evtr_write(EVTR_OUT_MASK_CLR(4, bank), _BIT(bit_pos));
+	}
 	return 0;
 }
 
-extern int lpc3131_reg_to_gpio(unsigned index, unsigned gpio);
+extern int lpc31xx_reg_to_gpio(unsigned index, unsigned gpio);
 
 /* when a gpio pin is request as an interrupt source,
  * make sure it is input mode
@@ -186,7 +221,7 @@ static int set_input(unsigned virq)
 			reg  = event_to_gpioreg[event];
 			if (!reg) /* not a gpio pin */
 				return -EINVAL;
-			gpio = lpc3131_reg_to_gpio(reg >> 5, reg & 0x1F);
+			gpio = lpc31xx_reg_to_gpio(reg >> 5, reg & 0x1F);
 			printk("setting to input %d\n", gpio);
 			ret = gpio_request(gpio, "IRQ");
 			if (ret)
@@ -222,7 +257,7 @@ static struct irq_chip lpc31xx_evtr_chip = {
 			/* compute bank & bit position for the event_pin */ \
 			bank = EVT_GET_BANK(events[i].event); \
 			bit_pos = events[i].event & 0x1F; \
-			status = EVRT_OUT_PEND(n, bank); \
+			status = evtr_read(EVTR_OUT_PEND(n, bank)); \
 			if (status & _BIT(bit_pos)) { \
 				generic_handle_irq(events[i].virq); \
 				break; \
@@ -236,7 +271,7 @@ ROUTER_HDLR(1)
 ROUTER_HDLR(2)
 ROUTER_HDLR(3)
 
-int event_to_irq(int event)
+int lpc31xx_event_to_irq(int event)
 {
 	int i;
 	for (i = 0; i < num_events; i++) {
@@ -246,7 +281,23 @@ int event_to_irq(int event)
 	}
 	return -EINVAL;
 }
-EXPORT_SYMBOL(event_to_irq);
+EXPORT_SYMBOL(lpc31xx_event_to_irq);
+
+int lpc31xx_set_cgu_wakeup(int enable, int event)
+{
+	uint32_t bank = EVT_GET_BANK(event);
+	uint32_t bit_pos = event & 0x1F;
+
+	if (!evtr_regs)
+		return -EAGAIN;
+
+	if (enable)
+		evtr_write(EVTR_OUT_MASK_SET(4, bank), _BIT(bit_pos))
+	else
+		evtr_write(EVTR_OUT_MASK_CLR(4, bank), _BIT(bit_pos))
+	return 0;
+}
+EXPORT_SYMBOL(lpc31xx_set_cgu_wakeup);
 
 static const struct of_device_id evtr_of_match[] __initconst = {
 	{ .compatible = "nxp,lpc31xx-evtr", },
@@ -257,8 +308,6 @@ static int evtr_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t
 {
 	uint32_t bank, bit_pos;
 	/* compute bank & bit position for the event_pin */
-	//bank = EVT_GET_BANK(irq_2_event[irq].event_pin);
-	//bit_pos = irq_2_event[irq].event_pin & 0x1F;
 	bank = EVT_GET_BANK(events[hw].event);
 	bit_pos = events[hw].event & 0x1F;
 
@@ -266,38 +315,38 @@ static int evtr_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t
 	set_irq_flags(virq, IRQF_VALID);
 	/* configure the interrupt sensitivity */
 	switch (events[hw].edge) {
-		case EVT_ACTIVE_LOW:
-			EVRT_APR(bank) &= ~_BIT(bit_pos);
-			EVRT_ATR(bank) &= ~_BIT(bit_pos);
-			irq_set_handler(virq, handle_level_irq);
-			break;
-		case EVT_ACTIVE_HIGH:
-			EVRT_APR(bank) |= _BIT(bit_pos);
-			EVRT_ATR(bank) &= ~_BIT(bit_pos);
-			irq_set_handler(virq, handle_level_irq);
-			break;
-		case EVT_FALLING_EDGE:
-			EVRT_APR(bank) &= ~_BIT(bit_pos);
-			EVRT_ATR(bank) |= _BIT(bit_pos);
-			irq_set_handler(virq, handle_edge_irq);
-			break;
-		case EVT_RISING_EDGE:
-			EVRT_APR(bank) |= _BIT(bit_pos);
-			EVRT_ATR(bank) |= _BIT(bit_pos);
-			irq_set_handler(virq, handle_edge_irq);
-			break;
-		case EVT_BOTH_EDGE:
-			EVRT_ATR(bank) |= _BIT(bit_pos);
-			irq_set_handler(virq, handle_edge_irq);
-			break;
-		default:
-			printk("Invalid Event type.\r\n");
-			break;
+	case EVT_RISING_EDGE:
+		evtr_write(EVTR_APR(bank), evtr_read(EVTR_APR(bank)) | _BIT(bit_pos));
+		evtr_write(EVTR_ATR(bank), evtr_read(EVTR_ATR(bank)) | _BIT(bit_pos));
+		irq_set_handler(virq, handle_edge_irq);
+		break;
+	case EVT_FALLING_EDGE:
+		evtr_write(EVTR_APR(bank), evtr_read(EVTR_APR(bank)) & ~_BIT(bit_pos));
+		evtr_write(EVTR_ATR(bank), evtr_read(EVTR_ATR(bank)) | _BIT(bit_pos));
+		irq_set_handler(virq, handle_edge_irq);
+		break;
+	case EVT_BOTH_EDGE:
+		evtr_write(EVTR_ATR(bank), evtr_read(EVTR_ATR(bank)) | _BIT(bit_pos));
+		irq_set_handler(virq, handle_edge_irq);
+		break;
+	case EVT_ACTIVE_HIGH:
+		evtr_write(EVTR_APR(bank), evtr_read(EVTR_APR(bank)) | _BIT(bit_pos));
+		evtr_write(EVTR_ATR(bank), evtr_read(EVTR_ATR(bank)) &~ _BIT(bit_pos));
+		irq_set_handler(virq, handle_level_irq);
+		break;
+	case EVT_ACTIVE_LOW:
+		evtr_write(EVTR_APR(bank), evtr_read(EVTR_APR(bank)) &~ _BIT(bit_pos));
+		evtr_write(EVTR_ATR(bank), evtr_read(EVTR_ATR(bank)) &~ _BIT(bit_pos));
+		irq_set_handler(virq, handle_level_irq);
+		break;
+	default:
+		printk("Invalid Event type.\r\n");
+		break;
 	}
-	EVRT_OUT_MASK_SET(events[hw].group, bank) = _BIT(bit_pos);
-	printk("evtr hw=%ld virq=%d Event=0x%02x bank:%d bit:%02d type:%d vector %d\n", hw, virq,
+	evtr_write(EVTR_OUT_MASK_SET(events[hw].group, bank), _BIT(bit_pos));
+	/*printk("evtr hw=%ld virq=%d Event=0x%02x bank:%d bit:%02d type:%d vector %d\n", hw, virq,
 		events[hw].event, bank,
-		bit_pos, events[hw].edge, events[hw].group);
+		bit_pos, events[hw].edge, events[hw].group); */
 	events[hw].virq = virq;
 
 	return 0;
@@ -310,13 +359,14 @@ static struct irq_domain_ops evtr_ops = {
 
 static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
 {
-	unsigned int irq;
 	int i, j;
 	const __be32 *ip;
 	struct device_node *np = pdev->dev.of_node;
 	int cells, length;
 
-	printk("###### Event router probe ######\n");
+	evtr_regs = of_iomap(np, 0);
+	if (!evtr_regs)
+		return -EINVAL;
 
 	ip = of_get_property(np, "#event-cells", NULL);
 	if (!ip)
@@ -332,30 +382,31 @@ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
 		events[i].group = be32_to_cpup(ip++);
 		events[i].event = be32_to_cpup(ip++);
 		events[i].edge = be32_to_cpup(ip++);
-		printk("group %d bit %02x edge %d\n", events[i].group, events[i].event, events[i].edge);
-		//set_input(events[i].event);
+		if ((events[i].group < 0) || (events[i].group >= EVT_MAX_VALID_BANKS))
+			panic("Event router groups must be 0-3");
 	}
+	/* enable clock to Event router */
+	cgu_clk_en_dis(CGU_SB_EVENT_ROUTER_PCLK_ID, 1);
 
 	/* mask all external events */
-	for (i = 0; i < EVT_MAX_VALID_BANKS; i++)
-	{
+	for (i = 0; i < EVT_MAX_VALID_BANKS; i++) {
 		/* mask all events */
-		EVRT_MASK_CLR(i) = 0xFFFFFFFF;
+		evtr_write(EVTR_MASK_CLR(i), 0xFFFFFFFF);
 		/* clear all pending events */
-		EVRT_INT_CLR(i) = 0xFFFFFFFF;
+		evtr_write(EVTR_INT_CLR(i), 0xFFFFFFFF);
 
-		for (j = 0; j < EVT_MAX_VALID_INT_OUT; j++)
-		{
+		for (j = 0; j < EVT_MAX_VALID_INT_OUT; j++) {
 			/* mask all events */
-			EVRT_OUT_MASK_CLR(j,i) = 0xFFFFFFFF;
+			evtr_write(EVTR_OUT_MASK_CLR(j,i), 0xFFFFFFFF);
 		}
 	}
-	evtr_domain = irq_domain_add_linear(np, num_events, &evtr_ops, NULL);
+	//evtr_domain = irq_domain_add_linear(np, num_events, &evtr_ops, NULL);
+	evtr_domain = irq_domain_add_legacy(np, num_events, 30, 0, &evtr_ops, NULL);
 
 	/* for power management. Wake from internal irqs */
-	EVRT_APR(3) &= ~_BIT(12);
-	EVRT_ATR(3) &= ~_BIT(12);
-	EVRT_MASK_SET(3) = _BIT(12);
+	evtr_write(EVTR_APR(3), evtr_read(EVTR_APR(3)) & ~_BIT(12));
+	evtr_write(EVTR_ATR(3), evtr_read(EVTR_ATR(3)) & ~_BIT(12));
+	evtr_write(EVTR_MASK_SET(3), _BIT(12));
 
 	/* install IRQ_EVT_ROUTER0  chain handler */
 	irq_set_chained_handler (IRQ_EVT_ROUTER0, router0_handler);
