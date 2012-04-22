@@ -27,14 +27,14 @@
 /***********************************************************************
  * WDT register definitions
  **********************************************************************/
-#define WDT_IR       __REG (WDT_PHYS + 0x00)
-#define WDT_TCR      __REG (WDT_PHYS + 0x04)
-#define WDT_TC       __REG (WDT_PHYS + 0x08)
-#define WDT_PR       __REG (WDT_PHYS + 0x0c)
-#define WDT_MCR      __REG (WDT_PHYS + 0x14)
-#define WDT_MR0      __REG (WDT_PHYS + 0x18)
-#define WDT_MR1      __REG (WDT_PHYS + 0x1c)
-#define WDT_EMR      __REG (WDT_PHYS + 0x3c)
+#define WDT_IR       0x00
+#define WDT_TCR      0x04
+#define WDT_TC       0x08
+#define WDT_PR       0x0c
+#define WDT_MCR      0x14
+#define WDT_MR0      0x18
+#define WDT_MR1      0x1c
+#define WDT_EMR      0x3c
 
 #define WDT_IR_MR1        _BIT(1)
 #define WDT_IR_MR0        _BIT(0)
@@ -50,22 +50,6 @@
 #define WDT_EMR_CTRL1(n)  _SBF(6,((n) &0x3))
 #define WDT_EMR_M1        _BIT(1)
 #define WDT_EMR_M0        _BIT(0)
-
-/***********************************************************************
- * Timer register definitions
- **********************************************************************/
-#define TIMER_LOAD(base)      __REG ((base) + 0x00)
-#define TIMER_VALUE(base)     __REG ((base) + 0x04)
-#define TIMER_CONTROL(base)   __REG ((base) + 0x08)
-#define TIMER_CLEAR(base)     __REG ((base) + 0x0c)
-
-#define TM_CTRL_ENABLE    _BIT(7)
-#define TM_CTRL_MODE      _BIT(6)
-#define TM_CTRL_PERIODIC  _BIT(6)
-#define TM_CTRL_PS1       _SBF(2, 0)
-#define TM_CTRL_PS16      _SBF(2, 1)
-#define TM_CTRL_PS256     _SBF(2, 2)
-#define TM_CTRL_PS_MASK   _SBF(2, 0x3)
 
 /***********************************************************************
  * UART register definitions
