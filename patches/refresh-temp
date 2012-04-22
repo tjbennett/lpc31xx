@@ -1,0 +1,18 @@
+Bottom: 967444b14e734f1635c924c76b631ce1cf63c1df
+Top:    819e6d417c84d217c6ebeab1f0e9fa90f6b2bec1
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-21 23:37:50 -0400
+
+Refresh of intc
+
+---
+
+diff --git a/arch/arm/mach-lpc31xx/time.c b/arch/arm/mach-lpc31xx/time.c
+index 559ee67..d16dfc9 100644
+--- a/arch/arm/mach-lpc31xx/time.c
++++ b/arch/arm/mach-lpc31xx/time.c
+@@ -148,4 +148,3 @@ struct sys_timer lpc31xx_timer = {
+ 	.suspend = lpc31xx_timer_suspend,
+ 	.resume = lpc31xx_timer_resume,
+ };
+-
