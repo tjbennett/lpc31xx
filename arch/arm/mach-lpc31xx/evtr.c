@@ -206,7 +206,7 @@ static int evt_set_wake(struct irq_data *data, unsigned int on)
 	return 0;
 }
 
-extern int lpc3131_reg_to_gpio(unsigned index, unsigned gpio);
+extern int lpc31xx_reg_to_gpio(unsigned index, unsigned gpio);
 
 /* when a gpio pin is request as an interrupt source,
  * make sure it is input mode
@@ -221,7 +221,7 @@ static int set_input(unsigned virq)
 			reg  = event_to_gpioreg[event];
 			if (!reg) /* not a gpio pin */
 				return -EINVAL;
-			gpio = lpc3131_reg_to_gpio(reg >> 5, reg & 0x1F);
+			gpio = lpc31xx_reg_to_gpio(reg >> 5, reg & 0x1F);
 			printk("setting to input %d\n", gpio);
 			ret = gpio_request(gpio, "IRQ");
 			if (ret)
@@ -283,6 +283,22 @@ int lpc31xx_event_to_irq(int event)
 }
 EXPORT_SYMBOL(lpc31xx_event_to_irq);
 
+int lpc31xx_set_cgu_wakeup(int enable, int event)
+{
+	uint32_t bank = EVT_GET_BANK(event);
+	uint32_t bit_pos = event & 0x1F;
+
+	if (!evtr_regs)
+		return -EAGAIN;
+
+	if (enable)
+		evtr_write(EVTR_OUT_MASK_SET(4, bank), _BIT(bit_pos))
+	else
+		evtr_write(EVTR_OUT_MASK_CLR(4, bank), _BIT(bit_pos))
+	return 0;
+}
+EXPORT_SYMBOL(lpc31xx_set_cgu_wakeup);
+
 static const struct of_device_id evtr_of_match[] __initconst = {
 	{ .compatible = "nxp,lpc31xx-evtr", },
 	{},
@@ -328,9 +344,9 @@ static int evtr_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t
 		break;
 	}
 	evtr_write(EVTR_OUT_MASK_SET(events[hw].group, bank), _BIT(bit_pos));
-	printk("evtr hw=%ld virq=%d Event=0x%02x bank:%d bit:%02d type:%d vector %d\n", hw, virq,
+	/*printk("evtr hw=%ld virq=%d Event=0x%02x bank:%d bit:%02d type:%d vector %d\n", hw, virq,
 		events[hw].event, bank,
-		bit_pos, events[hw].edge, events[hw].group);
+		bit_pos, events[hw].edge, events[hw].group); */
 	events[hw].virq = virq;
 
 	return 0;

@@ -137,7 +137,7 @@ static int intc_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t
 	irq_set_chip_and_handler(virq, &lpc31xx_internal_chip, handle_level_irq);
 	set_irq_flags(virq, IRQF_VALID);
 
-	printk("intc hw=%ld virq=%d\n", hw, virq);
+	//printk("intc hw=%ld virq=%d\n", hw, virq);
 	return 0;
 }
 
