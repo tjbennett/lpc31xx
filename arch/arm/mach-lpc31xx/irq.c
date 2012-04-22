@@ -26,6 +26,7 @@
 #include <linux/timer.h>
 #include <linux/of_irq.h>
 #include <linux/irqdomain.h>
+#include <linux/of_address.h>
 
 #include <mach/hardware.h>
 #include <asm/irq.h>
@@ -33,32 +34,34 @@
 #include <mach/irqs.h>
 #include <mach/clock.h>
 
+#define NR_IRQ_CPU	30	/* IRQs directly recognized by CPU */
+
 /* Macros to compute the bank based on EVENT_T */
 #define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
 #define EVT_arm926_nirq		0x6C
 
-extern void __init lpc31xx_init_evtr(void);
+static struct irq_domain *intc_domain;
 
 static void intc_mask_irq(struct irq_data *data)
 {
-	INTC_REQ_REG(data->irq) = INTC_REQ_WE_ENABLE;
+	INTC_REQ_REG(data->hwirq) = INTC_REQ_WE_ENABLE;
 }
 
 static void intc_unmask_irq(struct irq_data *data)
 {
-	INTC_REQ_REG(data->irq) = INTC_REQ_ENABLE | INTC_REQ_WE_ENABLE;
+	INTC_REQ_REG(data->hwirq) = INTC_REQ_ENABLE | INTC_REQ_WE_ENABLE;
 }
 
 static int intc_set_wake(struct irq_data *data, unsigned int on)
 {
-	static u32 wake_ints = 0;
+	static uint32_t wake_ints = 0;
 
 	if (on)
 		/* save the irqs which wake */
-		wake_ints |= _BIT(data->irq);
+		wake_ints |= _BIT(data->hwirq);
 	else
 		/* clear the irqs which don't wake */
-		wake_ints &= ~_BIT(data->irq);
+		wake_ints &= ~_BIT(data->hwirq);
 
 	/* Note: the clocks to corresponding blocks shouldn't be suspended
 	 * by individual drivers for this logic to work.
@@ -80,7 +83,7 @@ static int intc_set_wake(struct irq_data *data, unsigned int on)
 
 static struct irq_chip lpc31xx_internal_chip = {
 	.name = "INTC",
-	.irq_ack = intc_mask_irq,
+	//.irq_ack = intc_mask_irq,
 	.irq_mask = intc_mask_irq,
 	.irq_unmask = intc_unmask_irq,
 	.irq_set_wake = intc_set_wake,
@@ -91,11 +94,35 @@ static const struct of_device_id intc_of_match[] __initconst = {
 	{},
 };
 
+static int intc_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t hw)
+{
+	/* Set the initial control values */
+	INTC_REQ_REG(hw) = INTC_REQ_WE_ENABLE;
+
+	/* Initialize as high-active, Disable the interrupt,
+	* Set target to IRQ , Set priority level to 1 (= lowest) for
+	* all the interrupt lines */
+	INTC_REQ_REG(hw) = INTC_REQ_WE_ACT_LOW |
+		INTC_REQ_WE_ENABLE |
+		INTC_REQ_TARGET_IRQ |
+		INTC_REQ_PRIO_LVL(1) |
+		INTC_REQ_WE_PRIO_LVL;
+
+	irq_set_chip_and_handler(virq, &lpc31xx_internal_chip, handle_level_irq);
+	set_irq_flags(virq, IRQF_VALID);
+
+	printk("intc hw=%ld virq=%d\n", hw, virq);
+	return 0;
+}
+
+static struct irq_domain_ops intc_ops = {
+	.map	= intc_irq_map,
+	.xlate	= irq_domain_xlate_onecell,
+};
+
 void __init lpc31xx_init_irq(void)
 {
-	unsigned int irq;
-
-	irq_domain_generate_simple(intc_of_match, 0x60000000, 0);
+	struct device_node *node;
 
 	/* enable clock to interrupt controller */
 	cgu_clk_en_dis(CGU_SB_AHB2INTC_CLK_ID, 1);
@@ -111,30 +138,15 @@ void __init lpc31xx_init_irq(void)
 	INTC_IRQ_PRI_MASK = 0xFF;
 	INTC_FIQ_PRI_MASK = 0xFF;
 
-	/* Clear and disable all interrupts. Start from index 1 since 0 is unused.*/
-	for (irq = 1; irq < NR_IRQ_CPU; irq++) {
-		/* Set the initial control values */
-		INTC_REQ_REG(irq) = INTC_REQ_WE_ENABLE;
+	node = of_find_matching_node_by_address(NULL, intc_of_match, INTC_PHYS);
+	intc_domain = irq_domain_add_legacy(node, NR_IRQ_CPU, 0, 0, &intc_ops, NULL);
 
-		/* Initialize as high-active, Disable the interrupt,
-		* Set target to IRQ , Set priority level to 1 (= lowest) for
-		* all the interrupt lines */
-		INTC_REQ_REG(irq) = INTC_REQ_WE_ACT_LOW |
-			INTC_REQ_WE_ENABLE |
-			INTC_REQ_TARGET_IRQ |
-			INTC_REQ_PRIO_LVL(1) |
-			INTC_REQ_WE_PRIO_LVL;
-
-		irq_set_chip_and_handler(irq, &lpc31xx_internal_chip,
-					 handle_level_irq);
-		set_irq_flags(irq, IRQF_VALID);
-	}
+	irq_set_default_host(intc_domain);
 
 	/* Set the priority threshold to 0, i.e. don't mask any interrupt */
 	/* on the basis of priority level, for both targets (IRQ/FIQ)    */
 	INTC_IRQ_PRI_MASK = 0;
 	INTC_FIQ_PRI_MASK = 0;
-
 }
 
 
