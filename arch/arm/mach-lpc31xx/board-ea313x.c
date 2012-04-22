@@ -602,7 +602,13 @@ static struct map_desc ea313x_io_desc[] __initdata = {
 	},
 };
 
+#define PCA9532_GPIO_BASE 0x340
+#define VBUS_PWR_EN	(6 + PCA9532_GPIO_BASE)
+#define START_STOP_LED	8  /*led5 */
+#define IDLE_LED	9  /*led6 */
+
 static struct pca9532_platform_data ea313x_leds = {
+	.gpio_base = PCA9532_GPIO_BASE,
 	.leds = {
 	{	.type = PCA9532_TYPE_GPIO }, /* key joy 1 */
 	{	.type = PCA9532_TYPE_GPIO }, /* key joy 2 */
@@ -648,7 +654,6 @@ static struct pca9532_platform_data ea313x_leds = {
 	},
 	.psc = { 0, 0 },
 	.pwm = { 0, 0 },
-	.gpio_base = 0x340,
 };
 
 static struct i2c_board_info ea313x_i2c_devices[] __initdata = {
@@ -666,6 +671,11 @@ static struct i2c_board_info ea3152_i2c1_devices[] __initdata = {
 };
 #endif
 
+void lpc313x_vbus_power(int enable)
+{
+	printk (KERN_INFO "enabling USB host vbus_power %d\n", enable);
+	gpio_set_value(VBUS_PWR_EN, enable);
+}
 
 static void __init ea313x_init(void)
 {
@@ -689,6 +699,17 @@ static void __init ea313x_init(void)
 		ARRAY_SIZE(ea3152_i2c1_devices));
 #endif
 }
+
+#if defined(CONFIG_USB_EHCI_HCD)
+static void __init ea_usb_power(void)
+{
+	int ret; 
+
+	ret = gpio_request(VBUS_PWR_EN, "vbus power");
+	ret = gpio_direction_output(VBUS_PWR_EN, 1);
+}
+late_initcall(ea_usb_power);
+#endif
 
 static void __init ea313x_map_io(void)
 {
@@ -716,4 +737,5 @@ MACHINE_START(EA313X, "NXP EA313X")
 	.init_machine	= ea313x_init,
 MACHINE_END
 #endif
+
 
