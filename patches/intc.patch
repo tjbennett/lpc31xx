@@ -1,5 +1,5 @@
 Bottom: 9b620f86d9d3911a5542026c9b455c2d25bcd790
-Top:    d99e7c8ea5d048a61f5ebdf2a0930be796404ba7
+Top:    300165e6eb541db81cdb4053ae56d5e327b4a009
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-21 23:43:52 -0400
 
@@ -8,11 +8,83 @@ intr domain irq
 
 ---
 
+diff --git a/arch/arm/mach-lpc31xx/evtr.c b/arch/arm/mach-lpc31xx/evtr.c
+index 853f04d..b44a647 100644
+--- a/arch/arm/mach-lpc31xx/evtr.c
++++ b/arch/arm/mach-lpc31xx/evtr.c
+@@ -37,6 +37,11 @@
+ #include <mach/irqs.h>
+ #include <mach/clock.h>
+ 
++#define IRQ_EVT_ROUTER0	1	/*interrupts from Event router 0*/
++#define IRQ_EVT_ROUTER1	2	/*interrupts from Event router 1*/
++#define IRQ_EVT_ROUTER2	3	/*interrupts from Event router 2*/
++#define IRQ_EVT_ROUTER3	4	/*interrupts from Event router 3*/
++
+ /* External interrupt type enumerations */
+ typedef enum
+ {
+@@ -257,8 +262,6 @@ static int evtr_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t
+ {
+ 	uint32_t bank, bit_pos;
+ 	/* compute bank & bit position for the event_pin */
+-	//bank = EVT_GET_BANK(irq_2_event[irq].event_pin);
+-	//bit_pos = irq_2_event[irq].event_pin & 0x1F;
+ 	bank = EVT_GET_BANK(events[hw].event);
+ 	bit_pos = events[hw].event & 0x1F;
+ 
+@@ -310,7 +313,6 @@ static struct irq_domain_ops evtr_ops = {
+ 
+ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
+ {
+-	unsigned int irq;
+ 	int i, j;
+ 	const __be32 *ip;
+ 	struct device_node *np = pdev->dev.of_node;
+@@ -333,7 +335,6 @@ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
+ 		events[i].event = be32_to_cpup(ip++);
+ 		events[i].edge = be32_to_cpup(ip++);
+ 		printk("group %d bit %02x edge %d\n", events[i].group, events[i].event, events[i].edge);
+-		//set_input(events[i].event);
+ 	}
+ 
+ 	/* mask all external events */
+@@ -350,7 +351,8 @@ static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
+ 			EVRT_OUT_MASK_CLR(j,i) = 0xFFFFFFFF;
+ 		}
+ 	}
+-	evtr_domain = irq_domain_add_linear(np, num_events, &evtr_ops, NULL);
++	//evtr_domain = irq_domain_add_linear(np, num_events, &evtr_ops, NULL);
++	evtr_domain = irq_domain_add_legacy(np, num_events, 30, 0, &evtr_ops, NULL);
+ 
+ 	/* for power management. Wake from internal irqs */
+ 	EVRT_APR(3) &= ~_BIT(12);
 diff --git a/arch/arm/mach-lpc31xx/generic.c b/arch/arm/mach-lpc31xx/generic.c
-index d257d47..88553e2 100644
+index d257d47..a59ead8 100644
 --- a/arch/arm/mach-lpc31xx/generic.c
 +++ b/arch/arm/mach-lpc31xx/generic.c
-@@ -90,7 +90,8 @@ static struct plat_serial8250_port platform_serial_ports[] = {
+@@ -27,6 +27,8 @@
+ #include <linux/string.h>
+ #include <linux/console.h>
+ #include <linux/serial_8250.h>
++#include <linux/of_address.h>
++#include <linux/of_irq.h>
+ 
+ #include <asm/errno.h>
+ #include <mach/hardware.h>
+@@ -36,6 +38,11 @@
+ 
+ /* local functions */
+ 
++static struct of_device_id uart_ids[] = {
++	{ .compatible = "nxp,lpc31xx-uart" },
++	{ /* sentinel */ }
++};
++
+ static void lpc31xx_uart_pm(struct uart_port * port, unsigned int state,
+ 			      unsigned int oldstate)
+ {
+@@ -90,7 +97,8 @@ static struct plat_serial8250_port platform_serial_ports[] = {
  	{
  		.membase = (void *)io_p2v(UART_PHYS),
  		.mapbase = (unsigned long)UART_PHYS,
@@ -22,18 +94,115 @@ index d257d47..88553e2 100644
  		.uartclk = XTAL_CLOCK,
  		.regshift = 2,
  		.iotype = UPIO_MEM,
-@@ -266,7 +267,8 @@ static int __init lpc31xx_init_console(void)
+@@ -188,6 +196,24 @@ void __init lpc31xx_uart_init(void)
+ {
+ 	int mul, div;
  
++	struct device_node *node;
++	int irq;
++
++	node = of_find_matching_node(NULL, uart_ids);
++	if (!node)
++		return;
++
++	/* Get the interrupts property */
++	irq = irq_of_parse_and_map(node, 0);
++	if (!irq) {
++		pr_crit("LPC31xx: UART -  unable to get IRQ from DT\n");
++		return;
++	}
++	of_node_put(node);
++
++	platform_serial_ports[0].irq = irq;
++	printk("JDS - Uart IRQ %d\n", irq);
++
+ 	/* check what FDR bootloader is using */
+ 	mul = (UART_FDR_REG >> 4) & 0xF;
+ 	div = UART_FDR_REG & 0xF;
+@@ -213,8 +239,8 @@ void __init lpc31xx_init(void)
+ 	/* Disable ring oscillators used by Random number generators */
+ 	SYS_RNG_OSC_CFG = 0;
+ 
++	/* fixme */
+ #if 0
+-	/* fix me */
+ 	/* Mux I2S signals based on selected channel */
+ #if defined (CONFIG_SND_I2S_TX0_MASTER)
+ 	/* I2S TX0 WS, DATA */
+@@ -264,22 +290,17 @@ static int __init lpc31xx_init_console(void)
+  	 */
+ 	memset(&up, 0, sizeof(up));
+ 
++	lpc31xx_uart_init();
++	up.uartclk = platform_serial_ports[0].uartclk;
++	up.irq = platform_serial_ports[0].irq;
++
  	up.membase = (char *) io_p2v(UART_PHYS);
  	up.mapbase = (unsigned long)UART_PHYS,
 -	up.irq = IRQ_UART;
-+//	up.irq = IRQ_UART;
-+	up.irq = 13;
- 	up.uartclk = XTAL_CLOCK;
- 	/* check what FDR bootloader is using */
- 	mul = (UART_FDR_REG >> 4) & 0xF;
+-	up.uartclk = XTAL_CLOCK;
+-	/* check what FDR bootloader is using */
+-	mul = (UART_FDR_REG >> 4) & 0xF;
+-	div = UART_FDR_REG & 0xF;
+-	if (div != 0)  {
+-		up.uartclk = (XTAL_CLOCK * mul) / (mul + div);
+-	}
+ 	up.regshift = 2;
+ 	up.iotype = UPIO_MEM;
+ 	up.type	= PORT_NXP16750;
+ 	up.flags = UPF_BOOT_AUTOCONF | UPF_BUGGY_UART | UPF_SKIP_TEST;
+ 	up.line	= 0;
+-	platform_serial_ports[0].uartclk = up.uartclk;
+ 	if (early_serial_setup(&up))
+ 		printk(serr, up.line);
+ 
+diff --git a/arch/arm/mach-lpc31xx/include/mach/irqs.h b/arch/arm/mach-lpc31xx/include/mach/irqs.h
+index 7ded119..f650c47 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/irqs.h
++++ b/arch/arm/mach-lpc31xx/include/mach/irqs.h
+@@ -25,39 +25,6 @@
+ #ifndef __ASM_ARCH_IRQS_H
+ #define __ASM_ARCH_IRQS_H
+ 
+-#define IRQ_EVT_ROUTER0	1	/*interrupts from Event router 0*/
+-#define IRQ_EVT_ROUTER1	2	/*interrupts from Event router 1*/
+-#define IRQ_EVT_ROUTER2	3	/*interrupts from Event router 2*/
+-#define IRQ_EVT_ROUTER3	4	/*interrupts from Event router 3*/
+-#define IRQ_TIMER0	5	/*Timer 0 IRQ */
+-#define IRQ_TIMER1	6	/*Timer 1 IRQ */
+-#define IRQ_TIMER2	7	/*Timer 2 IRQ */
+-#define IRQ_TIMER3	8	/*Timer 3 IRQ */
+-#define IRQ_ADC		9	/*10bit ADC IRQ*/
+-#define IRQ_UART	10	/*UART IRQ */
+-#define IRQ_I2C0	11	/*I2C 0 IRQ */
+-#define IRQ_I2C1	12	/*I2C 1 IRQ */
+-#define IRQ_I2S0_OUT	13	/*I2S 0 out IRQ */
+-#define IRQ_I2S1_OUT	14	/*I2S 1 out IRQ */
+-#define IRQ_I2S0_IN	15	/*I2S 0 IN IRQ */
+-#define IRQ_I2S1_IN	16	/*I2S 1 IN IRQ */
+-#define IRQ_LCD		18	/*LCD IRQ */
+-#define IRQ_SPI_SMS	19	/*SPI SMS IRQ */
+-#define IRQ_SPI_TX	20	/*SPI Transmit IRQ */
+-#define IRQ_SPI_RX	21	/*SPI Receive IRQ */
+-#define IRQ_SPI_OVR	22	/*SPI overrun IRQ */
+-#define IRQ_SPI		23	/*SPI interrupt IRQ */
+-#define IRQ_DMA		24	/*DMA IRQ */
+-#define IRQ_NAND_FLASH	25	/*NAND flash IRQ */
+-#define IRQ_MCI		26	/*MCI IRQ */
+-#define IRQ_USB		27	/*USB IRQ */
+-#define IRQ_ISRAM0	28	/*ISRAM0 IRQ */
+-#define IRQ_ISRAM1	29	/*ISRAM1 IRQ */
+-
+-#define NR_IRQ_CPU	30	/* IRQs directly recognized by CPU */
+-
+-#define NR_IRQ_BOARD	34	/* Leave room for board specific IRQs */
+-
+-#define NR_IRQS		(NR_IRQ_CPU + NR_IRQ_BOARD)
++#define NR_IRQS 64
+ 
+ #endif
 diff --git a/arch/arm/mach-lpc31xx/irq.c b/arch/arm/mach-lpc31xx/irq.c
-index 8de96b1..8727e9f 100644
+index 8de96b1..2ac9b6c 100644
 --- a/arch/arm/mach-lpc31xx/irq.c
 +++ b/arch/arm/mach-lpc31xx/irq.c
 @@ -26,6 +26,7 @@
@@ -44,7 +213,13 @@ index 8de96b1..8727e9f 100644
  
  #include <mach/hardware.h>
  #include <asm/irq.h>
-@@ -37,28 +38,28 @@
+@@ -33,32 +34,34 @@
+ #include <mach/irqs.h>
+ #include <mach/clock.h>
+ 
++#define NR_IRQ_CPU	30	/* IRQs directly recognized by CPU */
++
+ /* Macros to compute the bank based on EVENT_T */
  #define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
  #define EVT_arm926_nirq		0x6C
  
@@ -79,7 +254,16 @@ index 8de96b1..8727e9f 100644
  
  	/* Note: the clocks to corresponding blocks shouldn't be suspended
  	 * by individual drivers for this logic to work.
-@@ -91,11 +92,36 @@ static const struct of_device_id intc_of_match[] __initconst = {
+@@ -80,7 +83,7 @@ static int intc_set_wake(struct irq_data *data, unsigned int on)
+ 
+ static struct irq_chip lpc31xx_internal_chip = {
+ 	.name = "INTC",
+-	.irq_ack = intc_mask_irq,
++	//.irq_ack = intc_mask_irq,
+ 	.irq_mask = intc_mask_irq,
+ 	.irq_unmask = intc_unmask_irq,
+ 	.irq_set_wake = intc_set_wake,
+@@ -91,11 +94,35 @@ static const struct of_device_id intc_of_match[] __initconst = {
  	{},
  };
  
@@ -99,8 +283,7 @@ index 8de96b1..8727e9f 100644
 +		INTC_REQ_PRIO_LVL(1) |
 +		INTC_REQ_WE_PRIO_LVL;
 +
-+	irq_set_chip_and_handler(virq, &lpc31xx_internal_chip,
-+				 handle_level_irq);
++	irq_set_chip_and_handler(virq, &lpc31xx_internal_chip, handle_level_irq);
 +	set_irq_flags(virq, IRQF_VALID);
 +
 +	printk("intc hw=%ld virq=%d\n", hw, virq);
@@ -119,7 +302,7 @@ index 8de96b1..8727e9f 100644
  
  	/* enable clock to interrupt controller */
  	cgu_clk_en_dis(CGU_SB_AHB2INTC_CLK_ID, 1);
-@@ -111,30 +137,13 @@ void __init lpc31xx_init_irq(void)
+@@ -111,30 +138,15 @@ void __init lpc31xx_init_irq(void)
  	INTC_IRQ_PRI_MASK = 0xFF;
  	INTC_FIQ_PRI_MASK = 0xFF;
  
@@ -142,7 +325,9 @@ index 8de96b1..8727e9f 100644
 -		set_irq_flags(irq, IRQF_VALID);
 -	}
 +	node = of_find_matching_node_by_address(NULL, intc_of_match, INTC_PHYS);
-+	intc_domain = irq_domain_add_linear(node, NR_IRQ_CPU, &intc_ops, NULL);
++	intc_domain = irq_domain_add_legacy(node, NR_IRQ_CPU, 0, 0, &intc_ops, NULL);
++
++	irq_set_default_host(intc_domain);
  
  	/* Set the priority threshold to 0, i.e. don't mask any interrupt */
  	/* on the basis of priority level, for both targets (IRQ/FIQ)    */
@@ -150,3 +335,50 @@ index 8de96b1..8727e9f 100644
  	INTC_FIQ_PRI_MASK = 0;
 -
  }
+ 
+ 
+diff --git a/arch/arm/mach-lpc31xx/time.c b/arch/arm/mach-lpc31xx/time.c
+index d16dfc9..d17779d 100644
+--- a/arch/arm/mach-lpc31xx/time.c
++++ b/arch/arm/mach-lpc31xx/time.c
+@@ -100,7 +100,7 @@ static struct of_device_id timer_ids[] = {
+ static void __init lpc31xx_timer_init(void)
+ {
+ 	struct device_node *node;
+-	int ret;
++	int irq;
+ 
+ 	node = of_find_matching_node(NULL, timer_ids);
+ 	if (!node)
+@@ -111,8 +111,8 @@ static void __init lpc31xx_timer_init(void)
+ 		goto node_err;
+ 
+ 	/* Get the interrupts property */
+-	ret = irq_of_parse_and_map(node, 0);
+-	if (!ret) {
++	irq = irq_of_parse_and_map(node, 0);
++	if (!irq) {
+ 		pr_crit("LPC31xx: Timer -  unable to get IRQ from DT\n");
+ 		goto ioremap_err;
+ 	}
+@@ -130,7 +130,7 @@ static void __init lpc31xx_timer_init(void)
+ 	timer_write(TIMER_LOAD, LATCH);
+ 	timer_write(TIMER_CONTROL, (TM_CTRL_ENABLE | TM_CTRL_PERIODIC));
+ 	timer_write(TIMER_CLEAR, 0);
+-	setup_irq (IRQ_TIMER0, &lpc31xx_timer_irq);
++	setup_irq (irq, &lpc31xx_timer_irq);
+ 
+ 	return;
+ 
+diff --git a/drivers/i2c/busses/i2c-pnx.c b/drivers/i2c/busses/i2c-pnx.c
+index 855c534..ffeaceb 100644
+--- a/drivers/i2c/busses/i2c-pnx.c
++++ b/drivers/i2c/busses/i2c-pnx.c
+@@ -718,6 +718,7 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
+ 		dev_err(&pdev->dev, "Failed to get IRQ from platform resource\n");
+ 		goto out_irq;
+ 	}
++	printk("i2c_pnx_probe irq is %d\n", alg_data->irq);
+ 	ret = request_irq(alg_data->irq, i2c_pnx_interrupt,
+ 			0, pdev->name, alg_data);
+ 	if (ret)
