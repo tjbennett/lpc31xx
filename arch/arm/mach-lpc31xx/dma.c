@@ -324,7 +324,7 @@ int dma_read_counter (unsigned int chn, unsigned int * pcnt)
 	return 0;
 }
 
-int dma_write_counter (unsigned int chn, u32 cnt)
+int dma_write_counter (unsigned int chn, uint32_t cnt)
 {
 	if (chn >= DMA_MAX_CHANNELS || !dma_channels[chn].name) {
 		return -EINVAL;
@@ -458,9 +458,9 @@ int dma_request_specific_sg_channel (int chn, char *name, dma_cb_t cb,
 	return sg_higher_channel[chn];
 }
 
-int dma_prog_sg_channel(int chn, u32 dma_sg_list)
+int dma_prog_sg_channel(int chn, uint32_t dma_sg_list)
 {
-	u32 dma_config;
+	uint32_t dma_config;
 
 	if (chn >= DMA_MAX_CHANNELS)
 		return -EINVAL;
@@ -553,9 +553,9 @@ int dma_release_sg_channel (unsigned int chn){return 0;}
 int dma_prog_channel (unsigned int chn, dma_setup_t *dma_setup){return 0;}
 int dma_start_channel (unsigned int chn){return 0;}
 int dma_stop_channel (unsigned int chn){return 0;}
-int dma_prog_sg_channel(int chn, u32 dma_sg_list){return 0;}
+int dma_prog_sg_channel(int chn, uint32_t dma_sg_list){return 0;}
 int dma_set_irq_mask(unsigned int chn, int half_int, int fin_int){return 0;}
-int dma_write_counter (unsigned int chn, u32 cnt){return 0;}
+int dma_write_counter (unsigned int chn, uint32_t cnt){return 0;}
 int dma_stop_channel_sg (unsigned int chn){return 0;}
 int dma_channel_enabled(unsigned int chn){return 0;}
 int dma_current_state (unsigned int   chn, unsigned int * psrc, unsigned int * pdst, unsigned int * plen, unsigned int * pcfg, unsigned int * pena, unsigned int * pcnt){return 0;}
