@@ -1,0 +1,598 @@
+Bottom: 9eeb7ee710176124e7df1828196a7d4c0710d01a
+Top:    b69554927656f5a6b24b7bc12f2ac66325c3f894
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-23 07:43:27 -0400
+
+Refresh of clean-val315x
+
+---
+
+diff --git a/arch/arm/mach-lpc31xx/clock.c b/arch/arm/mach-lpc31xx/clock.c
+index 51d623b..4c143bb 100644
+--- a/arch/arm/mach-lpc31xx/clock.c
++++ b/arch/arm/mach-lpc31xx/clock.c
+@@ -39,7 +39,7 @@
+ /***********************************************************************
+ * CGU driver package data
+ ***********************************************************************/
+-static u32 g_clkin_freq[CGU_FIN_SELECT_MAX];
++static uint32_t g_clkin_freq[CGU_FIN_SELECT_MAX];
+ 
+ /***********************************************************************
+ * CGU driver private functions
+@@ -52,9 +52,9 @@ static u32 g_clkin_freq[CGU_FIN_SELECT_MAX];
+ *     This is used to calculate the madd and msub width in frac div
+ *     registers.Reasonably fast.
+ **********************************************************************/
+-static u32 cgu_fdiv_num_bits(unsigned int i)
++static uint32_t cgu_fdiv_num_bits(unsigned int i)
+ {
+-	u32 x = 0, y = 16;
++	uint32_t x = 0, y = 16;
+ 
+ 	for (; y > 0; y = y >> 1) {
+ 		if (i >> y) {
+@@ -69,9 +69,9 @@ static u32 cgu_fdiv_num_bits(unsigned int i)
+ 	return x;
+ }
+ 
+-static inline u32 f_mult_m_div_n(u32 f_in, u32 m, u32 n)
++static inline uint32_t f_mult_m_div_n(uint32_t f_in, uint32_t m, uint32_t n)
+ {
+-	u32 temp;
++	uint32_t temp;
+ 	union {
+ 		unsigned long word[2];
+ 		unsigned long long longword;
+@@ -173,9 +173,9 @@ static unsigned int pl550_p(int x)
+ /***********************************************************************
+ *     Finds ESR index corresponding to the requested clock Id.
+ **********************************************************************/
+-u32 cgu_clkid2esrid(CGU_CLOCK_ID_T clkid)
++uint32_t cgu_clkid2esrid(CGU_CLOCK_ID_T clkid)
+ {
+-	u32 esrIndex = (u32)clkid;
++	uint32_t esrIndex = (uint32_t)clkid;
+ 
+ 	switch (clkid)
+ 	{
+@@ -200,9 +200,9 @@ u32 cgu_clkid2esrid(CGU_CLOCK_ID_T clkid)
+ /***********************************************************************
+ *     Finds BCR index corresponding to the requested domain Id.
+ **********************************************************************/
+-u32 cgu_DomainId2bcrid(CGU_DOMAIN_ID_T domainid)
++uint32_t cgu_DomainId2bcrid(CGU_DOMAIN_ID_T domainid)
+ {
+-	u32 bcridx = CGU_INVALID_ID;
++	uint32_t bcridx = CGU_INVALID_ID;
+ 	switch (domainid)
+ 	{
+ 	case CGU_SB_SYS_BASE_ID:
+@@ -225,10 +225,10 @@ u32 cgu_DomainId2bcrid(CGU_DOMAIN_ID_T domainid)
+ *	   clock.
+ **********************************************************************/
+ void cgu_ClkId2DomainId(CGU_CLOCK_ID_T clkid, CGU_DOMAIN_ID_T* pDomainId,
+-                        u32* pSubdomainId)
++                        uint32_t* pSubdomainId)
+ {
+-	u32 esrIndex, esrReg;
+-	u32 fracdiv_base = CGU_INVALID_ID;
++	uint32_t esrIndex, esrReg;
++	uint32_t fracdiv_base = CGU_INVALID_ID;
+ 
+ 	/*    1. Get the domain ID */
+ 
+@@ -304,9 +304,9 @@ void cgu_ClkId2DomainId(CGU_CLOCK_ID_T clkid, CGU_DOMAIN_ID_T* pDomainId,
+ * Configure the selected fractional divider
+ *********************************************************************/
+ /* frac divider config function */
+-u32 cgu_fdiv_config(u32 fdId, CGU_FDIV_SETUP_T fdivCfg, u32 enable)
++uint32_t cgu_fdiv_config(uint32_t fdId, CGU_FDIV_SETUP_T fdivCfg, uint32_t enable)
+ {
+-	u32 conf, maddw, msubw, maxw, fdWidth;
++	uint32_t conf, maddw, msubw, maxw, fdWidth;
+ 	int madd, msub;
+ 
+ 	/* calculating program values to see if they fit in fractional divider*/
+@@ -314,8 +314,8 @@ u32 cgu_fdiv_config(u32 fdId, CGU_FDIV_SETUP_T fdivCfg, u32 enable)
+ 	msub = -fdivCfg.n;
+ 
+ 	/* Find required bit width of madd & msub:*/
+-	maddw = cgu_fdiv_num_bits((u32)madd);
+-	msubw = cgu_fdiv_num_bits((u32)fdivCfg.n);
++	maddw = cgu_fdiv_num_bits((uint32_t)madd);
++	msubw = cgu_fdiv_num_bits((uint32_t)fdivCfg.n);
+ 	maxw = (maddw > msubw) ? maddw : msubw;
+ 	fdWidth = CGU_SB_BASE0_FDIV0_W;
+ 
+@@ -352,7 +352,7 @@ u32 cgu_fdiv_config(u32 fdId, CGU_FDIV_SETUP_T fdivCfg, u32 enable)
+ /***********************************************************************
+ * Get frequency of requested base domain clock.
+ **********************************************************************/
+-u32 cgu_get_base_freq(CGU_DOMAIN_ID_T baseid)
++uint32_t cgu_get_base_freq(CGU_DOMAIN_ID_T baseid)
+ {
+ 	/* get base frequency for the domain */
+ 	return g_clkin_freq[CGU_SB_SSR_FS_GET(CGU_SB->base_ssr[baseid])];
+@@ -361,9 +361,9 @@ u32 cgu_get_base_freq(CGU_DOMAIN_ID_T baseid)
+ /***********************************************************************
+ * Set frequency of requested base domain.
+ **********************************************************************/
+-void cgu_set_base_freq(CGU_DOMAIN_ID_T baseid, u32 fin_sel)
++void cgu_set_base_freq(CGU_DOMAIN_ID_T baseid, uint32_t fin_sel)
+ {
+-	u32 baseSCR;
++	uint32_t baseSCR;
+ 
+ 	/* Switch configuration register*/
+ 	baseSCR = CGU_SB->base_scr[baseid] & ~CGU_SB_SCR_FS_MASK;
+@@ -395,7 +395,7 @@ void cgu_set_base_freq(CGU_DOMAIN_ID_T baseid, u32 fin_sel)
+ void cgu_hpll_config(CGU_HPLL_ID_T pllid, CGU_HPLL_SETUP_T* pllsetup)
+ {
+ 	CGU_HP_CFG_REGS* hppll;
+-	u32 switched_domains = 0;
++	uint32_t switched_domains = 0;
+ 	CGU_DOMAIN_ID_T domainId;
+ 
+ 	/**********************************************************
+@@ -466,7 +466,7 @@ void cgu_hpll_config(CGU_HPLL_ID_T pllid, CGU_HPLL_SETUP_T* pllsetup)
+ /***********************************************************************
+ * Set external enable feature for the requested clock
+ **********************************************************************/
+-void cgu_clk_set_exten(CGU_CLOCK_ID_T clkid, u32 enable)
++void cgu_clk_set_exten(CGU_CLOCK_ID_T clkid, uint32_t enable)
+ {
+ 	switch (clkid)
+ 	{
+@@ -519,13 +519,13 @@ void cgu_clk_set_exten(CGU_CLOCK_ID_T clkid, u32 enable)
+ * Notes: None
+ *
+ **********************************************************************/
+-u32 cgu_get_clk_freq(CGU_CLOCK_ID_T clkid)
++uint32_t cgu_get_clk_freq(CGU_CLOCK_ID_T clkid)
+ {
+-	u32 freq = 0;
++	uint32_t freq = 0;
+ 	CGU_DOMAIN_ID_T domainId;
+-	u32 subDomainId;
++	uint32_t subDomainId;
+ 	int n, m;
+-	u32 fdcVal;
++	uint32_t fdcVal;
+ 
+ 	/* get domain and frac div info for the clock */
+ 	cgu_ClkId2DomainId(clkid, &domainId, &subDomainId);
+@@ -580,7 +580,7 @@ u32 cgu_get_clk_freq(CGU_CLOCK_ID_T clkid)
+ void cgu_set_subdomain_freq(CGU_CLOCK_ID_T clkid, CGU_FDIV_SETUP_T fdiv_cfg)
+ {
+ 	CGU_DOMAIN_ID_T domainId;
+-	u32 subDomainId, base_freq, bcrId;
++	uint32_t subDomainId, base_freq, bcrId;
+ 
+ 	/* get domain and frac div info for the clock */
+ 	cgu_ClkId2DomainId(clkid, &domainId, &subDomainId);
+@@ -611,16 +611,16 @@ void cgu_set_subdomain_freq(CGU_CLOCK_ID_T clkid, CGU_FDIV_SETUP_T fdiv_cfg)
+ /***********************************************************************
+ * Get frequency of requested PLL clock.
+ **********************************************************************/
+-u32 cgu_get_pll_freq(CGU_HPLL_ID_T pll_id, u32 infreq)
++uint32_t cgu_get_pll_freq(CGU_HPLL_ID_T pll_id, uint32_t infreq)
+ {
+-	u32 mdec;     /* 17 bits */
+-	u32 ndec;     /* 10 bits */
+-	u32 pdec;     /*  7 bits */
+-	u32 mode;
+-	u32 M = 0;
+-	u32 N = 0;
+-	u32 P = 0;
+-	u32 ofreq = 0;
++	uint32_t mdec;     /* 17 bits */
++	uint32_t ndec;     /* 10 bits */
++	uint32_t pdec;     /*  7 bits */
++	uint32_t mode;
++	uint32_t M = 0;
++	uint32_t N = 0;
++	uint32_t P = 0;
++	uint32_t ofreq = 0;
+ 
+ 
+ 	mdec = CGU_CFG->hp[pll_id].mdec;  /* dec val feedback divider */
+@@ -694,8 +694,8 @@ u32 cgu_get_pll_freq(CGU_HPLL_ID_T pll_id, u32 infreq)
+  */
+ static int lpc31xx_cgu_clocks_show(struct seq_file *s, void *v)
+ {
+-	u32 clk_id = CGU_SYS_FIRST;
+-	u32 end_id = (CGU_SYSCLK_O_LAST + 1);
++	uint32_t clk_id = CGU_SYS_FIRST;
++	uint32_t end_id = (CGU_SYSCLK_O_LAST + 1);
+ 	char* str[2] = { "OFF", " ON"}; 
+ 
+ 	while (clk_id < end_id) {
+@@ -743,7 +743,7 @@ static void lpc31xx_cgu_init_debugfs(void) {}
+ int __init cgu_init(char *str)
+ {
+ 	int i, j;
+-	u32 flags;
++	uint32_t flags;
+ 	/* disable all non-essential clocks, enabel main clocks and wakeup
+ 	 * enables.
+ 	 */
+@@ -804,7 +804,7 @@ static unsigned long local_return_parent_rate(struct clk *clk)
+ 
+ static int local_onoff_enable(struct clk *clk, int enable)
+ {
+-	u32 tmp;
++	uint32_t tmp;
+ 
+ 	tmp = __raw_readl(clk->enable_reg);
+ 
+diff --git a/arch/arm/mach-lpc31xx/include/mach/board.h b/arch/arm/mach-lpc31xx/include/mach/board.h
+index f17126f..1792189 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/board.h
++++ b/arch/arm/mach-lpc31xx/include/mach/board.h
+@@ -54,19 +54,19 @@ extern struct sys_timer lpc31xx_timer;
+  */
+ struct lpc31xx_nand_timing
+ {
+-	u32 ns_trsd;
+-	u32 ns_tals;
+-	u32 ns_talh;
+-	u32 ns_tcls;
+-	u32 ns_tclh;
+-	u32 ns_tdrd;
+-	u32 ns_tebidel;
+-	u32 ns_tch;
+-	u32 ns_tcs;
+-	u32 ns_treh;
+-	u32 ns_trp;
+-	u32 ns_trw;
+-	u32 ns_twp;
++	uint32_t ns_trsd;
++	uint32_t ns_tals;
++	uint32_t ns_talh;
++	uint32_t ns_tcls;
++	uint32_t ns_tclh;
++	uint32_t ns_tdrd;
++	uint32_t ns_tebidel;
++	uint32_t ns_tch;
++	uint32_t ns_tcs;
++	uint32_t ns_treh;
++	uint32_t ns_trp;
++	uint32_t ns_trw;
++	uint32_t ns_twp;
+ };
+ 
+ /*
+@@ -109,7 +109,7 @@ struct lpc31xx_spics_cfg {
+  * Defines the number of chip selects and the cs data
+  */
+ struct lpc31xx_spi_cfg {
+-	u32 num_cs; /* Number of CS supported on this board */
++	uint32_t num_cs; /* Number of CS supported on this board */
+ 	/* Array of cs setup data (num_cs entries) */
+ 	struct lpc31xx_spics_cfg *spics_cfg;
+ };
+diff --git a/arch/arm/mach-lpc31xx/include/mach/clock.h b/arch/arm/mach-lpc31xx/include/mach/clock.h
+index 96a28cf..d065e74 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/clock.h
++++ b/arch/arm/mach-lpc31xx/include/mach/clock.h
+@@ -77,21 +77,21 @@
+ typedef volatile struct
+ {
+   /* Switches controls */
+-  volatile u32 base_scr[12]; /* Switch control */
+-  volatile u32 base_fs1[12]; /* Frequency select side 1 */
+-  volatile u32 base_fs2[12]; /* Frequency select side 2 */
+-  volatile u32 base_ssr[12]; /* Switch status */
++  volatile uint32_t base_scr[12]; /* Switch control */
++  volatile uint32_t base_fs1[12]; /* Frequency select side 1 */
++  volatile uint32_t base_fs2[12]; /* Frequency select side 2 */
++  volatile uint32_t base_ssr[12]; /* Switch status */
+   /* Clock enable controls (positive and inverted clock pairs share control register)*/
+-  volatile u32 clk_pcr[92]; /* power control */
+-  volatile u32 clk_psr[92]; /* power status */
++  volatile uint32_t clk_pcr[92]; /* power control */
++  volatile uint32_t clk_psr[92]; /* power status */
+   /* enable select from fractional dividers (positive and inverted clock pairs share esr)*/
+-  volatile u32 clk_esr[89]; /* enable select */
++  volatile uint32_t clk_esr[89]; /* enable select */
+   /* Base controls, currently only fd_run (base wide fractional divider enable) bit.*/
+-  volatile u32 base_bcr[5]; /* Base control */
++  volatile uint32_t base_bcr[5]; /* Base control */
+   /* Fractional divider controls & configuration*/
+-  volatile u32 base_fdc[24]; /* Fractional divider config & ctrl */
+-  volatile u32 base_dyn_fdc[7]; /* Fractional divider config & ctrl for dynamic fracdivs */
+-  volatile u32 base_dyn_sel[7]; /* Fractional divider register for selecting an external signal to trigger high-speed operation*/
++  volatile uint32_t base_fdc[24]; /* Fractional divider config & ctrl */
++  volatile uint32_t base_dyn_fdc[7]; /* Fractional divider config & ctrl for dynamic fracdivs */
++  volatile uint32_t base_dyn_sel[7]; /* Fractional divider register for selecting an external signal to trigger high-speed operation*/
+ } CGU_SB_REGS_T;
+ 
+ /* ----------------
+@@ -100,29 +100,29 @@ typedef volatile struct
+ */
+ typedef volatile struct
+ {
+-  volatile u32 fin_select;
+-  volatile u32 mdec;
+-  volatile u32 ndec;
+-  volatile u32 pdec;
+-  volatile u32 mode;
+-  volatile u32 status;
+-  volatile u32 ack;
+-  volatile u32 req;
+-  volatile u32 inselr;
+-  volatile u32 inseli;
+-  volatile u32 inselp;
+-  volatile u32 selr;
+-  volatile u32 seli;
+-  volatile u32 selp;
++  volatile uint32_t fin_select;
++  volatile uint32_t mdec;
++  volatile uint32_t ndec;
++  volatile uint32_t pdec;
++  volatile uint32_t mode;
++  volatile uint32_t status;
++  volatile uint32_t ack;
++  volatile uint32_t req;
++  volatile uint32_t inselr;
++  volatile uint32_t inseli;
++  volatile uint32_t inselp;
++  volatile uint32_t selr;
++  volatile uint32_t seli;
++  volatile uint32_t selp;
+ } CGU_HP_CFG_REGS;
+ 
+ typedef volatile struct
+ {
+-  volatile u32 powermode;
+-  volatile u32 wd_bark;
+-  volatile u32 ffast_on;
+-  volatile u32 ffast_bypass;
+-  volatile u32 resetn_soft[56];
++  volatile uint32_t powermode;
++  volatile uint32_t wd_bark;
++  volatile uint32_t ffast_on;
++  volatile uint32_t ffast_bypass;
++  volatile uint32_t resetn_soft[56];
+   CGU_HP_CFG_REGS hp[2];
+ } CGU_CONFIG_REGS;
+ 
+@@ -551,15 +551,15 @@ typedef enum
+ /* CGU HPLL config settings structure type */
+ typedef struct
+ {
+-  u32 fin_select;
+-  u32 ndec;
+-  u32 mdec;
+-  u32 pdec;
+-  u32 selr;
+-  u32 seli;
+-  u32 selp;
+-  u32 mode;
+-  u32 freq; /* in MHz for driver internal data */
++  uint32_t fin_select;
++  uint32_t ndec;
++  uint32_t mdec;
++  uint32_t pdec;
++  uint32_t selr;
++  uint32_t seli;
++  uint32_t selp;
++  uint32_t mode;
++  uint32_t freq; /* in MHz for driver internal data */
+ } CGU_HPLL_SETUP_T;
+ 
+ /* CGU fractional divider settings structure type */
+@@ -574,13 +574,13 @@ typedef struct
+ * CGU driver functions
+ **********************************************************************/
+ /* Return the current base frequecy of the requested domain*/
+-u32 cgu_get_base_freq(CGU_DOMAIN_ID_T baseid);
++uint32_t cgu_get_base_freq(CGU_DOMAIN_ID_T baseid);
+ 
+ /* Change the base frequency for the requested domain */
+-void cgu_set_base_freq(CGU_DOMAIN_ID_T baseid, u32 fin_sel);
++void cgu_set_base_freq(CGU_DOMAIN_ID_T baseid, uint32_t fin_sel);
+ 
+ /* Return the current frequecy of the requested clock*/
+-u32 cgu_get_clk_freq(CGU_CLOCK_ID_T clkid);
++uint32_t cgu_get_clk_freq(CGU_CLOCK_ID_T clkid);
+ 
+ /* Change the sub-domain frequency for the requested clock */
+ void cgu_set_subdomain_freq(CGU_CLOCK_ID_T clkid, CGU_FDIV_SETUP_T fdiv_cfg);
+@@ -589,16 +589,16 @@ void cgu_set_subdomain_freq(CGU_CLOCK_ID_T clkid, CGU_FDIV_SETUP_T fdiv_cfg);
+ void cgu_hpll_config(CGU_HPLL_ID_T id, CGU_HPLL_SETUP_T* pllsetup);
+ 
+ /* enable / disable external enabling of the requested clock in CGU */
+-void cgu_clk_set_exten(CGU_CLOCK_ID_T clkid, u32 enable);
++void cgu_clk_set_exten(CGU_CLOCK_ID_T clkid, uint32_t enable);
+ 
+ /* frac divider config function */
+-u32 cgu_fdiv_config(u32 fdId, CGU_FDIV_SETUP_T fdivCfg, u32 enable);
++uint32_t cgu_fdiv_config(uint32_t fdId, CGU_FDIV_SETUP_T fdivCfg, uint32_t enable);
+ 
+ /***********************************************************************
+ * CGU driver inline (ANSI C99 based) functions
+ **********************************************************************/
+ /* enable / disable the requested clock in CGU */
+-static inline void cgu_clk_en_dis(CGU_CLOCK_ID_T clkid, u32 enable)
++static inline void cgu_clk_en_dis(CGU_CLOCK_ID_T clkid, uint32_t enable)
+ {
+   if (enable)
+   {
+@@ -613,7 +613,7 @@ static inline void cgu_clk_en_dis(CGU_CLOCK_ID_T clkid, u32 enable)
+ /* Issue a software reset to the requested module */
+ static inline void cgu_soft_reset_module(CGU_MOD_ID_T modId)
+ {
+-  volatile u32 i;
++  volatile uint32_t i;
+ 
+   /* clear and set the register */
+   CGU_CFG->resetn_soft[modId] = 0;
+@@ -640,8 +640,8 @@ static inline void cgu_endis_base_freq(CGU_DOMAIN_ID_T baseid, int en)
+ struct clk {
+ 	struct list_head node;
+ 	struct clk *parent;
+-	u32 rate;
+-	u32 usecount;
++	uint32_t rate;
++	uint32_t usecount;
+ 
+ 	int (*set_rate) (struct clk *, unsigned long);
+ 	unsigned long (*round_rate) (struct clk *, unsigned long);
+@@ -650,7 +650,7 @@ struct clk {
+ 
+ 	/* Register address and bit mask for simple clocks */
+ 	void __iomem *enable_reg;
+-	u32 enable_mask;
++	uint32_t enable_mask;
+ 
+ 	CGU_CLOCK_ID_T id;
+ };
+diff --git a/arch/arm/mach-lpc31xx/include/mach/dma.h b/arch/arm/mach-lpc31xx/include/mach/dma.h
+index ca1a854..2767695 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/dma.h
++++ b/arch/arm/mach-lpc31xx/include/mach/dma.h
+@@ -130,7 +130,7 @@ typedef union __dma_config_t{
+ 		unsigned int circular_buffer:1;
+ 		unsigned int rsrvd1:12;
+ 	} s;
+-	u32 value;
++	uint32_t value;
+ } dma_config_t;
+ 
+ /*
+@@ -139,14 +139,14 @@ typedef union __dma_config_t{
+ typedef struct dma_setup
+ {
+ 	/* source address for transfer*/
+-	u32 src_address;
++	uint32_t src_address;
+ 	/* source address for transfer*/
+-	u32 dest_address;
++	uint32_t dest_address;
+ 	/* toatl transfer length*/
+-	u32 trans_length;
++	uint32_t trans_length;
+ 	/* channel configuration */
+ 	//dma_config_t cfg;
+-	u32 cfg;
++	uint32_t cfg;
+ } dma_setup_t;
+ 
+ /*
+@@ -155,7 +155,7 @@ typedef struct dma_setup
+ typedef struct dma_sg_ll
+ {
+ 	dma_setup_t setup;
+-	u32 next_entry;
++	uint32_t next_entry;
+ } dma_sg_ll_t;
+ 
+ 
+@@ -268,7 +268,7 @@ int dma_read_counter (unsigned int, unsigned int *);
+  *
+  * Returns: 0 on success, otherwise failure
+  */
+-int dma_write_counter (unsigned int, u32);
++int dma_write_counter (unsigned int, uint32_t);
+ 
+ /*
+  * Read current channel state
+@@ -368,7 +368,7 @@ int dma_prepare_sg_list(int, dma_sg_ll_t *);
+  *
+  * Returns: 0 on success, otherwise failure
+  */
+-int dma_prog_sg_channel(int, u32 );
++int dma_prog_sg_channel(int, uint32_t );
+ 
+ /*
+  * Release SDMA SG channel
+diff --git a/arch/arm/mach-lpc31xx/include/mach/hardware.h b/arch/arm/mach-lpc31xx/include/mach/hardware.h
+index a612cdb..5b4c2da 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/hardware.h
++++ b/arch/arm/mach-lpc31xx/include/mach/hardware.h
+@@ -41,7 +41,7 @@
+ #else
+ 
+ # if 0
+-#  define __REG(x)	(*((volatile u32 *)io_p2v(x)))
++#  define __REG(x)	(*((volatile uint32_t *)io_p2v(x)))
+ # else
+ /*
+  * This __REG() version gives the same results as the one above,  except
+@@ -49,7 +49,7 @@
+  * assembly code for access to contiguous registers.
+  */
+ #include <asm/types.h>
+-typedef struct { volatile u32 offset[4096]; } __regbase;
++typedef struct { volatile uint32_t offset[4096]; } __regbase;
+ # define __REGP(x)	((__regbase *)((x)&~4095))->offset[((x)&4095)>>2]
+ # define __REG(x)	__REGP(io_p2v(x))
+ typedef struct { volatile u16 offset[4096]; } __regbase16;
+@@ -62,9 +62,9 @@ typedef struct { volatile u8 offset[4096]; } __regbase8;
+ 
+ # define __REG2(x,y)	\
+ 	( __builtin_constant_p(y) ? (__REG((x) + (y))) \
+-				  : (*(volatile u32 *)((u32)&__REG(x) + (y))) )
++				  : (*(volatile uint32_t *)((uint32_t)&__REG(x) + (y))) )
+ 
+-# define __PREG(x)	(io_v2p((u32)&(x)))
++# define __PREG(x)	(io_v2p((uint32_t)&(x)))
+ 
+ /* include CGU header */
+ #include "clock.h"
+diff --git a/arch/arm/mach-lpc31xx/include/mach/uncompress.h b/arch/arm/mach-lpc31xx/include/mach/uncompress.h
+index 320ab47..fa0867a 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/uncompress.h
++++ b/arch/arm/mach-lpc31xx/include/mach/uncompress.h
+@@ -26,7 +26,7 @@
+ 
+ 
+ #undef __REG
+-#define __REG(x)	(*((volatile u32 *)(x)))
++#define __REG(x)	(*((volatile uint32_t *)(x)))
+ /***********************************************************************
+  * UART register definitions
+  **********************************************************************/
+diff --git a/arch/arm/mach-lpc31xx/pm.c b/arch/arm/mach-lpc31xx/pm.c
+index 194c02d..4b8999d 100644
+--- a/arch/arm/mach-lpc31xx/pm.c
++++ b/arch/arm/mach-lpc31xx/pm.c
+@@ -82,7 +82,7 @@ static int lpc31xx_pm_begin(suspend_state_t state)
+ static void lpc31xx_clk_debug(void)
+ {
+ #ifdef CONFIG_PM_DEBUG
+-	u32 i, clk_pcr;
++	uint32_t i, clk_pcr;
+ 	/* print all clocks which are not auto_wake enabled and are still
+ 	 * running before entering low-power states.
+ 	 */
+@@ -95,11 +95,11 @@ static void lpc31xx_clk_debug(void)
+ #endif
+ }
+ 
+-static int lpc31xx_enter_sleep(u32 standby)
++static int lpc31xx_enter_sleep(uint32_t standby)
+ {
+-	int (*lpc31xx_suspend_ptr) (u32);
++	int (*lpc31xx_suspend_ptr) (uint32_t);
+ 	int i;
+-	u32 base_clk_state = 0;
++	uint32_t base_clk_state = 0;
+ 
+ #if defined(BACKUP_ISRAM)
+ 	void *iram_swap_area;
+diff --git a/arch/arm/mach-lpc31xx/sram.c b/arch/arm/mach-lpc31xx/sram.c
+index 27f78ea..a272840 100644
+--- a/arch/arm/mach-lpc31xx/sram.c
++++ b/arch/arm/mach-lpc31xx/sram.c
+@@ -39,7 +39,7 @@ static int lpc31xx_sram_probe(struct platform_device *pdev)
+ 	const unsigned int *prop;
+ 	const unsigned int *ranges;
+ 	int len, count, i;
+-	volatile u32 *base;
++	volatile uint32_t *base;
+ 
+ 	prop = of_get_property(pdev->dev.of_node, "mpmc-config", &len);
+ 	if (!prop)
