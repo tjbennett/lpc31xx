@@ -1,0 +1,43 @@
+Bottom: fca9a5c076d1173c46837b905e7974f113998e7c
+Top:    2d7ef4ff4b695c9aaf7bf4ca529d9521077e5e68
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-23 07:33:17 -0400
+
+Refresh of clean-val315x
+
+---
+
+diff --git a/drivers/net/ethernet/cirrus/cs89x0.c b/drivers/net/ethernet/cirrus/cs89x0.c
+index 08ea950..b9406cb 100644
+--- a/drivers/net/ethernet/cirrus/cs89x0.c
++++ b/drivers/net/ethernet/cirrus/cs89x0.c
+@@ -369,18 +369,6 @@ writeword(unsigned long base_addr, int portno, u16 value)
+ {
+ 	__raw_writel(value, base_addr + (portno << 1));
+ }
+-#elif defined(CONFIG_ARCH_PNX010X)
+-static u16
+-readword(unsigned long base_addr, int portno)
+-{
+-	return inw(base_addr + (portno << 1));
+-}
+-
+-static void
+-writeword(unsigned long base_addr, int portno, u16 value)
+-{
+-	outw(value, base_addr + (portno << 1));
+-}
+ #else
+ static u16
+ readword(unsigned long base_addr, int portno)
+@@ -618,7 +606,9 @@ cs89x0_probe1(struct net_device *dev, unsigned long ioaddr, int modular)
+ 	   the driver will always do *something* instead of complain that
+ 	   adapter_cnf is 0. */
+ 
+-	{
++
++        if ((readreg(dev, PP_SelfST) & (EEPROM_OK | EEPROM_PRESENT)) ==
++	      (EEPROM_OK|EEPROM_PRESENT)) {
+ 	        /* Load the MAC. */
+ 		for (i=0; i < ETH_ALEN/2; i++) {
+ 	                unsigned int Addr;
