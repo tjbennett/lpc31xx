@@ -25,6 +25,9 @@ if SND_SOC
 config SND_SOC_AC97_BUS
 	bool
 
+config SND_SOC_DMAENGINE_PCM
+	bool
+
 # All the supported SoCs
 source "sound/soc/atmel/Kconfig"
 source "sound/soc/au1x/Kconfig"
@@ -45,7 +48,7 @@ source "sound/soc/s6000/Kconfig"
 source "sound/soc/sh/Kconfig"
 source "sound/soc/tegra/Kconfig"
 source "sound/soc/txx9/Kconfig"
-source "sound/soc/lpc313x/Kconfig"
+source "sound/soc/lpc31xx/Kconfig"
 
 # Supported codecs
 source "sound/soc/codecs/Kconfig"

@@ -1,8 +1,8 @@
-menu "LPC313x Implementations"
+menu "LPC31xx Implementations"
 	depends on ARCH_LPC31XX
 
 choice
-	prompt "LPC313x Platform type"
+	prompt "LPC31xx Platform type"
 	default MACH_EA313X
 
 config MACH_EA313X
@@ -15,17 +15,6 @@ config MACH_EA3152
 	select LPC3152_AD
 	help
 	  Say Y here if you are using Embedded Artist's EA3152 board
-	  
-config MACH_VAL3153
-	bool "val3153 board"
-	help
-	  Say Y here if you are using the NXP val3153 board
-
-config MACH_VAL3154
-	bool "val3154 board"
-	select LPC3152_AD
-	help
-	  Say Y here if you are using the NXP val3154 board
 	  
 endchoice
 

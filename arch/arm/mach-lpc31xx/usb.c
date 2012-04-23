@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-lpc313x/usb.c -- platform level USB initialization
+/* linux/arch/arm/mach-lpc31xx/usb.c -- platform level USB initialization
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
@@ -44,6 +44,9 @@
 #include <asm/system.h>
 #include <mach/board.h>
 #include <mach/gpio.h>
+
+#define EVRT_RSR(bank)       __REG (EVTR_PHYS + 0xD20 + ((bank) << 2))
+
 
 /****************************************************************************
 * USBOTG register definition
@@ -97,10 +100,10 @@
 
 /*-------------------------------------------------------------------------*/
 #if defined(CONFIG_USB_GADGET_FSL_USB2) || defined(CONFIG_USB_OTG)
-static struct resource lpc313x_usb_resource[] = {
+static struct resource lpc31xx_usb_resource[] = {
 	[0] = {
-		.start = (u32) (USBOTG_PHYS),
-		.end   = (u32) (USBOTG_PHYS + SZ_4K),
+		.start = (uint32_t) (USBOTG_PHYS),
+		.end   = (uint32_t) (USBOTG_PHYS + SZ_4K),
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
@@ -111,51 +114,51 @@ static struct resource lpc313x_usb_resource[] = {
 };
 #endif
 
-struct lpc313x_usb_board_t {
+struct lpc31xx_usb_board_t {
 	/* timer for VBUS enable */
 	struct timer_list	vbus_timer;
 	/* board specific over current monitor */
 	int	vbus_ovrc_irq;
 };
 
-static struct lpc313x_usb_board_t lpc313x_usb_brd;
+static struct lpc31xx_usb_board_t lpc31xx_usb_brd;
 
 #if defined(CONFIG_USB_GADGET_FSL_USB2) || defined(CONFIG_USB_OTG)
 
-static struct platform_device lpc313x_udc_device = {
+static struct platform_device lpc31xx_udc_device = {
 	.name = "fsl-usb2-udc",
 	.dev = {
 		.dma_mask          = &usb_dmamask,
 		.coherent_dma_mask = 0xffffffff,
-		.release           = lpc313x_usb_release,
+		.release           = lpc31xx_usb_release,
 	},
-	.num_resources = ARRAY_SIZE(lpc313x_usb_resource),
-	.resource      = lpc313x_usb_resource,
+	.num_resources = ARRAY_SIZE(lpc31xx_usb_resource),
+	.resource      = lpc31xx_usb_resource,
 };
 #endif
 
 #if defined(CONFIG_USB_EHCI_HCD) || defined(CONFIG_USB_OTG)
 
 #ifndef CONFIG_OF
-static struct platform_device lpc313x_ehci_device = {
+static struct platform_device lpc31xx_ehci_device = {
 	.name		= "lpc-ehci",
 	.dev = {
 		.dma_mask          = &usb_dmamask,
 		.coherent_dma_mask = 0xffffffff,
-		.release           = lpc313x_usb_release,
+		.release           = lpc31xx_usb_release,
 	},
-	.num_resources = ARRAY_SIZE(lpc313x_usb_resource),
-	.resource      = lpc313x_usb_resource,
+	.num_resources = ARRAY_SIZE(lpc31xx_usb_resource),
+	.resource      = lpc31xx_usb_resource,
 };
 #endif
 #endif
 
 
-static irqreturn_t lpc313x_vbus_ovrc_irq(int irq, void *data)
+static irqreturn_t lpc31xx_vbus_ovrc_irq(int irq, void *data)
 {
-	struct lpc313x_usb_board_t* brd = data;
+	struct lpc31xx_usb_board_t* brd = data;
 	/* disable VBUS power */
-	lpc313x_vbus_power(0);
+	lpc31xx_vbus_power(0);
 	/* Disable over current IRQ */
 	disable_irq_nosync(irq);
 	printk(KERN_INFO "Disabling VBUS as device is drawing too much current!!\n");
@@ -167,23 +170,26 @@ static irqreturn_t lpc313x_vbus_ovrc_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-static void lpc313x_vbusen_timer(unsigned long data)
+static void lpc31xx_vbusen_timer(unsigned long data)
 {
-	struct lpc313x_usb_board_t* brd = (struct lpc313x_usb_board_t*)data;
+	struct lpc31xx_usb_board_t* brd = (struct lpc31xx_usb_board_t*)data;
 	/* enable VBUS power */
-	lpc313x_vbus_power(1);
+	lpc31xx_vbus_power(1);
 	msleep(2);
 	/* enable the VBUS overcurrent monitoring IRQ */
 	enable_irq(brd->vbus_ovrc_irq);
 }
 
+/* Macros to compute the bank based on EVENT_T */
+#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
+#define EVT_usb_atx_pll_lock	0x79
 
 /*-------------------------------------------------------------------------*/
 int __init usbotg_init(void)
 {
 	int over;
-	u32 bank = EVT_GET_BANK(EVT_usb_atx_pll_lock);
-	u32 bit_pos = EVT_usb_atx_pll_lock & 0x1F;
+	uint32_t bank = EVT_GET_BANK(EVT_usb_atx_pll_lock);
+	uint32_t bit_pos = EVT_usb_atx_pll_lock & 0x1F;
 	int retval = 0;
 
 	/* enable USB to AHB clock */
@@ -217,9 +223,9 @@ int __init usbotg_init(void)
 #if defined(CONFIG_USB_GADGET_FSL_USB2)
 		/* register gadget */
 		printk(KERN_INFO "Registering USB gadget 0x%08x 0x%08x (%d)\n", USB_DEV_OTGSC, EVRT_RSR(bank), bank);
-		retval = platform_device_register(&lpc313x_udc_device);
+		retval = platform_device_register(&lpc31xx_udc_device);
 		if ( 0 != retval )
-			printk(KERN_INFO "Can't register lpc313x_udc_device device\n");
+			printk(KERN_INFO "Can't register lpc31xx_udc_device device\n");
 #else
 		printk(KERN_ERR "Unable to register USB gadget. Check USB_ID jumper!!!!!\n");
 #endif
@@ -228,13 +234,13 @@ int __init usbotg_init(void)
 		/* register host */
 #ifndef CONFIG_OF
 		printk(KERN_INFO "Registering USB host 0x%08x 0x%08x (%d)\n", USB_DEV_OTGSC, EVRT_RSR(bank), bank);
-		retval = platform_device_register(&lpc313x_ehci_device);
+		retval = platform_device_register(&lpc31xx_ehci_device);
 		if ( 0 != retval )
-			printk(KERN_INFO "Can't register lpc313x_ehci_device device\n");
+			printk(KERN_INFO "Can't register lpc31xx_ehci_device device\n");
 #endif
 		/* Create VBUS enable timer */
-		setup_timer(&lpc313x_usb_brd.vbus_timer, lpc313x_vbusen_timer,
-				(unsigned long)&lpc313x_usb_brd);
+		setup_timer(&lpc31xx_usb_brd.vbus_timer, lpc31xx_vbusen_timer,
+				(unsigned long)&lpc31xx_usb_brd);
 
 #if defined(CONFIG_MACH_EA313X) || defined(CONFIG_MACH_EA3152)
 		/* set thw I2SRX_WS0 pin as GPIO_IN for vbus overcurrent flag */
@@ -245,19 +251,21 @@ int __init usbotg_init(void)
 			printk(KERN_INFO "Can't acquire vbus-over GPIO\n");
 		gpio_direction_input(over);
 #endif
-		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_EA_VBUS_OVRC;
+#define IRQ_EA_VBUS_OVRC  37  /* Detect VBUS over current - Host mode */
+		lpc31xx_usb_brd.vbus_ovrc_irq = IRQ_EA_VBUS_OVRC;
 
 #else
-		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_VBUS_OVRC;
+		lpc31xx_usb_brd.vbus_ovrc_irq = IRQ_VBUS_OVRC;
 #endif
 
+#if 0
 		/* request IRQ to handle VBUS power event */
-		retval = request_irq( lpc313x_usb_brd.vbus_ovrc_irq, lpc313x_vbus_ovrc_irq, 
+		retval = request_irq( lpc31xx_usb_brd.vbus_ovrc_irq, lpc31xx_vbus_ovrc_irq,
 			IRQF_DISABLED, "VBUSOVR", 
-			&lpc313x_usb_brd);
-
+			&lpc31xx_usb_brd);
 		if ( 0 != retval )
 			printk(KERN_INFO "Unable to register IRQ_VBUS_OVRC handler\n");
+#endif
 		
 #else
 		printk(KERN_ERR "Unable to register USB host. Check USB_ID jumper!!!!!\n");

@@ -1,9 +1,9 @@
-/* linux/arch/arm/mach-lpc313x/include/mach/hardware.h
+/* linux/arch/arm/mach-lpc31xx/include/mach/hardware.h
  *  
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- * Hardware register defines for LPC313x and LPC315x SoCs.
+ * Hardware register defines for LPC31xx SoCs.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,6 @@
 
 #include "constants.h"
 
-
 /* macros to convert phys to virtual & virtual to phys memory location*/
 #define io_p2v(x) (0xf0000000 | (((x) & 0xff000000) >> 4) | ((x) & 0x000fffff))
 #define io_v2p(x) (             (((x) & 0x0ff00000) << 4) | ((x) & 0x000fffff))
@@ -47,7 +46,7 @@
 /*
  * This __REG() version gives the same results as the one above,  except
  * that we are fooling gcc somehow so it generates far better and smaller
- * assembly code for access to contigous registers.  
+ * assembly code for access to contiguous registers.
  */
 #include <asm/types.h>
 typedef struct { volatile u32 offset[4096]; } __regbase;

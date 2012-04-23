@@ -11,6 +11,7 @@
  *  2 of the License, or (at your option) any later version.
  *
  */
+
 #include <linux/errno.h>
 #include <linux/module.h>
 #include <linux/amba/bus.h>
@@ -55,7 +56,7 @@ EXPORT_SYMBOL(of_find_device_by_node);
 #include <asm/dcr.h>
 #endif
 
-#if !defined(CONFIG_SPARC)
+#ifdef CONFIG_OF_ADDRESS
 /*
  * The following routines scan a subtree and registers a device for
  * each applicable node.
@@ -253,7 +254,7 @@ static struct amba_device *of_amba_device_create(struct device_node *node,
 	if (!of_device_is_available(node))
 		return NULL;
 
-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	dev = amba_device_alloc(NULL, 0, 0);
 	if (!dev)
 		return NULL;
 
@@ -283,14 +284,14 @@ static struct amba_device *of_amba_device_create(struct device_node *node,
 	if (ret)
 		goto err_free;
 
-	ret = amba_device_register(dev, &iomem_resource);
+	ret = amba_device_add(dev, &iomem_resource);
 	if (ret)
 		goto err_free;
 
 	return dev;
 
 err_free:
-	kfree(dev);
+	amba_device_put(dev);
 	return NULL;
 }
 #else /* CONFIG_ARM_AMBA */
@@ -462,4 +463,4 @@ int of_platform_populate(struct device_node *root,
 	of_node_put(root);
 	return rc;
 }
-#endif /* !CONFIG_SPARC */
+#endif /* CONFIG_OF_ADDRESS */

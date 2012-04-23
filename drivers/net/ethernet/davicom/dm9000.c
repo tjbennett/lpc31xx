@@ -63,7 +63,7 @@ MODULE_PARM_DESC(watchdog, "transmit timeout in milliseconds");
 /*
  * Debug messages level
  */
-static int debug;
+static int debug = 4;
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "dm9000 debug level (0-4)");
 
@@ -100,7 +100,7 @@ typedef struct board_info {
 
 	void __iomem	*io_addr;	/* Register I/O base address */
 	void __iomem	*io_data;	/* Data I/O address */
-	unsigned long	 irq_flags;
+	u16		 irq;		/* IRQ */
 
 	u16		tx_pkt_cnt;
 	u16		queue_pkt_len;
@@ -127,6 +127,7 @@ typedef struct board_info {
 	struct resource *data_res;
 	struct resource	*addr_req;   /* resources requested */
 	struct resource *data_req;
+	struct resource *irq_res;
 
 	int		 irq_wake;
 
@@ -1033,7 +1034,7 @@ dm9000_rx(struct net_device *dev)
 
 		/* Move data from DM9000 */
 		if (GoodPacket &&
-		    ((skb = dev_alloc_skb(RxLen + 4)) != NULL)) {
+		    ((skb = netdev_alloc_skb(dev, RxLen + 4)) != NULL)) {
 			skb_reserve(skb, 2);
 			rdptr = (u8 *) skb_put(skb, RxLen - 4);
 
@@ -1170,13 +1171,15 @@ static int
 dm9000_open(struct net_device *dev)
 {
 	board_info_t *db = netdev_priv(dev);
-	unsigned long irqflags = db->irq_flags & IRQF_TRIGGER_MASK;
+	unsigned long irqflags = db->irq_res->flags & IRQF_TRIGGER_MASK;
 
 	if (netif_msg_ifup(db))
 		dev_dbg(db->dev, "enabling %s\n", dev->name);
 
 	/* If there is no IRQ type specified, default to something that
 	 * may work, and tell the user that this is a problem */
+
+	irqflags |= IRQ_TYPE_LEVEL_HIGH;
 
 	if (irqflags == IRQF_TRIGGER_NONE)
 		dev_warn(db->dev, "WARNING: no IRQ resource flags set.\n");
@@ -1361,7 +1364,8 @@ static const struct net_device_ops dm9000_netdev_ops = {
 #endif
 };
 
-# define DM_IO_DELAY()	do { gpio_get_value(GPIO_MNAND_RYBN3);} while(0)
+//# define DM_IO_DELAY()	do { gpio_get_value(GPIO_MNAND_RYBN3);} while(0)
+# define DM_IO_DELAY()	do {} while(0)
 
 static void dm9000_dumpblk(void __iomem *reg, int count)
 {
@@ -1386,32 +1390,6 @@ static void dm9000_inblk(void __iomem *reg, void *data, int count)
 	}
 }
 
-#ifdef CONFIG_OF
-static int  __devinit
-of_gpio_to_irq(struct platform_device *pdev, int offset)
-{
-	int ret, gpio;
-	enum of_gpio_flags flags;
-
-	gpio = of_get_gpio_flags(pdev->dev.of_node, offset, &flags);
-	if (!gpio_is_valid(gpio)) {
-		dev_err(&pdev->dev, "invalid gpio #%d: %d\n", offset, gpio);
-		return gpio;
-	}
-	ret = gpio_request(gpio, dev_name(&pdev->dev));
-	if (ret) {
-		dev_err(&pdev->dev, "can't request gpio #%d: %d\n", offset, ret);
-		return ret;
-	}
-	ret = gpio_direction_input(gpio);
-	if (ret) {
-		dev_err(&pdev->dev, "can't set input direction for gpio #%d: %d\n", offset, ret);
-		return ret;
-	}
-	return gpio_to_irq(gpio);
-}
-#endif
-
 /*
  * Search DM9000 board, allocate space and register it
  */
@@ -1421,7 +1399,6 @@ dm9000_probe(struct platform_device *pdev)
 	struct dm9000_plat_data *pdata = pdev->dev.platform_data;
 	struct board_info *db;	/* Point a board information structure */
 	struct net_device *ndev;
-	struct resource *irq_res;
 	const unsigned char *mac_src;
 	int ret = 0;
 	int iosize;
@@ -1430,10 +1407,8 @@ dm9000_probe(struct platform_device *pdev)
 
 	/* Init network device */
 	ndev = alloc_etherdev(sizeof(struct board_info));
-	if (!ndev) {
-		dev_err(&pdev->dev, "could not allocate device.\n");
+	if (!ndev)
 		return -ENOMEM;
-	}
 
 	SET_NETDEV_DEV(ndev, &pdev->dev);
 
@@ -1452,35 +1427,16 @@ dm9000_probe(struct platform_device *pdev)
 
 	db->addr_res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	db->data_res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	if (db->addr_res == NULL || db->data_res == NULL ) {
+	db->irq_res  = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
+
+	if (db->addr_res == NULL || db->data_res == NULL ||
+	    db->irq_res == NULL) {
 		dev_err(db->dev, "insufficient resources\n");
 		ret = -ENOENT;
 		goto out;
 	}
 
-	irq_res  = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-	if (irq_res) {
-		ndev->irq	= irq_res->start;
-		db->irq_flags	= irq_res->flags;
-	} else {
-#ifdef CONFIG_OF
-		ret = of_gpio_to_irq(pdev, 0);
-		db->irq_flags = IORESOURCE_IRQ_HIGHLEVEL;
-#else
-		ret = -ENOENT;
-#endif
-		if (ret < 0) {
-			dev_err(db->dev, "missing irq %d\n", ret);
-			goto out;
-		}
-		ndev->irq = ret;
-	}
-
 	db->irq_wake = platform_get_irq(pdev, 1);
-#ifdef CONFIG_OF
-	if (db->irq_wake < 0)
-		db->irq_wake = of_gpio_to_irq(pdev, 1);
-#endif
 	if (db->irq_wake >= 0) {
 		dev_dbg(db->dev, "wakeup irq %d\n", db->irq_wake);
 
@@ -1543,6 +1499,7 @@ pdata->flags		= DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM | DM9000_PLATF_S
 
 	/* fill in parameters for net-dev structure */
 	ndev->base_addr = (unsigned long)db->io_addr;
+	ndev->irq	= db->irq_res->start;
 
 	/* ensure at least we have a default set of IO routines */
 	dm9000_set_io(db, iosize);
@@ -1666,7 +1623,7 @@ pdata->flags		= DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM | DM9000_PLATF_S
 		dev_warn(db->dev, "%s: Invalid ethernet MAC address. Please "
 			 "set using ifconfig\n", ndev->name);
 
-		random_ether_addr(ndev->dev_addr);
+		eth_hw_addr_random(ndev);
 		mac_src = "random";
 	}
 

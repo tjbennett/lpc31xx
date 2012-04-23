@@ -1,9 +1,9 @@
-/*  linux/arch/arm/mach-lpc313x/irq.c
+/*  linux/arch/arm/mach-lpc31xx/irq.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- * Interrupt controller and event router driver for LPC313x & LPC315x.
+ * Interrupt controller and event router driver for LPC31xx & LPC315x.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,8 @@
 #include <linux/timer.h>
 #include <linux/of_irq.h>
 #include <linux/irqdomain.h>
+#include <linux/of_address.h>
+#include <linux/io.h>
 
 #include <mach/hardware.h>
 #include <asm/irq.h>
@@ -33,40 +35,70 @@
 #include <mach/irqs.h>
 #include <mach/clock.h>
 
+/***********************************************************************
+ * Interrupt controller register definitions
+ **********************************************************************/
+#define INTC_IRQ_PRI_MASK     0x000
+#define INTC_FIQ_PRI_MASK     0x004
+#define INTC_IRQ_VEC_BASE     0x100
+#define INTC_FIQ_VEC_BASE     0x104
+#define INTC_REQ_REG(irq)     (0x400 + ((irq) << 2))
 
-static IRQ_EVENT_MAP_T irq_2_event[] = BOARD_IRQ_EVENT_MAP;
+#define INTC_REQ_PEND         _BIT(31)
+#define INTC_REQ_SET_SWINT    _BIT(30)
+#define INTC_REQ_CLR_SWINT    _BIT(29)
+#define INTC_REQ_WE_PRIO_LVL  _BIT(28)
+#define INTC_REQ_WE_TARGET    _BIT(27)
+#define INTC_REQ_WE_ENABLE    _BIT(26)
+#define INTC_REQ_WE_ACT_LOW   _BIT(25)
+#define INTC_REQ_ACT_LOW      _BIT(17)
+#define INTC_REQ_ENABLE       _BIT(16)
+#define INTC_REQ_TARGET(n)    _SBF(8, ((n) & 0x3F))
+#define INTC_REQ_PRIO_LVL(n)  ((n) & 0xFF)
+#define INTC_REQ_TARGET_IRQ   (INTC_REQ_WE_TARGET)
+#define INTC_REQ_TARGET_FIQ   (INTC_REQ_WE_TARGET | _BIT(8))
+
+#define NR_IRQ_CPU	30	/* IRQs directly recognized by CPU */
+
+static void __iomem *intc_regs;
+#define intc_read(reg) \
+	__raw_readl(intc_regs + reg)
+#define intc_write(reg, value) \
+	__raw_writel(value, intc_regs + reg);
+
+
+/* Macros to compute the bank based on EVENT_T */
+#define EVT_arm926_nirq		0x6C
+
+static struct irq_domain *intc_domain;
 
 static void intc_mask_irq(struct irq_data *data)
 {
-	INTC_REQ_REG(data->irq) = INTC_REQ_WE_ENABLE;
+	intc_write(INTC_REQ_REG(data->hwirq), INTC_REQ_WE_ENABLE);
 }
 
 static void intc_unmask_irq(struct irq_data *data)
 {
-	INTC_REQ_REG(data->irq) = INTC_REQ_ENABLE | INTC_REQ_WE_ENABLE;
+	intc_write(INTC_REQ_REG(data->hwirq), INTC_REQ_ENABLE | INTC_REQ_WE_ENABLE);
 }
+
+extern int lpc31xx_set_cgu_wakeup(int enable, int event);
 
 static int intc_set_wake(struct irq_data *data, unsigned int on)
 {
-	static u32 wake_ints = 0;
+	static uint32_t wake_ints = 0;
 
 	if (on)
 		/* save the irqs which wake */
-		wake_ints |= _BIT(data->irq);
+		wake_ints |= _BIT(data->hwirq);
 	else
 		/* clear the irqs which don't wake */
-		wake_ints &= ~_BIT(data->irq);
+		wake_ints &= ~_BIT(data->hwirq);
 
 	/* Note: the clocks to corresponding blocks shouldn't be suspended
 	 * by individual drivers for this logic to work.
 	 */
-	if (wake_ints) {
-		/* enable ARM_IRQ routing to CGU_WAKEUP */
-		EVRT_OUT_MASK_SET(4, EVT_GET_BANK(EVT_arm926_nirq)) = _BIT((EVT_arm926_nirq & 0x1F));
-	} else {
-		/* disable ARM_IRQ routing to CGU_WAKEUP */
-		EVRT_OUT_MASK_CLR(4, EVT_GET_BANK(EVT_arm926_nirq)) = _BIT((EVT_arm926_nirq & 0x1F));
-	}
+	lpc31xx_set_cgu_wakeup(EVT_arm926_nirq, wake_ints);
 
 	//printk("wake on irq=%d value=%d 0x%08x/0x%08x/0x%08x 0x%08x/0x%08x\r\n", irq, value, 
 	//	EVRT_MASK(3), EVRT_APR(3), EVRT_ATR(3),
@@ -75,144 +107,54 @@ static int intc_set_wake(struct irq_data *data, unsigned int on)
 	return 0;
 }
 
-static struct irq_chip lpc313x_internal_chip = {
+static struct irq_chip lpc31xx_internal_chip = {
 	.name = "INTC",
-	.irq_ack = intc_mask_irq,
+	//.irq_ack = intc_mask_irq,
 	.irq_mask = intc_mask_irq,
 	.irq_unmask = intc_unmask_irq,
 	.irq_set_wake = intc_set_wake,
 };
-
-static void evt_mask_irq(struct irq_data *data)
-{
-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
-
-	EVRT_MASK_CLR(bank) = _BIT(bit_pos);
-}
-
-static void evt_unmask_irq(struct irq_data *data)
-{
-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
-
-	EVRT_MASK_SET(bank) = _BIT(bit_pos);
-}
-
-static void evt_ack_irq(struct irq_data *data)
-{
-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
-	//EVRT_MASK_CLR(bank) = _BIT(bit_pos);
-	EVRT_INT_CLR(bank) = _BIT(bit_pos);
-}
-
-static int evt_set_type(struct irq_data *data, unsigned int flow_type)
-{
-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
-
-	switch (flow_type) {
-	case IRQ_TYPE_EDGE_RISING:
-		EVRT_APR(bank) |= _BIT(bit_pos);
-		EVRT_ATR(bank) |= _BIT(bit_pos);
-		break;
-	case IRQ_TYPE_EDGE_FALLING:
-		EVRT_APR(bank) &= ~_BIT(bit_pos);
-		EVRT_ATR(bank) |= _BIT(bit_pos);
-		break;
-	case IRQ_TYPE_EDGE_BOTH:
-		EVRT_ATR(bank) |= _BIT(bit_pos);
-		break;
-	case IRQ_TYPE_LEVEL_HIGH:
-		EVRT_APR(bank) |= _BIT(bit_pos);
-		EVRT_ATR(bank) &= ~_BIT(bit_pos);
-		break;
-	case IRQ_TYPE_LEVEL_LOW:
-		EVRT_APR(bank) &= ~_BIT(bit_pos);
-		EVRT_ATR(bank) &= ~_BIT(bit_pos);
-		break;
-	default:
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int evt_set_wake(struct irq_data *data, unsigned int on)
-{
-	u32 bank = EVT_GET_BANK(irq_2_event[data->irq - IRQ_EVT_START].event_pin);
-	u32 bit_pos = irq_2_event[data->irq - IRQ_EVT_START].event_pin & 0x1F;
-
-	if (on)
-		/* enable routing to CGU_WAKEUP */
-		EVRT_OUT_MASK_SET(4, bank) = _BIT(bit_pos);
-	else
-		/* disable routing to CGU_WAKEUP */
-		EVRT_OUT_MASK_CLR(4, bank) = _BIT(bit_pos);
-
-	return 0;
-}
-
-
-static struct irq_chip lpc313x_evtr_chip = {
-	.name = "EVENTROUTER",
-	.irq_ack = evt_ack_irq,
-	.irq_mask = evt_mask_irq,
-	.irq_unmask = evt_unmask_irq,
-	.irq_set_type = evt_set_type,
-	.irq_set_wake = evt_set_wake,
-};
-
-
-#define ROUTER_HDLR(n) \
-	static void router##n##_handler (unsigned int irq, struct irq_desc *desc) { \
-		u32 status, bank, bit_pos; \
-		if (IRQ_EVTR##n##_START == IRQ_EVTR##n##_END) { \
-			/* translate IRQ number */ \
-			irq = IRQ_EVTR##n##_START; \
-			generic_handle_irq(irq); \
-		} else { \
-			for (irq = IRQ_EVTR##n##_START; irq <= IRQ_EVTR##n##_END; irq++) {  \
-				/* compute bank & bit position for the event_pin */ \
-				bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin); \
-				bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F; \
-				status = EVRT_OUT_PEND(n, bank); \
-				if (status & _BIT(bit_pos)) \
-					generic_handle_irq(irq); \
-			} \
-		} \
-	}
-
-
-#if IRQ_EVTR0_END
-ROUTER_HDLR(0)
-#endif /* IRQ_EVTR0_END */
-
-#if IRQ_EVTR1_END
-ROUTER_HDLR(1)
-#endif /* IRQ_EVTR1_END */
-
-#if IRQ_EVTR2_END
-ROUTER_HDLR(2)
-#endif /* IRQ_EVTR2_END */
-
-#if IRQ_EVTR3_END
-ROUTER_HDLR(3)
-#endif /* IRQ_EVTR3_END */
 
 static const struct of_device_id intc_of_match[] __initconst = {
 	{ .compatible = "nxp,lpc31xx-intc", },
 	{},
 };
 
-void __init lpc313x_init_irq(void)
+static int intc_irq_map(struct irq_domain *h, unsigned int virq, irq_hw_number_t hw)
 {
-	unsigned int irq;
-	int i, j;
-	u32 bank, bit_pos;
+	/* Set the initial control values */
+	intc_write(INTC_REQ_REG(hw), INTC_REQ_WE_ENABLE);
 
-	irq_domain_generate_simple(intc_of_match, 0x60000000, 0);
+	/* Initialize as high-active, Disable the interrupt,
+	* Set target to IRQ , Set priority level to 1 (= lowest) for
+	* all the interrupt lines */
+	intc_write(INTC_REQ_REG(hw), INTC_REQ_WE_ACT_LOW |
+		INTC_REQ_WE_ENABLE |
+		INTC_REQ_TARGET_IRQ |
+		INTC_REQ_PRIO_LVL(1) |
+		INTC_REQ_WE_PRIO_LVL);
+
+	irq_set_chip_and_handler(virq, &lpc31xx_internal_chip, handle_level_irq);
+	set_irq_flags(virq, IRQF_VALID);
+
+	//printk("intc hw=%ld virq=%d\n", hw, virq);
+	return 0;
+}
+
+static struct irq_domain_ops intc_ops = {
+	.map	= intc_irq_map,
+	.xlate	= irq_domain_xlate_onecell,
+};
+
+void __init lpc31xx_init_irq(void)
+{
+	struct device_node *node;
+
+	/* Remap the necessary zones */
+	node = of_find_matching_node(NULL, intc_of_match);
+	intc_regs = of_iomap(node, 0);
+	if (!intc_regs)
+		panic(__FILE__	": find_and_map failed on 'lpc31xx-intc'");
 
 	/* enable clock to interrupt controller */
 	cgu_clk_en_dis(CGU_SB_AHB2INTC_CLK_ID, 1);
@@ -221,134 +163,22 @@ void __init lpc313x_init_irq(void)
 	cgu_clk_en_dis(CGU_SB_EVENT_ROUTER_PCLK_ID, 1);
 
 	/* Set the vector base (we don't use direct vectoring, so this is 0) */
-	INTC_IRQ_VEC_BASE = 0x00000000;
-	INTC_FIQ_VEC_BASE = 0x00000000;
+	intc_write(INTC_IRQ_VEC_BASE, 0x00000000);
+	intc_write(INTC_FIQ_VEC_BASE, 0x00000000);
 
-	/* mask all interrupt by setting high priority untill init is done*/
-	INTC_IRQ_PRI_MASK = 0xFF;
-	INTC_FIQ_PRI_MASK = 0xFF;
+	/* mask all interrupt by setting high priority until init is done*/
+	intc_write(INTC_IRQ_PRI_MASK, 0xFF);
+	intc_write(INTC_FIQ_PRI_MASK, 0xFF);
 
-	/* mask all external events */
-	for (i = 0; i < EVT_MAX_VALID_BANKS; i++)
-	{
-		/* mask all events */
-		EVRT_MASK_CLR(i) = 0xFFFFFFFF;
-		/* clear all pending events */
-		EVRT_INT_CLR(i) = 0xFFFFFFFF;
+	node = of_find_matching_node_by_address(NULL, intc_of_match, INTC_PHYS);
+	intc_domain = irq_domain_add_legacy(node, NR_IRQ_CPU, 0, 0, &intc_ops, NULL);
 
-		for (j = 0; j < EVT_MAX_VALID_INT_OUT; j++)
-		{
-			/* mask all events */
-			EVRT_OUT_MASK_CLR(j,i) = 0xFFFFFFFF;
-		}
-	}
+	irq_set_default_host(intc_domain);
 
-	/* Clear and disable all interrupts. Start from index 1 since 0 is unused.*/
-	for (irq = 1; irq < NR_IRQ_CPU; irq++) {
-		/* Set the initial control values */
-		INTC_REQ_REG(irq) = INTC_REQ_WE_ENABLE;
-
-		/* Initialize as high-active, Disable the interrupt,
-		* Set target to IRQ , Set priority level to 1 (= lowest) for
-		* all the interrupt lines */
-		INTC_REQ_REG(irq) = INTC_REQ_WE_ACT_LOW |
-			INTC_REQ_WE_ENABLE |
-			INTC_REQ_TARGET_IRQ |
-			INTC_REQ_PRIO_LVL(1) |
-			INTC_REQ_WE_PRIO_LVL;
-
-		irq_set_chip_and_handler(irq, &lpc313x_internal_chip,
-					 handle_level_irq);
-		set_irq_flags(irq, IRQF_VALID);
-	}
-
-	/* Now configure external/board interrupts using event router */
-	for (irq = IRQ_EVT_START; irq < NR_IRQS; irq++) {
-		/* compute bank & bit position for the event_pin */
-		bank = EVT_GET_BANK(irq_2_event[irq - IRQ_EVT_START].event_pin);
-		bit_pos = irq_2_event[irq - IRQ_EVT_START].event_pin & 0x1F;
-		
-		printk("irq=%d Event=0x%x bank:%d bit:%d type:%d\r\n", irq,
-			irq_2_event[irq - IRQ_EVT_START].event_pin, bank,
-			bit_pos, irq_2_event[irq - IRQ_EVT_START].type);
-
-		irq_set_chip(irq, &lpc313x_evtr_chip);
-		set_irq_flags(irq, IRQF_VALID);
-		/* configure the interrupt senstivity */
-		switch (irq_2_event[irq - IRQ_EVT_START].type) {
-			case EVT_ACTIVE_LOW:
-				EVRT_APR(bank) &= ~_BIT(bit_pos);
-				EVRT_ATR(bank) &= ~_BIT(bit_pos);
-				irq_set_handler(irq, handle_level_irq);
-				break;
-			case EVT_ACTIVE_HIGH:
-				EVRT_APR(bank) |= _BIT(bit_pos);
-				EVRT_ATR(bank) &= ~_BIT(bit_pos);
-				irq_set_handler(irq, handle_level_irq);
-				break;
-			case EVT_FALLING_EDGE:
-				EVRT_APR(bank) &= ~_BIT(bit_pos);
-				EVRT_ATR(bank) |= _BIT(bit_pos);
-				irq_set_handler(irq, handle_edge_irq);
-				break;
-			case EVT_RISING_EDGE:
-				EVRT_APR(bank) |= _BIT(bit_pos);
-				EVRT_ATR(bank) |= _BIT(bit_pos);
-				irq_set_handler(irq, handle_edge_irq);
-				break;
-			case EVT_BOTH_EDGE:
-				EVRT_ATR(bank) |= _BIT(bit_pos);
-				irq_set_handler(irq, handle_edge_irq);
-			default:
-				printk("Invalid Event type.\r\n");
-				break;
-		}
-		if ( (irq >= IRQ_EVTR0_START) && (irq <= IRQ_EVTR0_END) ) {
-			/* enable routing to vector 0 */
-			EVRT_OUT_MASK_SET(0, bank) = _BIT(bit_pos);
-		} else if ( (irq >= IRQ_EVTR1_START) && (irq <= IRQ_EVTR1_END) ) {
-			/* enable routing to vector 1 */
-			EVRT_OUT_MASK_SET(1, bank) = _BIT(bit_pos);
-		} else if ( (irq >= IRQ_EVTR2_START) && (irq <= IRQ_EVTR2_END) ) {
-			/* enable routing to vector 2 */
-			EVRT_OUT_MASK_SET(2, bank) = _BIT(bit_pos);
-		} else if ( (irq >= IRQ_EVTR3_START) && (irq <= IRQ_EVTR3_END) ) {
-			/* enable routing to vector 3 */
-			EVRT_OUT_MASK_SET(3, bank) = _BIT(bit_pos);
-		} else {
-			printk("Invalid Event router setup.\r\n");
-		}
-	}
-	/* for power management. Wake from internal irqs */
-	EVRT_APR(3) &= ~_BIT(12);
-	EVRT_ATR(3) &= ~_BIT(12);
-	EVRT_MASK_SET(3) = _BIT(12);
-
-	/* install IRQ_EVT_ROUTER0  chain handler */
-#if IRQ_EVTR0_END
-	/* install chain handler for IRQ_EVT_ROUTER0 */
-	irq_set_chained_handler (IRQ_EVT_ROUTER0, router0_handler);
-#endif
-
-#if IRQ_EVTR1_END
-	/* install chain handler for IRQ_EVT_ROUTER1 */
-	irq_set_chained_handler (IRQ_EVT_ROUTER1, router1_handler);
-#endif
-
-#if IRQ_EVTR2_END
-	/* install chain handler for IRQ_EVT_ROUTER2 */
-	irq_set_chained_handler (IRQ_EVT_ROUTER2, router2_handler);
-#endif
-
-#if IRQ_EVTR3_END
-	/* install chain handler for IRQ_EVT_ROUTER3 */
-	irq_set_chained_handler (IRQ_EVT_ROUTER3, router3_handler);
-#endif
-
-	/* Set the priority treshold to 0, i.e. don't mask any interrupt */
+	/* Set the priority threshold to 0, i.e. don't mask any interrupt */
 	/* on the basis of priority level, for both targets (IRQ/FIQ)    */
-	INTC_IRQ_PRI_MASK = 0;
-	INTC_FIQ_PRI_MASK = 0;
+	intc_write(INTC_IRQ_PRI_MASK, 0);
+	intc_write(INTC_FIQ_PRI_MASK, 0);
 }
 
 
