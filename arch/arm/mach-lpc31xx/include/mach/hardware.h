@@ -41,7 +41,7 @@
 #else
 
 # if 0
-#  define __REG(x)	(*((volatile u32 *)io_p2v(x)))
+#  define __REG(x)	(*((volatile uint32_t *)io_p2v(x)))
 # else
 /*
  * This __REG() version gives the same results as the one above,  except
@@ -49,7 +49,7 @@
  * assembly code for access to contiguous registers.
  */
 #include <asm/types.h>
-typedef struct { volatile u32 offset[4096]; } __regbase;
+typedef struct { volatile uint32_t offset[4096]; } __regbase;
 # define __REGP(x)	((__regbase *)((x)&~4095))->offset[((x)&4095)>>2]
 # define __REG(x)	__REGP(io_p2v(x))
 typedef struct { volatile u16 offset[4096]; } __regbase16;
@@ -62,9 +62,9 @@ typedef struct { volatile u8 offset[4096]; } __regbase8;
 
 # define __REG2(x,y)	\
 	( __builtin_constant_p(y) ? (__REG((x) + (y))) \
-				  : (*(volatile u32 *)((u32)&__REG(x) + (y))) )
+				  : (*(volatile uint32_t *)((uint32_t)&__REG(x) + (y))) )
 
-# define __PREG(x)	(io_v2p((u32)&(x)))
+# define __PREG(x)	(io_v2p((uint32_t)&(x)))
 
 /* include CGU header */
 #include "clock.h"

@@ -60,7 +60,7 @@ struct lpc31xx_i2s_ch_info {
 	char *name;                 /* Name of this channel */
 	unsigned short ch_on;       /* Flag used to indicate if clocks are on */
 	unsigned short daifmt;
-	u32 ws_freq;
+	uint32_t ws_freq;
 	int i2s_ch;
 	enum i2s_supp_clks chclk;
 };
@@ -70,7 +70,7 @@ struct lpc31xx_i2s_info {
 	spinlock_t lock;
 	unsigned short initialized;
 	struct lpc31xx_i2s_ch_info ch_info[2];
-	u32 freq;
+	uint32_t freq;
 };
 
 /* Common I2S structure data */
@@ -265,7 +265,7 @@ static int lpc31xx_i2s_hw_params(struct snd_pcm_substream *substream,
 {
 	struct lpc31xx_i2s_res_info *info = snd_soc_dai_get_drvdata(dai);
 	int dir = lpc31xx_get_ch_dir(substream);
-	u32 tmp;
+	uint32_t tmp;
 
 	/* Setup the I2S data format */
 	tmp = 0;
