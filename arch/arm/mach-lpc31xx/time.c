@@ -78,7 +78,7 @@ static struct irqaction lpc31xx_timer_irq = {
  */
 static unsigned long lpc31xx_gettimeoffset(void)
 {
-	u32 elapsed = LATCH - timer_read(TIMER_VALUE);
+	uint32_t elapsed = LATCH - timer_read(TIMER_VALUE);
 	return ((elapsed * 100) / (XTAL_CLOCK / 20000));
 }
 

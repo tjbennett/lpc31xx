@@ -39,7 +39,7 @@ static int lpc31xx_sram_probe(struct platform_device *pdev)
 	const unsigned int *prop;
 	const unsigned int *ranges;
 	int len, count, i;
-	volatile u32 *base;
+	volatile uint32_t *base;
 
 	prop = of_get_property(pdev->dev.of_node, "mpmc-config", &len);
 	if (!prop)
