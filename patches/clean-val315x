@@ -1,5 +1,5 @@
 Bottom: 3877d0fb505bce9c681935666b5a4872dbe825dd
-Top:    fca9a5c076d1173c46837b905e7974f113998e7c
+Top:    2d7ef4ff4b695c9aaf7bf4ca529d9521077e5e68
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-23 07:25:22 -0400
 
@@ -399,7 +399,7 @@ index 6e4e0a5..e60254e 100644
  
  
 diff --git a/drivers/net/ethernet/cirrus/cs89x0.c b/drivers/net/ethernet/cirrus/cs89x0.c
-index f7e0595..08ea950 100644
+index f7e0595..b9406cb 100644
 --- a/drivers/net/ethernet/cirrus/cs89x0.c
 +++ b/drivers/net/ethernet/cirrus/cs89x0.c
 @@ -321,12 +321,6 @@ struct net_device * __init cs89x0_probe(int unit)
@@ -415,10 +415,22 @@ index f7e0595..08ea950 100644
  	if (io > 0x1ff)	{	/* Check a single specified location. */
  		err = cs89x0_probe1(dev, io, 0);
  	} else if (io != 0) {	/* Don't probe at all. */
-@@ -387,25 +381,6 @@ writeword(unsigned long base_addr, int portno, u16 value)
+@@ -375,37 +369,6 @@ writeword(unsigned long base_addr, int portno, u16 value)
  {
- 	outw(value, base_addr + (portno << 1));
+ 	__raw_writel(value, base_addr + (portno << 1));
  }
+-#elif defined(CONFIG_ARCH_PNX010X)
+-static u16
+-readword(unsigned long base_addr, int portno)
+-{
+-	return inw(base_addr + (portno << 1));
+-}
+-
+-static void
+-writeword(unsigned long base_addr, int portno, u16 value)
+-{
+-	outw(value, base_addr + (portno << 1));
+-}
 -#elif defined(CONFIG_MACH_VAL3153)
 -static u16
 -readword(unsigned long base_addr, int portno)
@@ -441,7 +453,7 @@ index f7e0595..08ea950 100644
  #else
  static u16
  readword(unsigned long base_addr, int portno)
-@@ -578,12 +553,6 @@ cs89x0_probe1(struct net_device *dev, unsigned long ioaddr, int modular)
+@@ -578,12 +541,6 @@ cs89x0_probe1(struct net_device *dev, unsigned long ioaddr, int modular)
  		goto out1;
  	}
  
@@ -454,15 +466,18 @@ index f7e0595..08ea950 100644
  	/* if they give us an odd I/O address, then do ONE write to
             the address port, to get it back to address zero, where we
             expect to find the EISA signature word. An IO with a base of 0x3
-@@ -649,11 +618,6 @@ cs89x0_probe1(struct net_device *dev, unsigned long ioaddr, int modular)
+@@ -649,12 +606,9 @@ cs89x0_probe1(struct net_device *dev, unsigned long ioaddr, int modular)
  	   the driver will always do *something* instead of complain that
  	   adapter_cnf is 0. */
  
 -/* quick hack for VAL3153 boards to reuse the mac address set by boot loader */
 -#if !defined(CONFIG_MACH_VAL3153)
--        if ((readreg(dev, PP_SelfST) & (EEPROM_OK | EEPROM_PRESENT)) ==
++
+         if ((readreg(dev, PP_SelfST) & (EEPROM_OK | EEPROM_PRESENT)) ==
 -	      (EEPROM_OK|EEPROM_PRESENT)) 
 -#endif
- 	{
+-	{
++	      (EEPROM_OK|EEPROM_PRESENT)) {
  	        /* Load the MAC. */
  		for (i=0; i < ETH_ALEN/2; i++) {
+ 	                unsigned int Addr;
