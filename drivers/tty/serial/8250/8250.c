@@ -193,7 +193,7 @@ static unsigned long probe_rsa[PORT_RSA_MAX];
 static unsigned int probe_rsa_count;
 #endif /* CONFIG_SERIAL_8250_RSA  */
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 static DEFINE_MUTEX(dma_mutex);
 #undef UART_FCR_ENABLE_FIFO
 #define UART_FCR_ENABLE_FIFO (0x9 | (1 << 6)) /* FIFO enable + DMA */
@@ -1356,7 +1356,7 @@ static void autoconfig_irq(struct uart_8250_port *up)
 	port->irq = (irq > 0) ? irq : 0;
 }
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 static void lpc31xx_dma_lock(struct uart_8250_port *up)
 {
 	mutex_lock(&dma_mutex);
@@ -1643,7 +1643,7 @@ static void serial8250_stop_tx(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	dma_stop_channel(up->dma_tx.dmach);
 #endif
 
@@ -1663,7 +1663,7 @@ static void serial8250_start_tx(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	lpc31xx_dma_lock(up);
  
 	/*
@@ -1715,7 +1715,7 @@ static void serial8250_enable_ms(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	dma_stop_channel(up->dma_rx.dmach);
 
 #else
@@ -1957,7 +1957,7 @@ static int serial8250_default_handle_irq(struct uart_port *port)
  */
 static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 {
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	struct irq_info *i = dev_id;
 	struct uart_8250_port *up;
 	unsigned int iir, status;
@@ -2064,7 +2064,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
 	struct hlist_node *n;
 	struct irq_info *i;
 	int ret, irq_flags = up->port.flags & UPF_SHARE_IRQ ? IRQF_SHARED : 0;
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	dma_addr_t dma_handle;
 	struct circ_buf *xmit = &up->port.state->xmit;
 #endif
@@ -2102,7 +2102,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
 		INIT_LIST_HEAD(&up->list);
 		i->head = &up->list;
 		spin_unlock_irq(&i->lock);
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 		/* NOTE: The 31XX has only 1 UART channel, so the list head will
 		   always point to that channel. This logic isn't quite right,
 		   but its ok for a single UART */
@@ -2190,7 +2190,7 @@ static void serial_unlink_irq_chain(struct uart_8250_port *up)
 			break;
 	}
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	/* NOTE: The 31XX has only 1 UART channel, so the list head will
 	   always point to that channel. This logic isn't quite right,
 	   but its ok for a single UART */
@@ -2240,7 +2240,7 @@ static void serial8250_timeout(unsigned long data)
 	mod_timer(&up->timer, jiffies + uart_poll_timeout(&up->port));
 }
 
-#ifndef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifndef CONFIG_SERIAL_8250_LPC31xx_DMA
 static void serial8250_backup_timeout(unsigned long data)
 {
 	struct uart_8250_port *up = (struct uart_8250_port *)data;
@@ -2577,7 +2577,7 @@ static int serial8250_startup(struct uart_port *port)
 	 * The above check will only give an accurate result the first time
 	 * the port is opened so this value needs to be preserved.
 	 */
-#ifndef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifndef CONFIG_SERIAL_8250_LPC31xx_DMA
 	if (up->bugs & UART_BUG_THRE) {
 		up->timer.function = serial8250_backup_timeout;
 		up->timer.data = (unsigned long)up;
@@ -2600,7 +2600,7 @@ static int serial8250_startup(struct uart_port *port)
 			return retval;
 	}
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	init_timer(&up->dma_rx.timer);
 	up->dma_rx.timer.function = serial8250_dma_rx_timer_check;
 	up->dma_rx.timer.data = (unsigned long)up;
@@ -2678,7 +2678,7 @@ dont_test_tx_en:
 	 * are set via set_termios(), which will be occurring imminently
 	 * anyway, so we don't enable them here.
 	 */
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	up->ier = UART_IER_RLSI;
 
 #else
@@ -2778,7 +2778,7 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	unsigned long flags;
 	unsigned int baud, quot;
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	dma_stop_channel(up->dma_rx.dmach);
 	dma_stop_channel(up->dma_tx.dmach);
 	up->dma_tx.active = 0;
@@ -2955,7 +2955,7 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	}
 	serial8250_set_mctrl(port, port->mctrl);
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	dma_write_counter(up->dma_rx.dmach, 0);
 	lcp31xx_dma_rx_setup(up);
 #endif
@@ -2994,7 +2994,7 @@ void serial8250_do_pm(struct uart_port *port, unsigned int state,
 	struct uart_8250_port *p =
 		container_of(port, struct uart_8250_port, port);
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	if (state == 0) {
 		dma_write_counter(p->dma_rx.dmach, 0);
 		lcp31xx_dma_rx_setup(p);
