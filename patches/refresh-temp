@@ -1,0 +1,693 @@
+Bottom: f14bd8bb92c9bc74995891a12d6f798291fa728a
+Top:    7b8e6caef336d3d6d44cffb97bb23e440b0ee9a2
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-23 07:57:45 -0400
+
+Refresh of clean-val315x
+
+---
+
+diff --git a/drivers/misc/lpc31xx/lpc31xx-adc.c b/drivers/misc/lpc31xx/lpc31xx-adc.c
+index fd5b6ef..f765a43 100644
+--- a/drivers/misc/lpc31xx/lpc31xx-adc.c
++++ b/drivers/misc/lpc31xx/lpc31xx-adc.c
+@@ -302,7 +302,7 @@ u16 lpc31xx_adc_read(int channel, int resolution) {
+ 
+ int lpc31xx_init_adc(void) {
+ 	int dummy;
+-	u32 timeout;
++	uint32_t timeout;
+ 	
+ 	SYS_ADC_PD = 0;
+ 	
+@@ -316,8 +316,8 @@ int lpc31xx_init_adc(void) {
+ 	ADC_INT_ENABLE_REG = ADC_INT_ENABLE_DEFAULT;
+ 	ADC_INT_CLEAR_REG = ADC_INT_CLEAR_DEFAULT;
+ 
+-	/* dummy interupt status register read */
+-	/** TODO: here we have to use a timeout, find out why and change, if neccessary. 
++	/* dummy interrupt status register read */
++	/** TODO: here we have to use a timeout, find out why and change, if necessary.
+ 	    if you re-enable the adc the whole board freezes without this timeout. **/
+ 	dummy = ADC_INT_STATUS_REG;
+ 	timeout = 0x2ffff;	// if timeout is too high, we have to wait a bit (system freezes for this time) 
+diff --git a/drivers/mmc/host/lpc31xx_mmc.c b/drivers/mmc/host/lpc31xx_mmc.c
+index 0dd758c..ffeeba6 100644
+--- a/drivers/mmc/host/lpc31xx_mmc.c
++++ b/drivers/mmc/host/lpc31xx_mmc.c
+@@ -99,18 +99,18 @@ struct lpc31xx_mci {
+ 	dma_addr_t		sg_dma;
+ 	dma_sg_ll_t		*sg_cpu;
+ #endif
+-	u32			cmd_status;
+-	u32			data_status;
+-	u32			stop_cmdr;
+-	u32			dir_status;
++	uint32_t			cmd_status;
++	uint32_t			data_status;
++	uint32_t			stop_cmdr;
++	uint32_t			dir_status;
+ 	struct tasklet_struct	tasklet;
+ 	unsigned long		pending_events;
+ 	unsigned long		completed_events;
+ 	enum lpc31xx_mci_state	state;
+ 	struct list_head	queue;
+ 
+-	u32			bus_hz;
+-	u32			current_speed;
++	uint32_t			bus_hz;
++	uint32_t			current_speed;
+ 	struct platform_device	*pdev;
+ 	int slot_count;
+ 	struct lpc31xx_mci_slot	*slot[MAX_MCI_SLOTS];
+@@ -120,7 +120,7 @@ struct lpc31xx_mci_slot {
+ 	struct mmc_host		*mmc;
+ 	struct lpc31xx_mci	*host;
+ 
+-	u32			ctype;
++	uint32_t			ctype;
+ 
+ 	struct mmc_request	*mrq;
+ 	struct list_head	queue_node;
+@@ -266,17 +266,17 @@ static void lpc31xx_mci_init_debugfs(struct lpc31xx_mci_slot *slot)
+ 	if (!node)
+ 		goto err;
+ 
+-	node = debugfs_create_u32("state", S_IRUSR, root, (u32 *)&host->state);
++	node = debugfs_create_u32("state", S_IRUSR, root, (uint32_t *)&host->state);
+ 	if (!node)
+ 		goto err;
+ 
+ 	node = debugfs_create_x32("pending_events", S_IRUSR, root,
+-				     (u32 *)&host->pending_events);
++				     (uint32_t *)&host->pending_events);
+ 	if (!node)
+ 		goto err;
+ 
+ 	node = debugfs_create_x32("completed_events", S_IRUSR, root,
+-				     (u32 *)&host->completed_events);
++				     (uint32_t *)&host->completed_events);
+ 	if (!node)
+ 		goto err;
+ 
+@@ -289,7 +289,7 @@ err:
+ 
+ static inline unsigned ns_to_clocks(unsigned clkrate, unsigned ns)
+ {
+-	u32 clks;
++	uint32_t clks;
+ 	if (clkrate > 1000000)
+ 		clks =  (ns * (clkrate / 1000000) + 999) / 1000;
+ 	else
+@@ -313,11 +313,11 @@ static void lpc31xx_mci_set_timeout(struct lpc31xx_mci *host,
+ 	mci_writel(host, SDMMC_TMOUT, /*0xffffffff); */ (timeout << 8) | (70));
+ }
+ 
+-static u32 lpc31xx_mci_prepare_command(struct mmc_host *mmc,
++static uint32_t lpc31xx_mci_prepare_command(struct mmc_host *mmc,
+ 				 struct mmc_command *cmd)
+ {
+ 	struct mmc_data	*data;
+-	u32		cmdr;
++	uint32_t		cmdr;
+ 
+ 	cmd->error = -EINPROGRESS;
+ 	cmdr = cmd->opcode;
+@@ -355,7 +355,7 @@ static u32 lpc31xx_mci_prepare_command(struct mmc_host *mmc,
+ 
+ 
+ static void lpc31xx_mci_start_command(struct lpc31xx_mci *host,
+-		struct mmc_command *cmd, u32 cmd_flags)
++		struct mmc_command *cmd, uint32_t cmd_flags)
+ {
+  	int tmo = 50;
+  	host->cmd = cmd;
+@@ -455,11 +455,11 @@ static int lpc31xx_mci_submit_data_dma(struct lpc31xx_mci *host, struct mmc_data
+ 				   direction);
+ 
+ 	dev_vdbg(&host->pdev->dev, "sd sg_cpu: 0x%08x sg_dma:0x%08x sg_len:%d \n",
+-		(u32)host->sg_cpu, (u32)host->sg_dma, sg_len);
++		(uint32_t)host->sg_cpu, (uint32_t)host->sg_dma, sg_len);
+ 
+ 	for (i = 0, j = 0; i < sg_len; i++) {
+ 		unsigned int length = sg_dma_len(&data->sg[i]);
+-		u32 mem_addr = sg_dma_address(&data->sg[i]);
++		uint32_t mem_addr = sg_dma_address(&data->sg[i]);
+ 
+ 		while (length) {
+ 
+@@ -571,7 +571,7 @@ static void lpc31xx_mci_submit_data(struct lpc31xx_mci *host, struct mmc_data *d
+ void lpc31xx_mci_setup_bus(struct lpc31xx_mci_slot *slot)
+ {
+ 	struct lpc31xx_mci *host = slot->host;
+-	u32 div;
++	uint32_t div;
+ 
+ 	if (slot->clock != host->current_speed) {
+ 		div  = (((host->bus_hz + (host->bus_hz / 5)) / slot->clock)) >> 1;
+@@ -628,7 +628,7 @@ static void lpc31xx_mci_start_request(struct lpc31xx_mci *host,
+ 	struct mmc_request	*mrq;
+ 	struct mmc_command	*cmd;
+ 	struct mmc_data		*data;
+-	u32			cmdflags;
++	uint32_t			cmdflags;
+ 
+ 	mrq = slot->mrq;
+ 	/* now select the proper slot */
+@@ -831,7 +831,7 @@ static void lpc31xx_mci_request_end(struct lpc31xx_mci *host, struct mmc_request
+ static void lpc31xx_mci_command_complete(struct lpc31xx_mci *host,
+ 			struct mmc_command *cmd)
+ {
+-	u32		status = host->cmd_status;
++	uint32_t		status = host->cmd_status;
+ 
+ 	host->cmd_status = 0;
+ 
+@@ -888,7 +888,7 @@ static void lpc31xx_mci_tasklet_func(unsigned long priv)
+ 	struct mmc_command	*cmd = host->cmd;
+ 	enum lpc31xx_mci_state	state = host->state;
+ 	enum lpc31xx_mci_state	prev_state;
+-	u32			status;
++	uint32_t			status;
+ 
+ 	spin_lock(&host->lock);
+ 
+@@ -1010,7 +1010,7 @@ unlock:
+ 
+ inline static void lpc31xx_mci_push_data(struct lpc31xx_mci *host, void *buf, int cnt)
+ {
+-    u32* pData = (u32*)buf;
++    uint32_t* pData = (uint32_t*)buf;
+ 
+     if (cnt % 4 != 0)
+ 	    printk("error not align 4\n");
+@@ -1024,7 +1024,7 @@ inline static void lpc31xx_mci_push_data(struct lpc31xx_mci *host, void *buf, in
+ 
+ inline static void lpc31xx_mci_pull_data(struct lpc31xx_mci *host, void *buf,int cnt)
+ {
+-    u32* pData = (u32*)buf;
++    uint32_t* pData = (uint32_t*)buf;
+ 
+     if (cnt % 4 != 0)
+ 	    printk("error not align 4\n");
+@@ -1041,7 +1041,7 @@ static void lpc31xx_mci_read_data_pio(struct lpc31xx_mci *host)
+ 	void			*buf = sg_virt(sg);
+ 	unsigned int		offset = host->pio_offset;
+ 	struct mmc_data		*data = host->data;
+-	u32			status;
++	uint32_t			status;
+ 	unsigned int		nbytes = 0,len,old_len,count =0;
+ 
+ 	do {
+@@ -1106,7 +1106,7 @@ static void lpc31xx_mci_write_data_pio(struct lpc31xx_mci *host)
+ 	void			*buf = sg_virt(sg);
+ 	unsigned int		offset = host->pio_offset;
+ 	struct mmc_data		*data = host->data;
+-	u32			status;
++	uint32_t			status;
+ 	unsigned int		nbytes = 0,len;
+ 
+ 	do {
+@@ -1165,7 +1165,7 @@ done:
+ 	lpc31xx_mci_set_pending(host, EVENT_XFER_COMPLETE);
+ }
+ 
+-static void lpc31xx_mci_cmd_interrupt(struct lpc31xx_mci *host, u32 status)
++static void lpc31xx_mci_cmd_interrupt(struct lpc31xx_mci *host, uint32_t status)
+ {
+ 	if(!host->cmd_status)
+ 		host->cmd_status = status;
+@@ -1178,7 +1178,7 @@ static void lpc31xx_mci_cmd_interrupt(struct lpc31xx_mci *host, u32 status)
+ static irqreturn_t lpc31xx_mci_interrupt(int irq, void *dev_id)
+ {
+ 	struct lpc31xx_mci	*host = dev_id;
+-	u32			status,  pending;
++	uint32_t			status,  pending;
+ 	unsigned int		pass_count = 0;
+ 
+ 	spin_lock(&host->lock);
+@@ -1374,7 +1374,7 @@ lpc31xx_mci_init_slot(struct lpc31xx_mci *host, struct device_node *np)
+ {
+ 	struct mmc_host			*mmc;
+ 	struct lpc31xx_mci_slot		*slot;
+-	const u32 *voltage_ranges;
++	const uint32_t *voltage_ranges;
+ 	const int *width;
+ 	int i, ret, num_ranges, level;
+ 	enum of_gpio_flags flags;
+@@ -1425,7 +1425,7 @@ lpc31xx_mci_init_slot(struct lpc31xx_mci *host, struct device_node *np)
+ 
+ 	for (i = 0; i < num_ranges; i++) {
+ 		const int j = i * 2;
+-		u32 mask;
++		uint32_t mask;
+ 
+ 		mask = mmc_vddrange_to_ocrmask(be32_to_cpu(voltage_ranges[j]),
+ 					       be32_to_cpu(voltage_ranges[j + 1]));
+diff --git a/drivers/usb/host/lpc-ehset.c b/drivers/usb/host/lpc-ehset.c
+index aa76b7e5..0e8e413 100644
+--- a/drivers/usb/host/lpc-ehset.c
++++ b/drivers/usb/host/lpc-ehset.c
+@@ -88,7 +88,7 @@ static struct usb_driver hset_driver;
+ /* Test routines */
+ static inline void test_se0_nak(struct usb_hset *hset)
+ {
+-	u32 temp = USB_DEV_PORTSC1;
++	uint32_t temp = USB_DEV_PORTSC1;
+ 	printk(KERN_INFO "%s\n", __FUNCTION__);
+ 	
+ 	temp &= ~(0xF << 16);
+@@ -98,7 +98,7 @@ static inline void test_se0_nak(struct usb_hset *hset)
+ 
+ static inline void test_j(struct usb_hset *hset)
+ {
+-	u32 temp = USB_DEV_PORTSC1;
++	uint32_t temp = USB_DEV_PORTSC1;
+ 	printk(KERN_INFO "%s\n", __FUNCTION__);
+ 	
+ 	temp &= ~(0xF << 16);
+@@ -108,7 +108,7 @@ static inline void test_j(struct usb_hset *hset)
+ 
+ static inline void test_k(struct usb_hset *hset)
+ {
+-	u32 temp = USB_DEV_PORTSC1;
++	uint32_t temp = USB_DEV_PORTSC1;
+ 	printk(KERN_INFO "%s\n", __FUNCTION__);
+ 	
+ 	temp &= ~(0xF << 16);
+@@ -118,7 +118,7 @@ static inline void test_k(struct usb_hset *hset)
+ 
+ static inline void test_packet(struct usb_hset *hset)
+ {
+-	u32 temp = USB_DEV_PORTSC1;
++	uint32_t temp = USB_DEV_PORTSC1;
+ 	printk(KERN_INFO "%s\n", __FUNCTION__);
+ 	
+ 	temp &= ~(0xF << 16);
+@@ -128,7 +128,7 @@ static inline void test_packet(struct usb_hset *hset)
+ 
+ static inline void test_force_enable(struct usb_hset *hset)
+ {
+-	u32 temp = USB_DEV_PORTSC1;
++	uint32_t temp = USB_DEV_PORTSC1;
+ 	printk(KERN_INFO "%s\n", __FUNCTION__);
+ 	
+ 	temp &= ~(0xF << 16);
+diff --git a/sound/soc/codecs/lpc315x_codec.c b/sound/soc/codecs/lpc315x_codec.c
+index a998f50..991d7ba 100644
+--- a/sound/soc/codecs/lpc315x_codec.c
++++ b/sound/soc/codecs/lpc315x_codec.c
+@@ -52,7 +52,7 @@ static struct snd_soc_codec *lpc315x_codec;
+  * */
+ struct lpc315x_codec_priv {
+ 	struct snd_soc_codec	codec;
+-	u32			lpc315x_reg_cache[LPC315X_CODEC_NUM_REGS];
++	uint32_t			lpc315x_reg_cache[LPC315X_CODEC_NUM_REGS];
+ 	struct work_struct	work;
+ };
+ static struct lpc315x_codec_priv *lpc315x_codec_prv;
+@@ -60,7 +60,7 @@ static struct lpc315x_codec_priv *lpc315x_codec_prv;
+ /*
+  * LPC315X CODEC register cache
+  */
+-static const u32 lpc315x_codec_regs[LPC315X_CODEC_NUM_REGS] = {
++static const uint32_t lpc315x_codec_regs[LPC315X_CODEC_NUM_REGS] = {
+ 	0x00000000, /* PGA */
+ 	0x0002FFFC, /* AIN_1 */
+ 	0x8000F5FB, /* AOUT */
+@@ -77,10 +77,10 @@ static unsigned long lpc315x_codec_cache_dirty;
+ /*
+  * Read LPC315X CODEC register cache
+  */
+-static inline u32 lpc315x_codec_read_reg_cache(struct snd_soc_codec *codec,
++static inline uint32_t lpc315x_codec_read_reg_cache(struct snd_soc_codec *codec,
+ 		unsigned int reg)
+ {
+-	u32 *cache = codec->reg_cache;
++	uint32_t *cache = codec->reg_cache;
+ 
+ 	/* Check if register offset is valid */
+ 	if (reg > LPC315X_CODEC_DEC_STA) {
+@@ -95,9 +95,9 @@ static inline u32 lpc315x_codec_read_reg_cache(struct snd_soc_codec *codec,
+  * Write LPC315X CODEC register cache
+  */
+ static inline void lpc315x_codec_write_reg_cache(struct snd_soc_codec
+-		*codec, unsigned int reg, u32 value)
++		*codec, unsigned int reg, uint32_t value)
+ {
+-	u32 *cache = codec->reg_cache;
++	uint32_t *cache = codec->reg_cache;
+ 
+ 	/* Check if register offset is valid */
+ 	if (reg > LPC315X_CODEC_DEC_STA)
+@@ -118,11 +118,11 @@ static inline void lpc315x_codec_write_reg_cache(struct snd_soc_codec
+  * Write to LPC315X CODEC registers using I2C functions
+  */
+ static int lpc315x_codec_register_rw(struct snd_soc_codec *codec,
+-		unsigned int reg, u32 *value, int read)
++		unsigned int reg, uint32_t *value, int read)
+ {
+ 	int ret = 0;
+ 	u8 off[2], data[6];
+-	u32 val = 0;
++	uint32_t val = 0;
+ 
+ 	if(read) {
+ 		/*
+@@ -215,7 +215,7 @@ static int lpc315x_codec_write(struct snd_soc_codec *codec,
+ static void lpc315x_codec_work(struct work_struct *work)
+ {
+ 	u16 bit, reg;
+-	u32 data;
++	uint32_t data;
+ 
+ 	for_each_bit(bit, &lpc315x_codec_cache_dirty,
+ 			(LPC315X_CODEC_DEC_STA - LPC315X_CODEC_CODEC_START)) {
+@@ -350,7 +350,7 @@ static int snd_soc_lpc315x_coa_put_volsw(struct snd_kcontrol *kcontrol,
+ 	struct snd_ctl_elem_value *ucontrol)
+ {
+ 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+-	u32 i, val, reg, avc_gain;
++	uint32_t i, val, reg, avc_gain;
+ 
+ 	val = (ucontrol->value.integer.value[0] & 0xF);
+ 	/* conversion to AVC Coarse volume bit pattern
+@@ -397,7 +397,7 @@ static int snd_soc_lpc315x_coa_get_volsw(struct snd_kcontrol *kcontrol,
+ 	struct snd_ctl_elem_value *ucontrol)
+ {
+ 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+-	u32 reg, cnt;
++	uint32_t reg, cnt;
+ 
+ 	/* Get value from register */
+ 	reg = lpc315x_codec_read_reg_cache(codec, LPC315X_CODEC_AOUT);
+@@ -443,7 +443,7 @@ static int snd_soc_lpc315x_fin_put_volsw(struct snd_kcontrol *kcontrol,
+ 	struct snd_ctl_elem_value *ucontrol)
+ {
+ 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+-	u32 val, reg, avc_gain;
++	uint32_t val, reg, avc_gain;
+ 
+ 	val = (ucontrol->value.integer.value[0] & 0x7);
+ 	/* conversion to AVC Fine volume bit pattern
+@@ -473,7 +473,7 @@ static int snd_soc_lpc315x_fin_get_volsw(struct snd_kcontrol *kcontrol,
+ 	struct snd_ctl_elem_value *ucontrol)
+ {
+ 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+-	u32 reg, cnt;
++	uint32_t reg, cnt;
+ 
+ 	/* Get value from register */
+ 	reg = lpc315x_codec_read_reg_cache(codec, LPC315X_CODEC_AOUT);
+@@ -705,7 +705,7 @@ static int lpc315x_codec_set_dai_fmt_both(struct snd_soc_dai *codec_dai,
+ 		unsigned int fmt)
+ {
+ 	struct snd_soc_codec *codec = codec_dai->codec;
+-	u32 i2s_mux_reg;
++	uint32_t i2s_mux_reg;
+ 
+ 	/* Set up DAI based upon fmt */
+ 	i2s_mux_reg = lpc315x_codec_read_reg_cache(codec,
+@@ -741,7 +741,7 @@ static int lpc315x_codec_set_dai_fmt_playback(struct snd_soc_dai *codec_dai,
+ 		unsigned int fmt)
+ {
+ 	struct snd_soc_codec *codec = codec_dai->codec;
+-	u32 i2s_mux_reg;
++	uint32_t i2s_mux_reg;
+ 
+ 	/* Set up DAI based upon fmt */
+ 	i2s_mux_reg = lpc315x_codec_read_reg_cache(codec,
+@@ -773,7 +773,7 @@ static int lpc315x_codec_set_dai_fmt_capture(struct snd_soc_dai *codec_dai,
+ 		unsigned int fmt)
+ {
+ 	struct snd_soc_codec *codec = codec_dai->codec;
+-	u32 i2s_mux_reg;
++	uint32_t i2s_mux_reg;
+ 
+ 	/* set up DAI based upon fmt */
+ 	i2s_mux_reg = lpc315x_codec_read_reg_cache(codec,
+@@ -808,7 +808,7 @@ static int lpc315x_codec_trigger(struct snd_pcm_substream *substream,
+ 	struct snd_soc_device *socdev = rtd->socdev;
+ 	struct snd_soc_codec *codec = socdev->card->codec;
+ 	struct lpc315x_codec_priv *prv = codec->private_data;
+-	u32 int0_reg = lpc315x_codec_read_reg_cache(codec,
++	uint32_t int0_reg = lpc315x_codec_read_reg_cache(codec,
+ 			LPC315X_CODEC_INT0);
+ 
+ 	switch (cmd) {
+@@ -839,7 +839,7 @@ static int lpc315x_codec_pcm_hw_params(struct snd_pcm_substream *substream,
+ 	struct snd_soc_device *socdev = rtd->socdev;
+ 	struct snd_soc_codec *codec = socdev->card->codec;
+ 	unsigned int cgu_reg = 0;
+-	u32 aout_reg, ain_reg, int0_reg, dec_reg, i2srx1_reg, int1_reg;
++	uint32_t aout_reg, ain_reg, int0_reg, dec_reg, i2srx1_reg, int1_reg;
+ 
+ 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+ 		/* Playback power up sequence */
+@@ -1000,7 +1000,7 @@ static void lpc315x_codec_pcm_shutdown(struct snd_pcm_substream *substream,
+ 	struct snd_soc_device *socdev = rtd->socdev;
+ 	struct snd_soc_codec *codec = socdev->card->codec;
+ 	unsigned int cgu_reg = 0;
+-	u32 aout_reg, dec_reg, int0_reg, ain_reg, int1_reg, i2srx1_reg;
++	uint32_t aout_reg, dec_reg, int0_reg, ain_reg, int1_reg, i2srx1_reg;
+ 
+ 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+ 		/* Playback power down sequence */
+@@ -1141,7 +1141,7 @@ static int lpc315x_codec_mute(struct snd_soc_dai *codec_dai,
+ 		int mute)
+ {
+ 	struct snd_soc_codec *codec = codec_dai->codec;
+-	u32 int1_reg = lpc315x_codec_read_reg_cache(codec, LPC315X_CODEC_INT1)
++	uint32_t int1_reg = lpc315x_codec_read_reg_cache(codec, LPC315X_CODEC_INT1)
+ 		& ~LPC315X_CODEC_INT1_MAS_MUTE;
+ 
+ 	/* Mute */
+@@ -1162,7 +1162,7 @@ static int lpc315x_codec_mute(struct snd_soc_dai *codec_dai,
+ static int lpc315x_codec_set_bias_level(struct snd_soc_codec *codec,
+ 	enum snd_soc_bias_level level)
+ {
+-	u32 ain1_reg = lpc315x_codec_read_reg_cache(codec,
++	uint32_t ain1_reg = lpc315x_codec_read_reg_cache(codec,
+ 			LPC315X_CODEC_AIN1);
+ 
+ 	switch (level) {
+@@ -1292,7 +1292,7 @@ static int lpc315x_codec_resume(struct platform_device *pdev)
+ 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
+ 	struct snd_soc_codec *codec = socdev->card->codec;
+ 	u8 data[6];
+-	u32 i, *cache = codec->reg_cache;
++	uint32_t i, *cache = codec->reg_cache;
+ 
+ 	/* Sync reg_cache with the hardware */
+ 	for (i = 0; i < ARRAY_SIZE(lpc315x_codec_regs); i++) {
+@@ -1320,7 +1320,7 @@ static int lpc315x_codec_probe(struct platform_device *pdev)
+ 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
+ 	struct snd_soc_codec *codec;
+ 	int ret = 0;
+-	u32 cgu_reg = 0;
++	uint32_t cgu_reg = 0;
+ 
+ 	/* Check if LPC315X CODECX registered */
+ 	if (lpc315x_codec == NULL) {
+diff --git a/sound/soc/lpc31xx/lpc31xx-i2s-clocking.c b/sound/soc/lpc31xx/lpc31xx-i2s-clocking.c
+index 5251ec3..f8d9f35 100644
+--- a/sound/soc/lpc31xx/lpc31xx-i2s-clocking.c
++++ b/sound/soc/lpc31xx/lpc31xx-i2s-clocking.c
+@@ -53,8 +53,8 @@
+ 
+ 
+ struct i2s_clk_setup {
+-	u32 target_codec_rate;
+-	u32 real_fs_codec_rate;
++	uint32_t target_codec_rate;
++	uint32_t real_fs_codec_rate;
+ };
+ static struct i2s_clk_setup i2s_clk_state;
+ 
+@@ -187,14 +187,14 @@ static CGU_HPLL_SETUP_T *ppll_list[] = {
+ 
+ #if defined(CONFIG_SND_LPC315X_SOC)
+ /* For LPC315X Analog CODEC 128FS clock has to be used */
+-static const u32 fsdiv =
++static const uint32_t fsdiv =
+ #if defined (CONFIG_SND_CODEC_FS128)
+ 	128;
+ #endif
+ #endif
+ 
+ #if defined(CONFIG_SND_LPC31XX_SOC)
+-static const u32 fsdiv =
++static const uint32_t fsdiv =
+ #if defined (CONFIG_SND_CODEC_FS256)
+ 	256;
+ #elif defined (CONFIG_SND_CODEC_FS384)
+@@ -208,10 +208,10 @@ static const u32 fsdiv =
+ #endif
+ #endif
+ 
+-static u32 lpc31xx_set_best_rate(u32 freq)
++static uint32_t lpc31xx_set_best_rate(uint32_t freq)
+ {
+ 	CGU_FDIV_SETUP_T clk_div;
+-	u32 diff;
++	uint32_t diff;
+ 	int i = 0;
+ 
+ 	clk_div.stretch = 1;
+@@ -252,7 +252,7 @@ static u32 lpc31xx_set_best_rate(u32 freq)
+  * Sets up the audio PLL to generate a frequency as close as possible to
+  * the target clkrate frequency
+  */
+-static u32 lpc31xx_set_codec_freq(u32 freq)
++static uint32_t lpc31xx_set_codec_freq(uint32_t freq)
+ {
+ 	if (freq == 0)
+ 	{
+@@ -301,7 +301,7 @@ static void lpc31xx_ch_clk_disen(enum i2s_supp_clks chclk, int en)
+  * Sets up the channel bit clock to generate a rate as close as possible
+  * to the target clkrate frequency
+  */
+-static u32 lpc31xx_set_ch_freq(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq)
++static uint32_t lpc31xx_set_ch_freq(enum i2s_supp_clks chclk, uint32_t ws_freq, uint32_t bit_freq)
+ {
+ 	CGU_FDIV_SETUP_T ch_div;
+ 
+@@ -345,9 +345,9 @@ static u32 lpc31xx_set_ch_freq(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_fr
+  * the actual programmed clock rate. The programmed rate is generated on
+  * the FS256 pin has a rate of (256 * clkrate).
+  */
+-u32 lpc31xx_main_clk_rate(u32 freq)
++uint32_t lpc31xx_main_clk_rate(uint32_t freq)
+ {
+-	u32 ret = 0;
++	uint32_t ret = 0;
+ 	/* Compute and set proper divider */
+ 	ret = lpc31xx_set_codec_freq(freq);
+ #if defined (CONFIG_SND_DEBUG_VERBOSE)
+@@ -363,7 +363,7 @@ u32 lpc31xx_main_clk_rate(u32 freq)
+  * to the channel's WS and BCLK signals. Returns the actual programmed
+  * WS clock rate.
+  */
+-u32 lpc31xx_chan_clk_enable(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq)
++uint32_t lpc31xx_chan_clk_enable(enum i2s_supp_clks chclk, uint32_t ws_freq, uint32_t bit_freq)
+ {
+ 	/* Compute and set proper divider */
+ 	return lpc31xx_set_ch_freq(chclk, ws_freq, bit_freq);
+diff --git a/sound/soc/lpc31xx/lpc31xx-i2s-clocking.h b/sound/soc/lpc31xx/lpc31xx-i2s-clocking.h
+index 9241a2a..368e644 100644
+--- a/sound/soc/lpc31xx/lpc31xx-i2s-clocking.h
++++ b/sound/soc/lpc31xx/lpc31xx-i2s-clocking.h
+@@ -54,13 +54,13 @@ enum i2s_supp_clks {CLK_RX_0, CLK_TX_0, CLK_RX_1, CLK_TX_1};
+  * the actual programmed clock rate. The programmed rate is generated on
+  * the FS256 pin has a rate of (256 * clkrate).
+  */
+-u32 lpc31xx_main_clk_rate(u32 clkrate);
++uint32_t lpc31xx_main_clk_rate(uint32_t clkrate);
+ 
+ /*
+  * Set a specific channel's bit clock and word select rates. his applies
+  * to the channel's WS and BCLK signals. Returns the actual programmed
+  * WS clock rate.
+  */
+-u32 lpc31xx_chan_clk_enable(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq);
++uint32_t lpc31xx_chan_clk_enable(enum i2s_supp_clks chclk, uint32_t ws_freq, uint32_t bit_freq);
+ 
+ #endif /* __LPC31XX_I2S_CLOCKING */
+diff --git a/sound/soc/lpc31xx/lpc31xx-i2s.c b/sound/soc/lpc31xx/lpc31xx-i2s.c
+index 00e8b4d..4bdb17c 100644
+--- a/sound/soc/lpc31xx/lpc31xx-i2s.c
++++ b/sound/soc/lpc31xx/lpc31xx-i2s.c
+@@ -60,7 +60,7 @@ struct lpc31xx_i2s_ch_info {
+ 	char *name;                 /* Name of this channel */
+ 	unsigned short ch_on;       /* Flag used to indicate if clocks are on */
+ 	unsigned short daifmt;
+-	u32 ws_freq;
++	uint32_t ws_freq;
+ 	int i2s_ch;
+ 	enum i2s_supp_clks chclk;
+ };
+@@ -70,7 +70,7 @@ struct lpc31xx_i2s_info {
+ 	spinlock_t lock;
+ 	unsigned short initialized;
+ 	struct lpc31xx_i2s_ch_info ch_info[2];
+-	u32 freq;
++	uint32_t freq;
+ };
+ 
+ /* Common I2S structure data */
+@@ -265,7 +265,7 @@ static int lpc31xx_i2s_hw_params(struct snd_pcm_substream *substream,
+ {
+ 	struct lpc31xx_i2s_res_info *info = snd_soc_dai_get_drvdata(dai);
+ 	int dir = lpc31xx_get_ch_dir(substream);
+-	u32 tmp;
++	uint32_t tmp;
+ 
+ 	/* Setup the I2S data format */
+ 	tmp = 0;
+diff --git a/sound/soc/lpc31xx/lpc31xx-pcm.c b/sound/soc/lpc31xx/lpc31xx-pcm.c
+index fff64dc..fa2655e 100644
+--- a/sound/soc/lpc31xx/lpc31xx-pcm.c
++++ b/sound/soc/lpc31xx/lpc31xx-pcm.c
+@@ -93,7 +93,7 @@ struct lpc31xx_i2sdma_data {
+ 	/* DMA configuration and support */
+ 	int dmach;
+ 	volatile dma_addr_t dma_cur;
+-	u32 dma_cfg_base;
++	uint32_t dma_cfg_base;
+ #if defined (CONFIG_SND_USE_DMA_LINKLIST)
+ 	dma_sg_ll_t *p_sg_cpu;
+ 	dma_sg_ll_t *p_sg_dma;
+@@ -289,7 +289,7 @@ static int lpc31xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
+ 
+ #if defined (CONFIG_SND_USE_DMA_LINKLIST)
+ 	int i, tch;
+-	u32 addr;
++	uint32_t addr;
+ 	dma_sg_ll_t *p_sg_cpuw, *p_sg_dmaw;
+ 	unsigned long timeout;
+ 
+@@ -307,11 +307,11 @@ static int lpc31xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
+ 		p_sg_dmaw = prtd->p_sg_dma;
+ 
+ 		/* Build a linked list that wraps around */
+-		addr = (u32) prtd->dma_buffer;
++		addr = (uint32_t) prtd->dma_buffer;
+ 		for (i = 0; i < prtd->num_periods; i++) {
+ 			p_sg_cpuw->setup.trans_length = (prtd->period_size / 4) - 1;
+ 			p_sg_cpuw->setup.cfg = prtd->dma_cfg_base;
+-			p_sg_cpuw->next_entry = (u32) (p_sg_dmaw + 1);
++			p_sg_cpuw->next_entry = (uint32_t) (p_sg_dmaw + 1);
+ 
+ 			if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+ 				p_sg_cpuw->setup.src_address = addr;
+@@ -324,7 +324,7 @@ static int lpc31xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
+ 
+ 			/* Wrap end of list back to start? */
+ 			if (i == (prtd->num_periods - 1))
+-				p_sg_cpuw->next_entry = (u32) prtd->p_sg_dma;
++				p_sg_cpuw->next_entry = (uint32_t) prtd->p_sg_dma;
+ 
+ 			p_sg_cpuw++;
+ 			p_sg_dmaw++;
+@@ -339,7 +339,7 @@ static int lpc31xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
+ 		add_timer(&prtd->timer[tch]);
+ 
+ 		/* Program DMA channel and start it */
+-		dma_prog_sg_channel(prtd->dmach, (u32) prtd->p_sg_dma);
++		dma_prog_sg_channel(prtd->dmach, (uint32_t) prtd->p_sg_dma);
+ 		dma_set_irq_mask(prtd->dmach, 1, 1);
+ #else
+ 	dma_setup_t dmasetup;
+@@ -349,11 +349,11 @@ static int lpc31xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
+ 		prtd->dma_cur = prtd->dma_buffer;
+ 
+ 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+-			dmasetup.src_address = (u32) prtd->dma_buffer;
++			dmasetup.src_address = (uint32_t) prtd->dma_buffer;
+ 			dmasetup.dest_address = TX_FIFO_ADDR;
+ 		}
+ 		else {
+-			dmasetup.dest_address = (u32) prtd->dma_buffer;
++			dmasetup.dest_address = (uint32_t) prtd->dma_buffer;
+ 			dmasetup.src_address = RX_FIFO_ADDR;
+ 		}
