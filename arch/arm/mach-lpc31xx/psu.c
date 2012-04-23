@@ -1,4 +1,4 @@
-/*  linux/arch/arm/mach-lpc31xx/leds.c
+/*  linux/arch/arm/mach-lpc31xx/psu.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
@@ -63,9 +63,9 @@ static struct psu_data g_pca_data;
  */
 struct i2c_client *lpc315x_ad_get_i2c_client_struct(void)
 {
-	/* Check if psu_data structure is initialised */
+	/* Check if psu_data structure is initialized */
 	if(!g_pca_data.client) {
-		printk(KERN_ERR "I2C not initialised \r\n");
+		printk(KERN_ERR "I2C not initialized \r\n");
 		return NULL;
 	}
 
@@ -80,7 +80,7 @@ static ssize_t psu_show(struct device *dev, struct device_attribute *attr,
 	struct sensor_device_attribute *psa = to_sensor_dev_attr(attr);
 	struct i2c_client *client = to_i2c_client(dev);
 	char reg_adr[2];
-	u32 reg_val = 0;
+	uint32_t reg_val = 0;
 
 	reg_adr[0] = (psa->index >> 8) & 0xFF;
 	reg_adr[1] = psa->index & 0xFF;
