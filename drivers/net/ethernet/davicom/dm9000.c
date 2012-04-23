@@ -35,7 +35,6 @@
 #include <linux/platform_device.h>
 #include <linux/irq.h>
 #include <linux/slab.h>
-#include <linux/of_gpio.h>
 
 #include <asm/delay.h>
 #include <asm/irq.h>
@@ -1364,30 +1363,36 @@ static const struct net_device_ops dm9000_netdev_ops = {
 #endif
 };
 
-//# define DM_IO_DELAY()	do { gpio_get_value(GPIO_MNAND_RYBN3);} while(0)
-# define DM_IO_DELAY()	do {} while(0)
-
-static void dm9000_dumpblk(void __iomem *reg, int count)
+static void  __devinit dm9000_parse_options(struct device_node *node, struct board_info *db)
 {
-	int i;
-	int tmp;
+#ifdef CONFIG_OF
+	const unsigned int *prop;
+	int len, bits;
 
-	count = (count + 1) >> 1;
-	for (i = 0; i < count; i++) {
-		DM_IO_DELAY();
-		tmp = readw(reg);
+	prop = of_get_property(node, "interface-width", &len);
+	if (prop) {
+		bits = __be32_to_cpup(prop);
+		switch (bits) {
+		case 8:
+			db->flags |= DM9000_PLATF_8BITONLY;
+			break;
+		case 16:
+			db->flags |= DM9000_PLATF_16BITONLY;
+			break;
+		case 32:
+			db->flags |= DM9000_PLATF_32BITONLY;
+			break;
+		}
 	}
-}
-
-static void dm9000_inblk(void __iomem *reg, void *data, int count)
-{
-	int i;
-	u16* pdata = (u16*)data;
-	count = (count + 1) >> 1;
-	for (i = 0; i < count; i++) {
-		DM_IO_DELAY();
-		*pdata++ = readw(reg);
-	}
+	prop = of_get_property(node, "no-eeprom", &len);
+	if (prop)
+		db->flags |= DM9000_PLATF_NO_EEPROM;
+	prop = of_get_property(node, "phy", &len);
+	if (prop)
+		db->flags |= DM9000_PLATF_EXT_PHY;
+	else
+		db->flags |= DM9000_PLATF_SIMPLE_PHY;
+#endif
 }
 
 /*
@@ -1494,8 +1499,6 @@ dm9000_probe(struct platform_device *pdev)
 		ret = -EINVAL;
 		goto out;
 	}
-/* fixme */
-pdata->flags		= DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM | DM9000_PLATF_SIMPLE_PHY;
 
 	/* fill in parameters for net-dev structure */
 	ndev->base_addr = (unsigned long)db->io_addr;
@@ -1506,34 +1509,33 @@ pdata->flags		= DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM | DM9000_PLATF_S
 
 	/* check to see if anything is being over-ridden */
 	if (pdata != NULL) {
-		/* check to see if the driver wants to over-ride the
-		 * default IO width */
-
-		if (pdata->flags & DM9000_PLATF_8BITONLY)
-			dm9000_set_io(db, 1);
-
-		if (pdata->flags & DM9000_PLATF_16BITONLY)
-			dm9000_set_io(db, 2);
-
-		if (pdata->flags & DM9000_PLATF_32BITONLY)
-			dm9000_set_io(db, 4);
-
 		/* check to see if there are any IO routine
 		 * over-rides */
 
 		if (pdata->inblk != NULL)
-//			db->inblk = pdata->inblk;
-			db->inblk = dm9000_inblk;
+			db->inblk = pdata->inblk;
 
 		if (pdata->outblk != NULL)
 			db->outblk = pdata->outblk;
 
 		if (pdata->dumpblk != NULL)
-//			db->dumpblk = pdata->dumpblk;
-			db->dumpblk = dm9000_dumpblk;
+			db->dumpblk = pdata->dumpblk;
 
 		db->flags = pdata->flags;
-	}
+	} else
+		dm9000_parse_options(pdev->dev.of_node, db);
+
+	/* check to see if the driver wants to over-ride the
+	 * default IO width */
+	if (db->flags & DM9000_PLATF_8BITONLY)
+		dm9000_set_io(db, 1);
+
+	if (db->flags & DM9000_PLATF_16BITONLY)
+		dm9000_set_io(db, 2);
+
+	if (db->flags & DM9000_PLATF_32BITONLY)
+		dm9000_set_io(db, 4);
+
 
 #ifdef CONFIG_DM9000_FORCE_SIMPLE_PHY_POLL
 	db->flags |= DM9000_PLATF_SIMPLE_PHY;
