@@ -302,7 +302,7 @@ u16 lpc31xx_adc_read(int channel, int resolution) {
 
 int lpc31xx_init_adc(void) {
 	int dummy;
-	u32 timeout;
+	uint32_t timeout;
 	
 	SYS_ADC_PD = 0;
 	
@@ -316,8 +316,8 @@ int lpc31xx_init_adc(void) {
 	ADC_INT_ENABLE_REG = ADC_INT_ENABLE_DEFAULT;
 	ADC_INT_CLEAR_REG = ADC_INT_CLEAR_DEFAULT;
 
-	/* dummy interupt status register read */
-	/** TODO: here we have to use a timeout, find out why and change, if neccessary. 
+	/* dummy interrupt status register read */
+	/** TODO: here we have to use a timeout, find out why and change, if necessary.
 	    if you re-enable the adc the whole board freezes without this timeout. **/
 	dummy = ADC_INT_STATUS_REG;
 	timeout = 0x2ffff;	// if timeout is too high, we have to wait a bit (system freezes for this time) 
