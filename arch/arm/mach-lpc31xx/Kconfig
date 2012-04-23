@@ -16,17 +16,6 @@ config MACH_EA3152
 	help
 	  Say Y here if you are using Embedded Artist's EA3152 board
 	  
-config MACH_VAL3153
-	bool "val3153 board"
-	help
-	  Say Y here if you are using the NXP val3153 board
-
-config MACH_VAL3154
-	bool "val3154 board"
-	select LPC3152_AD
-	help
-	  Say Y here if you are using the NXP val3154 board
-	  
 endchoice
 
 config LPC3152_AD
