@@ -587,6 +587,20 @@ config ARCH_KIRKWOOD
 	  Support for the following Marvell Kirkwood series SoCs:
 	  88F6180, 88F6192 and 88F6281.
 
+config ARCH_LPC31XX
+	bool "NXP LPC31XX series"
+	select CPU_ARM926T
+	select GENERIC_GPIO
+	select CLKDEV_LOOKUP
+	select ARCH_REQUIRE_GPIOLIB
+	select ARCH_USES_GETTIMEOFFSET
+	select USE_OF
+	help
+	  Say Y here for systems based on one of the NXP LPC31xx
+	  System on a Chip processors.  These CPUs include an ARM926EJS
+	  core with a wide array of integrated devices for
+	  hand-held and low-power applications.
+
 config ARCH_LPC32XX
 	bool "NXP LPC32XX"
 	select CLKSRC_MMIO
@@ -1009,19 +1023,6 @@ config ARCH_ZYNQ
 	select USE_OF
 	help
 	  Support for Xilinx Zynq ARM Cortex A9 Platform
-
-config ARCH_LPC31XX
-	bool "NXP LPC31XX series"
-	select CPU_ARM926T
-	select GENERIC_GPIO
-	select CLKDEV_LOOKUP
-	select ARCH_REQUIRE_GPIOLIB
-	select ARCH_USES_GETTIMEOFFSET
-	help
-	  Say Y here for systems based on one of the NXP LPC31xx
-	  System on a Chip processors.  These CPUs include an ARM926EJS
-	  core with a wide array of integrated devices for
-	  hand-held and low-power applications.
 
 endchoice
 

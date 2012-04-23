@@ -47,7 +47,7 @@ static int lpc31xx_sram_probe(struct platform_device *pdev)
 	count = len / sizeof(*prop);
 
 	ranges = of_get_property(pdev->dev.of_node, "ranges", &len);
-	if (!prop) {
+	if (!ranges) {
 		dev_err(&pdev->dev, "Ranges property missing on SRAM DT");
 		return -EINVAL;
 	}
