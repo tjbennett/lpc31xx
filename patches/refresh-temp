@@ -1,0 +1,624 @@
+Bottom: 7b8e6caef336d3d6d44cffb97bb23e440b0ee9a2
+Top:    197d993160ac56218f97735bfbc6a475fac092cf
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-23 14:05:28 -0400
+
+Refresh of uart.patch
+
+---
+
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 6b2296e..daf666d 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -587,6 +587,20 @@ config ARCH_KIRKWOOD
+ 	  Support for the following Marvell Kirkwood series SoCs:
+ 	  88F6180, 88F6192 and 88F6281.
+ 
++config ARCH_LPC31XX
++	bool "NXP LPC31XX series"
++	select CPU_ARM926T
++	select GENERIC_GPIO
++	select CLKDEV_LOOKUP
++	select ARCH_REQUIRE_GPIOLIB
++	select ARCH_USES_GETTIMEOFFSET
++	select USE_OF
++	help
++	  Say Y here for systems based on one of the NXP LPC31xx
++	  System on a Chip processors.  These CPUs include an ARM926EJS
++	  core with a wide array of integrated devices for
++	  hand-held and low-power applications.
++
+ config ARCH_LPC32XX
+ 	bool "NXP LPC32XX"
+ 	select CLKSRC_MMIO
+@@ -1010,19 +1024,6 @@ config ARCH_ZYNQ
+ 	help
+ 	  Support for Xilinx Zynq ARM Cortex A9 Platform
+ 
+-config ARCH_LPC31XX
+-	bool "NXP LPC31XX series"
+-	select CPU_ARM926T
+-	select GENERIC_GPIO
+-	select CLKDEV_LOOKUP
+-	select ARCH_REQUIRE_GPIOLIB
+-	select ARCH_USES_GETTIMEOFFSET
+-	help
+-	  Say Y here for systems based on one of the NXP LPC31xx
+-	  System on a Chip processors.  These CPUs include an ARM926EJS
+-	  core with a wide array of integrated devices for
+-	  hand-held and low-power applications.
+-
+ endchoice
+ 
+ #
+diff --git a/drivers/tty/serial/8250/8250.c b/drivers/tty/serial/8250/8250.c
+index b82fdbd..6333178 100644
+--- a/drivers/tty/serial/8250/8250.c
++++ b/drivers/tty/serial/8250/8250.c
+@@ -193,7 +193,7 @@ static unsigned long probe_rsa[PORT_RSA_MAX];
+ static unsigned int probe_rsa_count;
+ #endif /* CONFIG_SERIAL_8250_RSA  */
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ static DEFINE_MUTEX(dma_mutex);
+ #undef UART_FCR_ENABLE_FIFO
+ #define UART_FCR_ENABLE_FIFO (0x9 | (1 << 6)) /* FIFO enable + DMA */
+@@ -1356,7 +1356,7 @@ static void autoconfig_irq(struct uart_8250_port *up)
+ 	port->irq = (irq > 0) ? irq : 0;
+ }
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ static void lpc31xx_dma_lock(struct uart_8250_port *up)
+ {
+ 	mutex_lock(&dma_mutex);
+@@ -1643,7 +1643,7 @@ static void serial8250_stop_tx(struct uart_port *port)
+ 	struct uart_8250_port *up =
+ 		container_of(port, struct uart_8250_port, port);
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	dma_stop_channel(up->dma_tx.dmach);
+ #endif
+ 
+@@ -1663,7 +1663,7 @@ static void serial8250_start_tx(struct uart_port *port)
+ 	struct uart_8250_port *up =
+ 		container_of(port, struct uart_8250_port, port);
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	lpc31xx_dma_lock(up);
+  
+ 	/*
+@@ -1715,7 +1715,7 @@ static void serial8250_enable_ms(struct uart_port *port)
+ 	struct uart_8250_port *up =
+ 		container_of(port, struct uart_8250_port, port);
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	dma_stop_channel(up->dma_rx.dmach);
+ 
+ #else
+@@ -1957,7 +1957,7 @@ static int serial8250_default_handle_irq(struct uart_port *port)
+  */
+ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
+ {
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	struct irq_info *i = dev_id;
+ 	struct uart_8250_port *up;
+ 	unsigned int iir, status;
+@@ -2064,7 +2064,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
+ 	struct hlist_node *n;
+ 	struct irq_info *i;
+ 	int ret, irq_flags = up->port.flags & UPF_SHARE_IRQ ? IRQF_SHARED : 0;
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	dma_addr_t dma_handle;
+ 	struct circ_buf *xmit = &up->port.state->xmit;
+ #endif
+@@ -2102,7 +2102,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
+ 		INIT_LIST_HEAD(&up->list);
+ 		i->head = &up->list;
+ 		spin_unlock_irq(&i->lock);
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 		/* NOTE: The 31XX has only 1 UART channel, so the list head will
+ 		   always point to that channel. This logic isn't quite right,
+ 		   but its ok for a single UART */
+@@ -2190,7 +2190,7 @@ static void serial_unlink_irq_chain(struct uart_8250_port *up)
+ 			break;
+ 	}
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	/* NOTE: The 31XX has only 1 UART channel, so the list head will
+ 	   always point to that channel. This logic isn't quite right,
+ 	   but its ok for a single UART */
+@@ -2240,7 +2240,7 @@ static void serial8250_timeout(unsigned long data)
+ 	mod_timer(&up->timer, jiffies + uart_poll_timeout(&up->port));
+ }
+ 
+-#ifndef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifndef CONFIG_SERIAL_8250_LPC31xx_DMA
+ static void serial8250_backup_timeout(unsigned long data)
+ {
+ 	struct uart_8250_port *up = (struct uart_8250_port *)data;
+@@ -2577,7 +2577,7 @@ static int serial8250_startup(struct uart_port *port)
+ 	 * The above check will only give an accurate result the first time
+ 	 * the port is opened so this value needs to be preserved.
+ 	 */
+-#ifndef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifndef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	if (up->bugs & UART_BUG_THRE) {
+ 		up->timer.function = serial8250_backup_timeout;
+ 		up->timer.data = (unsigned long)up;
+@@ -2600,7 +2600,7 @@ static int serial8250_startup(struct uart_port *port)
+ 			return retval;
+ 	}
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	init_timer(&up->dma_rx.timer);
+ 	up->dma_rx.timer.function = serial8250_dma_rx_timer_check;
+ 	up->dma_rx.timer.data = (unsigned long)up;
+@@ -2678,7 +2678,7 @@ dont_test_tx_en:
+ 	 * are set via set_termios(), which will be occurring imminently
+ 	 * anyway, so we don't enable them here.
+ 	 */
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	up->ier = UART_IER_RLSI;
+ 
+ #else
+@@ -2778,7 +2778,7 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
+ 	unsigned long flags;
+ 	unsigned int baud, quot;
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	dma_stop_channel(up->dma_rx.dmach);
+ 	dma_stop_channel(up->dma_tx.dmach);
+ 	up->dma_tx.active = 0;
+@@ -2955,7 +2955,7 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
+ 	}
+ 	serial8250_set_mctrl(port, port->mctrl);
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	dma_write_counter(up->dma_rx.dmach, 0);
+ 	lcp31xx_dma_rx_setup(up);
+ #endif
+@@ -2994,7 +2994,7 @@ void serial8250_do_pm(struct uart_port *port, unsigned int state,
+ 	struct uart_8250_port *p =
+ 		container_of(port, struct uart_8250_port, port);
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	if (state == 0) {
+ 		dma_write_counter(p->dma_rx.dmach, 0);
+ 		lcp31xx_dma_rx_setup(p);
+diff --git a/drivers/tty/serial/8250/8250.h b/drivers/tty/serial/8250/8250.h
+index 2dbdd28..3e5a074 100644
+--- a/drivers/tty/serial/8250/8250.h
++++ b/drivers/tty/serial/8250/8250.h
+@@ -13,7 +13,7 @@
+ 
+ #include <linux/serial_8250.h>
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ struct LPC31XX_DMA {
+ 	dma_addr_t		dma_buff_p;
+ 	void			*dma_buff_v;
+@@ -50,7 +50,7 @@ struct uart_8250_port {
+ #define MSR_SAVE_FLAGS UART_MSR_ANY_DELTA
+ 	unsigned char		msr_saved_flags;
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	struct LPC31XX_DMA dma_rx;
+ 	struct LPC31XX_DMA dma_tx;
+ 	int buff_half_offs;
+diff --git a/drivers/tty/serial/8250/8250_lpc31xx.c b/drivers/tty/serial/8250/8250_lpc31xx.c
+new file mode 100644
+index 0000000..1a6e3e2
+--- /dev/null
++++ b/drivers/tty/serial/8250/8250_lpc31xx.c
+@@ -0,0 +1,358 @@
++/*  arch/arm/mach-lpc31xx/generic.c
++ *
++ *  Author:	Durgesh Pattamatta
++ *  Copyright (C) 2009 NXP semiconductors
++ *
++ *  Common code for machines with LPC31xx SoCs.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ *
++ */
++#include <linux/platform_device.h>
++#include <linux/init.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/string.h>
++#include <linux/console.h>
++#include <linux/serial_8250.h>
++#include <linux/of_address.h>
++#include <linux/of_irq.h>
++
++#include <asm/errno.h>
++#include <asm/pgtable.h>
++
++#include <mach/hardware.h>
++
++#include <mach/gpio.h>
++#include <asm/mach/map.h>
++
++/* local functions */
++
++static struct of_device_id uart_ids[] = {
++	{ .compatible = "nxp,lpc31xx-uart" },
++	{ /* sentinel */ }
++};
++
++static void lpc31xx_uart_pm(struct uart_port * port, unsigned int state,
++			      unsigned int oldstate)
++{
++	switch (state) {
++	case 0:
++		/* Free the pins so that UART IP will take control of it */
++		if (oldstate != -1) {
++			gpio_free(GPIO_UART_RXD);
++			gpio_free(GPIO_UART_TXD);
++		}
++		/*
++		 * Enable the peripheral clock for this serial port.
++		 * This is called on uart_open() or a resume event.
++		 */
++		/* Enable UART base clock */
++		cgu_endis_base_freq(CGU_SB_UARTCLK_BASE_ID, 1);
++
++		/* Enable UART IP clock */
++		cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 1);
++		cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
++		break;
++	case 1:
++		/* we can wake the system in this state. So leave clocks on */
++		printk(KERN_INFO "lpc31xx_uart_pm: UART can wake\n");
++		break;
++	case 3:
++		/*
++		 * Disable the peripheral clock for this serial port.
++		 * This is called on uart_close() or a suspend event.
++		 */
++		/* Disable UART IP clock */
++		cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 0);
++		cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 0);
++
++		/* Disable UART base clock */
++		cgu_endis_base_freq(CGU_SB_UARTCLK_BASE_ID, 0);
++
++		/* Free the pins and let GPIO handle it */
++		gpio_request(GPIO_UART_RXD, "uart_rx");
++		gpio_request(GPIO_UART_TXD, "uart_tx");
++
++		gpio_direction_input(GPIO_UART_RXD);
++		gpio_direction_output(GPIO_UART_TXD, 0);
++		break;
++	default:
++		printk(KERN_ERR "lpc31xx_uart_pm: unknown pm %d\n", state);
++	}
++
++}
++
++static const struct of_device_id wdt_of_match[] __initconst = {
++	{ .compatible = "nxp,lpc31xx-wdt", },
++	{},
++};
++
++#define wdt_read(reg) \
++	__raw_readl(wdt_regs + reg)
++#define wdt_write(reg, value) \
++	__raw_writel(value, wdt_regs + reg);
++
++void lpc31xx_arch_reset(char mode, const char *cmd)
++{
++	struct device_node *node;
++	static void __iomem *wdt_regs;
++
++	printk("arch_reset: attempting watchdog reset\n");
++
++	/* Remap the necessary zones */
++	node = of_find_matching_node(NULL, wdt_of_match);
++	wdt_regs = of_iomap(node, 0);
++
++	/* enable WDT clock */
++	cgu_clk_en_dis(CGU_SB_WDOG_PCLK_ID, 1);
++
++	/* Disable watchdog */
++	wdt_write(WDT_TCR, 0);
++	wdt_write(WDT_MCR, WDT_MCR_STOP_MR1 | WDT_MCR_INT_MR1);
++
++	/*  If TC and MR1 are equal a reset is generated. */
++	wdt_write(WDT_PR, 0x00000002);
++	wdt_write(WDT_TC, 0x00000FF0);
++	wdt_write(WDT_MR0, 0x0000F000);
++	wdt_write(WDT_MR1, 0x00001000);
++	wdt_write(WDT_EMR, WDT_EMR_CTRL1(0x3));
++	/* Enable watchdog timer; assert reset at timer timeout */
++	wdt_write(WDT_TCR, WDT_TCR_CNT_EN);
++	cpu_reset (0);/* loop forever and wait for reset to happen */
++
++	/*NOTREACHED*/
++}
++
++
++static struct plat_serial8250_port platform_serial_ports[] = {
++	{
++		.membase = (void *)io_p2v(UART_PHYS),
++		.mapbase = (unsigned long)UART_PHYS,
++		//.irq = IRQ_UART,
++		.irq = 13,
++		.uartclk = XTAL_CLOCK,
++		.regshift = 2,
++		.iotype = UPIO_MEM,
++		.type	= PORT_NXP16750,
++		.flags = UPF_BOOT_AUTOCONF | UPF_BUGGY_UART | UPF_SKIP_TEST,
++		.pm = lpc31xx_uart_pm,
++	},
++	{
++		.flags		= 0
++	},
++};
++
++static struct platform_device serial_device = {
++	.name = "serial8250",
++	.id = PLAT8250_DEV_PLATFORM,
++	.dev = {
++		.platform_data = &platform_serial_ports,
++	},
++};
++
++struct platform_device lpc31xx_pcm_device = {
++	.name = "lpc31xx-pcm-audio",
++	.id = -1,
++};
++
++static struct platform_device *devices[] __initdata = {
++	&serial_device,
++	&lpc31xx_pcm_device,
++};
++
++static struct map_desc lpc31xx_io_desc[] __initdata = {
++	{
++		.virtual	= io_p2v(IO_APB1_PHYS),
++		.pfn		= __phys_to_pfn(IO_APB1_PHYS),
++		.length		= SZ_1M,
++		.type		= MT_DEVICE
++	},
++	{
++		.virtual	= io_p2v(IO_APB2_PHYS),
++		.pfn		= __phys_to_pfn(IO_APB2_PHYS),
++		.length		= SZ_1M,
++		.type		= MT_DEVICE
++	},
++	{
++		.virtual	= io_p2v(IO_APB3_PHYS),
++		.pfn		= __phys_to_pfn(IO_APB3_PHYS),
++		.length		= SZ_1M,
++		.type		= MT_DEVICE
++	},
++	{
++		.virtual	= io_p2v(IO_APB4_PHYS),
++		.pfn		= __phys_to_pfn(IO_APB4_PHYS),
++		.length		= SZ_1M,
++		.type		= MT_DEVICE
++	},
++	{
++		.virtual	= io_p2v(IO_SDMMC_PHYS),
++		.pfn		= __phys_to_pfn(IO_SDMMC_PHYS),
++		.length		= SZ_1M,
++		.type		= MT_DEVICE
++	},
++	{
++		.virtual	= io_p2v(IO_USB_PHYS),
++		.pfn		= __phys_to_pfn(IO_USB_PHYS),
++		.length		= SZ_1M,
++		.type		= MT_DEVICE
++	},
++	{
++		.virtual	= io_p2v(EXT_SRAM0_PHYS),
++		.pfn		= __phys_to_pfn(EXT_SRAM0_PHYS),
++		.length		= SZ_1M,
++		.type		= MT_DEVICE
++	},
++	{
++		.virtual	= io_p2v(IO_INTC_PHYS),
++		.pfn		= __phys_to_pfn(IO_INTC_PHYS),
++		.length		= SZ_1M,
++		.type		= MT_DEVICE
++	},
++	{
++		.virtual	= io_p2v(IO_NAND_BUF_PHYS),
++		.pfn		= __phys_to_pfn(IO_NAND_BUF_PHYS),
++		.length		= SZ_1M,
++		.type		= MT_DEVICE
++	},
++};
++
++void __init lpc31xx_map_io(void)
++{
++	iotable_init(lpc31xx_io_desc, ARRAY_SIZE(lpc31xx_io_desc));
++}
++extern int __init cgu_init(char *str);
++
++void __init lpc31xx_uart_init(void)
++{
++	int mul, div;
++
++	struct device_node *node;
++	int irq;
++
++	node = of_find_matching_node(NULL, uart_ids);
++	if (!node)
++		return;
++
++	/* Get the interrupts property */
++	irq = irq_of_parse_and_map(node, 0);
++	if (!irq) {
++		pr_crit("LPC31xx: UART -  unable to get IRQ from DT\n");
++		return;
++	}
++	of_node_put(node);
++
++	platform_serial_ports[0].irq = irq;
++	printk("JDS - Uart IRQ %d\n", irq);
++
++	/* check what FDR bootloader is using */
++	mul = (UART_FDR_REG >> 4) & 0xF;
++	div = UART_FDR_REG & 0xF;
++	if (div != 0)  {
++		platform_serial_ports[0].uartclk = (XTAL_CLOCK * mul) / (mul + div);
++	}
++}
++
++void __init lpc31xx_init(void)
++{
++	/* cgu init */
++	clk_init();
++	cgu_init("");
++	/* Switch on the UART clocks */
++	cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
++	cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 1);
++	cgu_clk_en_dis(CGU_SB_IOCONF_PCLK_ID, 1);
++
++	/* Put adc block in low power state.
++	 * Once ADC driver is added this should move to driver.
++	 */
++	SYS_ADC_PD = 1;
++	/* Disable ring oscillators used by Random number generators */
++	SYS_RNG_OSC_CFG = 0;
++
++	/* fixme */
++#if 0
++	/* Mux I2S signals based on selected channel */
++#if defined (CONFIG_SND_I2S_TX0_MASTER)
++	/* I2S TX0 WS, DATA */
++	GPIO_DRV_IP(IOCONF_EBI_I2STX_0, 0x60);
++
++	/* I2S TX0 BCK */
++	GPIO_DRV_IP(IOCONF_EBI_MCI, 0x80);
++#endif
++
++#if defined (CONFIG_SND_I2S_TX1_MASTER)
++	/* I2S TX1 BCK, WS, DATA */
++	GPIO_DRV_IP(IOCONF_I2STX_1, 0x7);
++#endif
++
++#if defined (CONFIG_SND_I2S_RX0_MASTER) | defined (CONFIG_SND_I2S_RX0_SLAVE)
++	/* I2S RX0 BCK, WS, DATA */
++	GPIO_DRV_IP(IOCONF_I2SRX_0, 0x7);
++#endif
++#if defined (CONFIG_SND_I2S_RX1_MASTER) | defined (CONFIG_SND_I2S_RX1_SLAVE)
++	/* I2S RX1 BCK, WS, DATA */
++	GPIO_DRV_IP(IOCONF_I2SRX_1, 0x7);
++#endif
++	/* AUDIO CODEC CLOCK (256FS) */
++	GPIO_DRV_IP(IOCONF_I2STX_1, 0x8);
++#endif
++	lpc31xx_uart_init();
++
++	platform_add_devices(devices, ARRAY_SIZE(devices));
++}
++
++
++#if defined(CONFIG_SERIAL_8250_CONSOLE)
++static int __init lpc31xx_init_console(void)
++{
++	static __initdata char serr[] =
++		KERN_ERR "Serial port #%u setup failed\n";
++	struct uart_port up;
++
++	/* Switch on the UART clocks */
++	cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
++	cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 1);
++
++ 	/*
++	 * Set up serial port #0. Do not use autodetection; the result is
++	 * not what we want.
++ 	 */
++	memset(&up, 0, sizeof(up));
++
++	lpc31xx_uart_init();
++	up.uartclk = platform_serial_ports[0].uartclk;
++	up.irq = platform_serial_ports[0].irq;
++
++	up.membase = (char *) io_p2v(UART_PHYS);
++	up.mapbase = (unsigned long)UART_PHYS,
++	up.regshift = 2;
++	up.iotype = UPIO_MEM;
++	up.type	= PORT_NXP16750;
++	up.flags = UPF_BOOT_AUTOCONF | UPF_BUGGY_UART | UPF_SKIP_TEST;
++	up.line	= 0;
++	if (early_serial_setup(&up))
++		printk(serr, up.line);
++
++	return 0;
++}
++console_initcall(lpc31xx_init_console);
++
++#endif /*CONFIG_SERIAL_8250_CONSOLE*/
++
++
++
++
+diff --git a/drivers/tty/serial/8250/Kconfig b/drivers/tty/serial/8250/Kconfig
+index b26dbc4..4c33b30 100644
+--- a/drivers/tty/serial/8250/Kconfig
++++ b/drivers/tty/serial/8250/Kconfig
+@@ -278,10 +278,17 @@ config SERIAL_8250_DW
+ 	help
+ 	  Selecting this option will enable handling of the extra features
+ 	  present in the Synopsys DesignWare APB UART.
++	  
++config SERIAL_8250_LPC31xx
++	tristate "Support for NXP LPC31xx UART"
++	depends on SERIAL_8250 && ARCH_LPC31XX
++	default y
++	help
++	  Basic OF UART driver for NXP LPC31xx family
+ 
+-config LPC31XX_SERIAL_DMA_SUPPORT
++config SERIAL_8250_LPC31xx_DMA
+ 	bool "DMA support for the LPC31XX RX/TX functions"
+-	depends on SERIAL_8250=y
++	depends on SERIAL_8250=y && SERIAL_8250_LPC31xx
+ 	help
+ 	 Enables DMA support for the UART function
+ 
+diff --git a/drivers/tty/serial/8250/Makefile b/drivers/tty/serial/8250/Makefile
+index 867bba7..5b134f7 100644
+--- a/drivers/tty/serial/8250/Makefile
++++ b/drivers/tty/serial/8250/Makefile
+@@ -13,6 +13,7 @@ obj-$(CONFIG_SERIAL_8250_CONSOLE)	+= 8250_early.o
+ obj-$(CONFIG_SERIAL_8250_FOURPORT)	+= 8250_fourport.o
+ obj-$(CONFIG_SERIAL_8250_ACCENT)	+= 8250_accent.o
+ obj-$(CONFIG_SERIAL_8250_BOCA)		+= 8250_boca.o
++obj-$(CONFIG_SERIAL_8250_LPC31xx)	+= 8250_boca.o
+ obj-$(CONFIG_SERIAL_8250_EXAR_ST16C554)	+= 8250_exar_st16c554.o
+ obj-$(CONFIG_SERIAL_8250_HUB6)		+= 8250_hub6.o
+ obj-$(CONFIG_SERIAL_8250_MCA)		+= 8250_mca.o
