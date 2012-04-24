@@ -1,4 +1,4 @@
-/*  arch/arm/mach-lpc31xx/generic.c
+/*  drivers/tty/serial/8250/8250_lpc31xx.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
@@ -38,7 +38,280 @@
 #include <mach/gpio.h>
 #include <asm/mach/map.h>
 
-/* local functions */
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+static void lpc31xx_dma_lock(struct uart_8250_port *up)
+{
+	mutex_lock(&dma_mutex);
+}
+
+static void lpc31xx_dma_unlock(struct uart_8250_port *up)
+{
+	mutex_unlock(&dma_mutex);
+}
+
+static void lpc31xx_uart_tx_dma_start(struct uart_8250_port *up);
+static void lpc31xx_dma_tx_tasklet_func(unsigned long data)
+{
+	struct uart_8250_port *up = (struct uart_8250_port *) data;
+	struct circ_buf *xmit = &up->port.state->xmit;
+
+	if (dma_channel_enabled(up->dma_tx.dmach))
+		return;
+
+	lpc31xx_dma_lock(up);
+
+	dma_stop_channel(up->dma_tx.dmach);
+
+	xmit->tail = (xmit->tail + up->dma_tx.count) & (UART_XMIT_SIZE - 1);
+	up->port.icount.tx += up->dma_tx.count;
+
+	lpc31xx_uart_tx_dma_start(up);
+
+	lpc31xx_dma_unlock(up);
+}
+
+static int lpc31xx_get_readl_rx_dma_count(struct uart_8250_port *up)
+{
+	int count;
+
+	/* The DMA hardware returns the number of bytes currently
+	   transferred by the hardware. It will return 0 when the
+	   channel has stopped (full DMA transfer) or when nothing
+	   has been transferred. To tell the difference between
+	   empty 0 and full 0, we need to examine the DMA enable
+	   status. */
+
+	/* A race condition can exist where the DMA TCNT returns a
+	   value right as the DMA is stopping. In this case, the
+	   DMA is enabled during the check with a non-0 count
+	   value. To get around this issue, the DMA count value
+	   need to be verified again after disabling the DMA
+	   channel. If it is 0, then the DMA completed and the
+	   count is different. */
+	dma_read_counter(up->dma_rx.dmach, &count);
+	if ((!count) && (!dma_channel_enabled(up->dma_rx.dmach)))
+		count = UART_XMIT_SIZE;
+
+	return count;
+}
+
+static void serial8250_dma_rx_timer_check(unsigned long data)
+{
+	struct uart_8250_port *up = (struct uart_8250_port *) data;
+
+	/* Emulate RX timeout when DMA buffer is not full */
+	if ((lpc31xx_get_readl_rx_dma_count(up)) && (up->dma_rx.active))
+		tasklet_schedule(&up->dma_rx.tasklet);
+	else
+		mod_timer(&up->dma_rx.timer, jiffies +
+			msecs_to_jiffies(LPC31XX_UART_RX_TIMEOUT));
+}
+
+void lcp31xx_dma_rx_setup(struct uart_8250_port *up)
+{
+	dma_setup_t dmarx;
+
+	up->buff_half_offs = UART_XMIT_SIZE - up->buff_half_offs;
+	dmarx.trans_length = UART_XMIT_SIZE - 1;
+	dmarx.src_address = (u32) up->port.mapbase;
+	dmarx.dest_address = (u32) up->dma_rx.dma_buff_p;
+	dmarx.dest_address += up->buff_half_offs;
+	dmarx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(DMA_SLV_UART_RX) |
+		DMA_CFG_WR_SLV_NR(0);
+
+	dma_prog_channel(up->dma_rx.dmach, &dmarx);
+	dma_start_channel(up->dma_rx.dmach);
+}
+
+/*
+ * DMA RX tasklet
+ */
+unsigned int serial8250_modem_status(struct uart_8250_port *up);
+static void lpc31xx_dma_rx_tasklet_func(unsigned long data)
+{
+	unsigned int status, lsr;
+	int count, count2, i, maxcount = 64, breakflush = 0;
+	char ch, flag = TTY_NORMAL, *buf;
+	struct uart_8250_port *up = (struct uart_8250_port *) data;
+	int buffhalf = up->buff_half_offs;
+	u32 pbuf;
+
+	spin_lock(&up->port.lock);
+
+	/*
+	 * Per char stats don't work with DMA, so the status flags
+	 * don't apply to a specific character. We'll take a best
+	 * guess that the accumulated status only applies to the
+	 * last character in the DMA buffer.
+	 */
+	status = serial_inp(up, UART_LSR);
+	lsr = status | up->lsr_saved_flags;
+	up->lsr_saved_flags = 0;
+
+	if (unlikely(lsr & UART_LSR_BRK_ERROR_BITS)) {
+		/*
+		 * For statistics only
+		 */
+		if (lsr & UART_LSR_BI) {
+			lsr &= ~(UART_LSR_FE | UART_LSR_PE);
+			up->port.icount.brk++;
+			breakflush = 1;
+			/*
+			 * Breaks are trouble! Toss everything if
+			 * one occurs.
+			 */
+			uart_handle_break(&up->port);
+		} else if (lsr & UART_LSR_PE)
+			up->port.icount.parity++;
+		else if (lsr & UART_LSR_FE)
+			up->port.icount.frame++;
+		if (lsr & UART_LSR_OE)
+			up->port.icount.overrun++;
+
+		/*
+		 * Mask off conditions which should be ignored.
+		 */
+		lsr &= up->port.read_status_mask;
+
+		if (lsr & UART_LSR_BI) {
+			DEBUG_INTR("handling break....");
+			flag = TTY_BREAK;
+		} else if (lsr & UART_LSR_PE)
+			flag = TTY_PARITY;
+		else if (lsr & UART_LSR_FE)
+			flag = TTY_FRAME;
+	}
+
+	/* Disable DMA and get current DMA bytes transferred */
+	count = lpc31xx_get_readl_rx_dma_count(up);
+	dma_stop_channel(up->dma_rx.dmach);
+	count2 = lpc31xx_get_readl_rx_dma_count(up);
+	if (count != count2) {
+		if (count2 == 0)
+			count = UART_XMIT_SIZE;
+		else
+			count = count2;
+	}
+	dma_write_counter(up->dma_rx.dmach, 0);
+
+	/* Setup DMA again using unused buffer half */
+	lcp31xx_dma_rx_setup(up);
+	pbuf = (u32) up->dma_rx.dma_buff_p;
+	pbuf += buffhalf;
+	buf = (char *) up->dma_rx.dma_buff_v;
+	buf += buffhalf;
+
+	if (breakflush) {
+		/* Flush RX FIFO */
+		while ((serial_inp(up, UART_LSR) & UART_LSR_DR) &&
+			(maxcount-- > 0))
+			ch = serial_inp(up, UART_RX);
+	}
+	else {
+		for (i = 0; i < (count - 1); i++) {
+			up->port.icount.rx++;
+			if (uart_handle_sysrq_char(&up->port, buf[i]))
+				continue;
+
+			uart_insert_char(&up->port, lsr, UART_LSR_OE, buf[i], TTY_NORMAL);
+		}
+
+		up->port.icount.rx++;
+		if (!uart_handle_sysrq_char(&up->port, buf[i]))
+			uart_insert_char(&up->port, lsr, UART_LSR_OE, buf[i], flag);
+	}
+
+	serial8250_modem_status(up);
+
+	spin_unlock(&up->port.lock);
+	tty_flip_buffer_push(up->port.state->port.tty);
+	spin_lock(&up->port.lock);
+
+	mod_timer(&up->dma_rx.timer, jiffies +
+		msecs_to_jiffies(LPC31XX_UART_RX_TIMEOUT));
+
+	/* Clear any pending RX error status and re-enable TX status interrupt */
+	status = serial_inp(up, UART_LSR);
+	serial_outp(up, UART_IER, up->ier);
+
+	spin_unlock(&up->port.lock);
+}
+
+/*
+ * DMA UART TX completion interrupt - this interrupt is more of a spotholder
+ * as it is disabled and will never fire.
+ */
+static void lpc31xx_dma_tx_interrupt(int ch, dma_irq_type_t dtype, void *handle)
+{
+	struct uart_8250_port *up = handle;
+
+	printk(KERN_INFO "serial DMA TX interrupt unexpected\n");
+	tasklet_schedule(&up->dma_tx.tasklet);
+}
+
+/*
+ * DMA UART RX completion interrupt - fires when the DMA RX transfer
+ * is complete.
+ */
+static void lpc31xx_dma_rx_interrupt(int ch, dma_irq_type_t dtype, void *handle)
+{
+	struct uart_8250_port *up = handle;
+
+	tasklet_schedule(&up->dma_rx.tasklet);
+}
+
+static void lpc31xx_uart_tx_dma_start(struct uart_8250_port *up)
+{
+	struct circ_buf *xmit = &up->port.state->xmit;
+	dma_setup_t dmatx;
+
+	/* Start a DMA transfer, DMA is idle if this is called and
+	   TX is enabled. */
+	if (up->port.x_char) {
+		serial_outp(up, UART_TX, up->port.x_char);
+		up->port.icount.tx++;
+		up->port.x_char = 0;
+		return;
+	}
+
+	if (!uart_circ_empty(xmit) && !uart_tx_stopped(&up->port)) {
+		dma_sync_single_for_device(up->port.dev,
+					   up->dma_tx.dma_buff_p,
+					   UART_XMIT_SIZE,
+					   DMA_TO_DEVICE);
+
+		up->dma_tx.count = CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE);
+		if (up->dma_tx.count > 64)
+			up->dma_tx.count = 64;
+
+		/* Note TX buffer is loaned to the DMA so the TX bytes can't
+		   be released until the DMA transfer is complete. */
+		dmatx.trans_length = up->dma_tx.count - 1;
+		dmatx.src_address = (u32) up->dma_tx.dma_buff_p;
+		dmatx.src_address += xmit->tail;
+		dmatx.dest_address = (u32) up->port.mapbase;
+		dmatx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(0) |
+			DMA_CFG_WR_SLV_NR(DMA_SLV_UART_TX);
+
+		dma_prog_channel(up->dma_tx.dmach, &dmatx);
+		up->dma_tx.active = 1;
+		dma_start_channel(up->dma_tx.dmach);
+
+		/* Enable TX interrupt on TX FIFO empty */
+		up->ier |= UART_IER_THRI;
+	}
+	else {
+		up->dma_tx.active = 0;
+		up->ier &= ~UART_IER_THRI;
+	}
+
+	serial_out(up, UART_IER, up->ier);
+
+	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
+		uart_write_wakeup(&up->port);
+}
+#endif
+
 
 static struct of_device_id uart_ids[] = {
 	{ .compatible = "nxp,lpc31xx-uart" },
@@ -95,48 +368,6 @@ static void lpc31xx_uart_pm(struct uart_port * port, unsigned int state,
 
 }
 
-static const struct of_device_id wdt_of_match[] __initconst = {
-	{ .compatible = "nxp,lpc31xx-wdt", },
-	{},
-};
-
-#define wdt_read(reg) \
-	__raw_readl(wdt_regs + reg)
-#define wdt_write(reg, value) \
-	__raw_writel(value, wdt_regs + reg);
-
-void lpc31xx_arch_reset(char mode, const char *cmd)
-{
-	struct device_node *node;
-	static void __iomem *wdt_regs;
-
-	printk("arch_reset: attempting watchdog reset\n");
-
-	/* Remap the necessary zones */
-	node = of_find_matching_node(NULL, wdt_of_match);
-	wdt_regs = of_iomap(node, 0);
-
-	/* enable WDT clock */
-	cgu_clk_en_dis(CGU_SB_WDOG_PCLK_ID, 1);
-
-	/* Disable watchdog */
-	wdt_write(WDT_TCR, 0);
-	wdt_write(WDT_MCR, WDT_MCR_STOP_MR1 | WDT_MCR_INT_MR1);
-
-	/*  If TC and MR1 are equal a reset is generated. */
-	wdt_write(WDT_PR, 0x00000002);
-	wdt_write(WDT_TC, 0x00000FF0);
-	wdt_write(WDT_MR0, 0x0000F000);
-	wdt_write(WDT_MR1, 0x00001000);
-	wdt_write(WDT_EMR, WDT_EMR_CTRL1(0x3));
-	/* Enable watchdog timer; assert reset at timer timeout */
-	wdt_write(WDT_TCR, WDT_TCR_CNT_EN);
-	cpu_reset (0);/* loop forever and wait for reset to happen */
-
-	/*NOTREACHED*/
-}
-
-
 static struct plat_serial8250_port platform_serial_ports[] = {
 	{
 		.membase = (void *)io_p2v(UART_PHYS),
@@ -163,80 +394,11 @@ static struct platform_device serial_device = {
 	},
 };
 
-struct platform_device lpc31xx_pcm_device = {
-	.name = "lpc31xx-pcm-audio",
-	.id = -1,
-};
-
 static struct platform_device *devices[] __initdata = {
 	&serial_device,
-	&lpc31xx_pcm_device,
 };
 
-static struct map_desc lpc31xx_io_desc[] __initdata = {
-	{
-		.virtual	= io_p2v(IO_APB1_PHYS),
-		.pfn		= __phys_to_pfn(IO_APB1_PHYS),
-		.length		= SZ_1M,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_APB2_PHYS),
-		.pfn		= __phys_to_pfn(IO_APB2_PHYS),
-		.length		= SZ_1M,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_APB3_PHYS),
-		.pfn		= __phys_to_pfn(IO_APB3_PHYS),
-		.length		= SZ_1M,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_APB4_PHYS),
-		.pfn		= __phys_to_pfn(IO_APB4_PHYS),
-		.length		= SZ_1M,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_SDMMC_PHYS),
-		.pfn		= __phys_to_pfn(IO_SDMMC_PHYS),
-		.length		= SZ_1M,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_USB_PHYS),
-		.pfn		= __phys_to_pfn(IO_USB_PHYS),
-		.length		= SZ_1M,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(EXT_SRAM0_PHYS),
-		.pfn		= __phys_to_pfn(EXT_SRAM0_PHYS),
-		.length		= SZ_1M,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_INTC_PHYS),
-		.pfn		= __phys_to_pfn(IO_INTC_PHYS),
-		.length		= SZ_1M,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_NAND_BUF_PHYS),
-		.pfn		= __phys_to_pfn(IO_NAND_BUF_PHYS),
-		.length		= SZ_1M,
-		.type		= MT_DEVICE
-	},
-};
-
-void __init lpc31xx_map_io(void)
-{
-	iotable_init(lpc31xx_io_desc, ARRAY_SIZE(lpc31xx_io_desc));
-}
-extern int __init cgu_init(char *str);
-
-void __init lpc31xx_uart_init(void)
+static void __init lpc31xx_uart_init(void)
 {
 	int mul, div;
 
@@ -265,56 +427,6 @@ void __init lpc31xx_uart_init(void)
 		platform_serial_ports[0].uartclk = (XTAL_CLOCK * mul) / (mul + div);
 	}
 }
-
-void __init lpc31xx_init(void)
-{
-	/* cgu init */
-	clk_init();
-	cgu_init("");
-	/* Switch on the UART clocks */
-	cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
-	cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 1);
-	cgu_clk_en_dis(CGU_SB_IOCONF_PCLK_ID, 1);
-
-	/* Put adc block in low power state.
-	 * Once ADC driver is added this should move to driver.
-	 */
-	SYS_ADC_PD = 1;
-	/* Disable ring oscillators used by Random number generators */
-	SYS_RNG_OSC_CFG = 0;
-
-	/* fixme */
-#if 0
-	/* Mux I2S signals based on selected channel */
-#if defined (CONFIG_SND_I2S_TX0_MASTER)
-	/* I2S TX0 WS, DATA */
-	GPIO_DRV_IP(IOCONF_EBI_I2STX_0, 0x60);
-
-	/* I2S TX0 BCK */
-	GPIO_DRV_IP(IOCONF_EBI_MCI, 0x80);
-#endif
-
-#if defined (CONFIG_SND_I2S_TX1_MASTER)
-	/* I2S TX1 BCK, WS, DATA */
-	GPIO_DRV_IP(IOCONF_I2STX_1, 0x7);
-#endif
-
-#if defined (CONFIG_SND_I2S_RX0_MASTER) | defined (CONFIG_SND_I2S_RX0_SLAVE)
-	/* I2S RX0 BCK, WS, DATA */
-	GPIO_DRV_IP(IOCONF_I2SRX_0, 0x7);
-#endif
-#if defined (CONFIG_SND_I2S_RX1_MASTER) | defined (CONFIG_SND_I2S_RX1_SLAVE)
-	/* I2S RX1 BCK, WS, DATA */
-	GPIO_DRV_IP(IOCONF_I2SRX_1, 0x7);
-#endif
-	/* AUDIO CODEC CLOCK (256FS) */
-	GPIO_DRV_IP(IOCONF_I2STX_1, 0x8);
-#endif
-	lpc31xx_uart_init();
-
-	platform_add_devices(devices, ARRAY_SIZE(devices));
-}
-
 
 #if defined(CONFIG_SERIAL_8250_CONSOLE)
 static int __init lpc31xx_init_console(void)
