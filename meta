@@ -1,6 +1,6 @@
 Version: 1
-Previous: da09e9af4e5cf159f2daacd035d0dbc2cb5e49ab
-Head: 783e767bdc0d1e60937151e9f5038b5bee08a36c
+Previous: a49438a936678fcd0785aa7c3d71c32533b01fa5
+Head: 89377b6a4224557b0c1e44831ad3a015cc266146
 Applied:
   roland-dt-1.patch: fdd5d5d4094ddaebdfd597022100ac5ce9bd25e7
   base.patch: 84572d10a50c1c38f9f59ea106fd70d419596520
@@ -39,5 +39,6 @@ Applied:
   wdt.patch: fd032611a0473f3acf3fb7ab66ad13aa12a4e9b5
   clean-val315x: 76aad244c5f8185746cda6d6b2abb1c38bf84936
   uart.patch: 783e767bdc0d1e60937151e9f5038b5bee08a36c
+  refresh-temp: 89377b6a4224557b0c1e44831ad3a015cc266146
 Unapplied:
 Hidden:
