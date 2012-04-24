@@ -1369,7 +1369,7 @@ static void  __devinit dm9000_parse_options(struct device_node *node, struct boa
 	const unsigned int *prop;
 	int len, bits;
 
-	prop = of_get_property(node, "bits", &len);
+	prop = of_get_property(node, "interface-width", &len);
 	if (prop) {
 		bits = __be32_to_cpup(prop);
 		switch (bits) {
@@ -1384,11 +1384,13 @@ static void  __devinit dm9000_parse_options(struct device_node *node, struct boa
 			break;
 		}
 	}
-	prop = of_get_property(node, "no_eeprom", &len);
+	prop = of_get_property(node, "no-eeprom", &len);
 	if (prop)
 		db->flags |= DM9000_PLATF_NO_EEPROM;
-	prop = of_get_property(node, "simple_phy", &len);
+	prop = of_get_property(node, "phy", &len);
 	if (prop)
+		db->flags |= DM9000_PLATF_EXT_PHY;
+	else
 		db->flags |= DM9000_PLATF_SIMPLE_PHY;
 #endif
 }

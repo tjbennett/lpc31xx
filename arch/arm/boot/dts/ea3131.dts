@@ -108,9 +108,8 @@
 			reg = <0x20020000 0x100 0x20030000 0x100>;
 			interrupt-parent = <&evtr>;
 			interrupts = <4 4>;
-			bits = <16>;
+			interface-width = <16>;
 			no-eeprom;
-			simple-phy;
 		};			
 	};
 	memory@30000000 {
