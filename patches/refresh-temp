@@ -1,0 +1,2533 @@
+Bottom: f23b257f0aae0a6d515c8c32995c386597c134c4
+Top:    36a4991b52a56c82e07d2d156200707be668c1d4
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-04-24 22:07:34 -0400
+
+Refresh of spi-rewrite
+
+---
+
+diff --git a/drivers/spi/spi-lpc31xx.c b/drivers/spi/spi-lpc31xx.c
+index 09c925a..9c92631 100644
+--- a/drivers/spi/spi-lpc31xx.c
++++ b/drivers/spi/spi-lpc31xx.c
+@@ -1,15 +1,9 @@
+ /*
+- * A driver for the ARM PL022 PrimeCell SSP/SPI bus master.
++ * A driver for the LPC31xx SPI bus master.
+  *
+- * Copyright (C) 2008-2009 ST-Ericsson AB
+- * Copyright (C) 2006 STMicroelectronics Pvt. Ltd.
+- *
+- * Author: Linus Walleij <linus.walleij@stericsson.com>
+  *
+  * Initial version inspired by:
+- *	linux-2.6.17-rc3-mm1/drivers/spi/pxa2xx_spi.c
+- * Initial adoption to PL022 by:
+- *      Sachin Verma <sachin.verma@st.com>
++ *	drivers/spi/spi-pl022.c
+  *
+  * This program is free software; you can redistribute it and/or modify
+  * it under the terms of the GNU General Public License as published by
+@@ -28,12 +22,11 @@
+ #include <linux/ioport.h>
+ #include <linux/errno.h>
+ #include <linux/interrupt.h>
++#include <linux/platform_device.h>
+ #include <linux/spi/spi.h>
+ #include <linux/delay.h>
+ #include <linux/clk.h>
+ #include <linux/err.h>
+-#include <linux/amba/bus.h>
+-#include <linux/amba/pl022.h>
+ #include <linux/io.h>
+ #include <linux/slab.h>
+ #include <linux/dmaengine.h>
+@@ -41,197 +34,95 @@
+ #include <linux/scatterlist.h>
+ #include <linux/pm_runtime.h>
+ 
+-/*
+- * This macro is used to define some register default values.
+- * reg is masked with mask, the OR:ed with an (again masked)
+- * val shifted sb steps to the left.
+- */
+-#define SSP_WRITE_BITS(reg, val, mask, sb) \
+- ((reg) = (((reg) & ~(mask)) | (((val)<<(sb)) & (mask))))
+-
+-/*
+- * This macro is also used to define some default values.
+- * It will just shift val by sb steps to the left and mask
+- * the result with mask.
+- */
+-#define GEN_MASK_BITS(val, mask, sb) \
+- (((val)<<(sb)) & (mask))
+-
+-#define DRIVE_TX		0
+-#define DO_NOT_DRIVE_TX		1
+-
+-#define DO_NOT_QUEUE_DMA	0
+-#define QUEUE_DMA		1
+-
+-#define RX_TRANSFER		1
+-#define TX_TRANSFER		2
+-
+-/*
+- * Macros to access SSP Registers with their offsets
+- */
+-#define SSP_CR0(r)	(r + 0x000)
+-#define SSP_CR1(r)	(r + 0x004)
+-#define SSP_DR(r)	(r + 0x008)
+-#define SSP_SR(r)	(r + 0x00C)
+-#define SSP_CPSR(r)	(r + 0x010)
+-#define SSP_IMSC(r)	(r + 0x014)
+-#define SSP_RIS(r)	(r + 0x018)
+-#define SSP_MIS(r)	(r + 0x01C)
+-#define SSP_ICR(r)	(r + 0x020)
+-#define SSP_DMACR(r)	(r + 0x024)
+-#define SSP_ITCR(r)	(r + 0x080)
+-#define SSP_ITIP(r)	(r + 0x084)
+-#define SSP_ITOP(r)	(r + 0x088)
+-#define SSP_TDR(r)	(r + 0x08C)
+-
+-#define SSP_PID0(r)	(r + 0xFE0)
+-#define SSP_PID1(r)	(r + 0xFE4)
+-#define SSP_PID2(r)	(r + 0xFE8)
+-#define SSP_PID3(r)	(r + 0xFEC)
+-
+-#define SSP_CID0(r)	(r + 0xFF0)
+-#define SSP_CID1(r)	(r + 0xFF4)
+-#define SSP_CID2(r)	(r + 0xFF8)
+-#define SSP_CID3(r)	(r + 0xFFC)
+-
+-/*
+- * SSP Control Register 0  - SSP_CR0
+- */
+-#define SSP_CR0_MASK_DSS	(0x0FUL << 0)
+-#define SSP_CR0_MASK_FRF	(0x3UL << 4)
+-#define SSP_CR0_MASK_SPO	(0x1UL << 6)
+-#define SSP_CR0_MASK_SPH	(0x1UL << 7)
+-#define SSP_CR0_MASK_SCR	(0xFFUL << 8)
+-
+-/*
+- * The ST version of this block moves som bits
+- * in SSP_CR0 and extends it to 32 bits
+- */
+-#define SSP_CR0_MASK_DSS_ST	(0x1FUL << 0)
+-#define SSP_CR0_MASK_HALFDUP_ST	(0x1UL << 5)
+-#define SSP_CR0_MASK_CSS_ST	(0x1FUL << 16)
+-#define SSP_CR0_MASK_FRF_ST	(0x3UL << 21)
+-
+-/*
+- * SSP Control Register 0  - SSP_CR1
+- */
+-#define SSP_CR1_MASK_LBM	(0x1UL << 0)
+-#define SSP_CR1_MASK_SSE	(0x1UL << 1)
+-#define SSP_CR1_MASK_MS		(0x1UL << 2)
+-#define SSP_CR1_MASK_SOD	(0x1UL << 3)
+-
+-/*
+- * The ST version of this block adds some bits
+- * in SSP_CR1
+- */
+-#define SSP_CR1_MASK_RENDN_ST	(0x1UL << 4)
+-#define SSP_CR1_MASK_TENDN_ST	(0x1UL << 5)
+-#define SSP_CR1_MASK_MWAIT_ST	(0x1UL << 6)
+-#define SSP_CR1_MASK_RXIFLSEL_ST (0x7UL << 7)
+-#define SSP_CR1_MASK_TXIFLSEL_ST (0x7UL << 10)
+-/* This one is only in the PL023 variant */
+-#define SSP_CR1_MASK_FBCLKDEL_ST (0x7UL << 13)
+-
+-/*
+- * SSP Status Register - SSP_SR
+- */
+-#define SSP_SR_MASK_TFE		(0x1UL << 0) /* Transmit FIFO empty */
+-#define SSP_SR_MASK_TNF		(0x1UL << 1) /* Transmit FIFO not full */
+-#define SSP_SR_MASK_RNE		(0x1UL << 2) /* Receive FIFO not empty */
+-#define SSP_SR_MASK_RFF		(0x1UL << 3) /* Receive FIFO full */
+-#define SSP_SR_MASK_BSY		(0x1UL << 4) /* Busy Flag */
+-
+-/*
+- * SSP Clock Prescale Register  - SSP_CPSR
+- */
+-#define SSP_CPSR_MASK_CPSDVSR	(0xFFUL << 0)
+-
+-/*
+- * SSP Interrupt Mask Set/Clear Register - SSP_IMSC
+- */
+-#define SSP_IMSC_MASK_RORIM (0x1UL << 0) /* Receive Overrun Interrupt mask */
+-#define SSP_IMSC_MASK_RTIM  (0x1UL << 1) /* Receive timeout Interrupt mask */
+-#define SSP_IMSC_MASK_RXIM  (0x1UL << 2) /* Receive FIFO Interrupt mask */
+-#define SSP_IMSC_MASK_TXIM  (0x1UL << 3) /* Transmit FIFO Interrupt mask */
+-
+-/*
+- * SSP Raw Interrupt Status Register - SSP_RIS
+- */
+-/* Receive Overrun Raw Interrupt status */
+-#define SSP_RIS_MASK_RORRIS		(0x1UL << 0)
+-/* Receive Timeout Raw Interrupt status */
+-#define SSP_RIS_MASK_RTRIS		(0x1UL << 1)
+-/* Receive FIFO Raw Interrupt status */
+-#define SSP_RIS_MASK_RXRIS		(0x1UL << 2)
+-/* Transmit FIFO Raw Interrupt status */
+-#define SSP_RIS_MASK_TXRIS		(0x1UL << 3)
++/***********************************************************************
++ * SPI register definitions
++ **********************************************************************/
++#define SPI_CONFIG_REG    __REG (SPI_PHYS + 0x00)
++#define SPI_SLV_ENAB_REG  __REG (SPI_PHYS + 0x04)
++#define SPI_TXF_FLUSH_REG __REG (SPI_PHYS + 0x08)
++#define SPI_FIFO_DATA_REG __REG (SPI_PHYS + 0x0C)
++#define SPI_NHP_POP_REG   __REG (SPI_PHYS + 0x10)
++#define SPI_NHP_MODE_REG  __REG (SPI_PHYS + 0x14)
++#define SPI_DMA_SET_REG   __REG (SPI_PHYS + 0x18)
++#define SPI_STS_REG       __REG (SPI_PHYS + 0x1C)
++#define SPI_HWINFO_REG    __REG (SPI_PHYS + 0x20)
++#define SPI_SLV_SET1_REG(slv) __REG (SPI_PHYS + 0x24 + (8 * slv))
++#define SPI_SLV_SET2_REG(slv) __REG (SPI_PHYS + 0x28 + (8 * slv))
++#define SPI_INT_TRSH_REG  __REG (SPI_PHYS + 0xFD4)
++#define SPI_INT_CLRE_REG  __REG (SPI_PHYS + 0xFD8)
++#define SPI_INT_SETE_REG  __REG (SPI_PHYS + 0xFDC)
++#define SPI_INT_STS_REG   __REG (SPI_PHYS + 0xFE0)
++#define SPI_INT_ENAB_REG  __REG (SPI_PHYS + 0xFE4)
++#define SPI_INT_CLRS_REG  __REG (SPI_PHYS + 0xFE8)
++#define SPI_INT_SETS_REG  __REG (SPI_PHYS + 0xFEC)
++#define SPI_MOD_ID_REG    __REG (SPI_PHYS + 0xFFC)
++
++/* SPI device contants */
++#define SPI_FIFO_DEPTH  64 /* 64 words (16bit) deep */
++#define SPI_NUM_SLAVES  3  /* number of slaves supported */
++#define SPI_MAX_DIV2    254
++#define SPI_MAX_DIVIDER 65024 /* = 254 * (255 + 1) */
++#define SPI_MIN_DIVIDER 2
++
++/* SPI Configuration register definitions (SPI_CONFIG_REG) */
++#define SPI_CFG_INTER_DLY(n)      _SBF(16, ((n) & 0xFFFF))
++#define SPI_CFG_INTER_DLY_GET(n)  (((n) >> 16) & 0xFFFF)
++#define SPI_CFG_UPDATE_EN         _BIT(7)
++#define SPI_CFG_SW_RESET          _BIT(6)
++#define SPI_CFG_SLAVE_DISABLE     _BIT(4)
++#define SPI_CFG_MULTI_SLAVE       _BIT(3)
++#define SPI_CFG_LOOPBACK          _BIT(2)
++#define SPI_CFG_SLAVE_MODE        _BIT(1)
++#define SPI_CFG_ENABLE            _BIT(0)
++
++/* SPI slave_enable register definitions (SPI_SLV_ENAB_REG) */
++#define SPI_SLV_EN(n)             _SBF(((n) << 1), 0x1)
++#define SPI_SLV_SUSPEND(n)        _SBF(((n) << 1), 0x3)
++
++/* SPI tx_fifo_flush register definitions (SPI_TXF_FLUSH_REG) */
++#define SPI_TXFF_FLUSH            _BIT(1)
++
++/* SPI dma_settings register definitions (SPI_DMA_SET_REG) */
++#define SPI_DMA_TX_EN             _BIT(1)
++#define SPI_DMA_RX_EN             _BIT(0)
++
++/* SPI status register definitions (SPI_STS_REG) */
++#define SPI_ST_SMS_BUSY           _BIT(5)
++#define SPI_ST_BUSY               _BIT(4)
++#define SPI_ST_RX_FF              _BIT(3)
++#define SPI_ST_RX_EMPTY           _BIT(2)
++#define SPI_ST_TX_FF              _BIT(1)
++#define SPI_ST_TX_EMPTY           _BIT(0)
++
++/* SPI slv_setting registers definitions (SPI_SLV_SET1_REG) */
++#define SPI_SLV1_INTER_TX_DLY(n)  _SBF(24, ((n) & 0xFF))
++#define SPI_SLV1_NUM_WORDS(n)     _SBF(16, ((n) & 0xFF))
++#define SPI_SLV1_CLK_PS(n)        _SBF(8, ((n) & 0xFF))
++#define SPI_SLV1_CLK_PS_GET(n)    (((n) >> 8) & 0xFF)
++#define SPI_SLV1_CLK_DIV1(n)      ((n) & 0xFF)
++#define SPI_SLV1_CLK_DIV1_GET(n)  ((n) & 0xFF)
++
++/* SPI slv_setting registers definitions (SPI_SLV_SET2_REG) */
++#define SPI_SLV2_PPCS_DLY(n)      _SBF(9, ((n) & 0xFF))
++#define SPI_SLV2_CS_HIGH          _BIT(8)
++#define SPI_SLV2_SSI_MODE         _BIT(7)
++#define SPI_SLV2_SPO              _BIT(6)
++#define SPI_SLV2_SPH              _BIT(5)
++#define SPI_SLV2_WD_SZ(n)         ((n) & 0x1F)
++
++/* SPI int_threshold registers definitions (SPI_INT_TRSH_REG) */
++#define SPI_INT_TSHLD_TX(n)       _SBF(8, ((n) & 0xFF))
++#define SPI_INT_TSHLD_RX(n)       ((n) & 0xFF)
++
++/* SPI intterrupt registers definitions ( SPI_INT_xxx) */
++#define SPI_SMS_INT               _BIT(4)
++#define SPI_TX_INT                _BIT(3)
++#define SPI_RX_INT                _BIT(2)
++#define SPI_TO_INT                _BIT(1)
++#define SPI_OVR_INT               _BIT(0)
++#define SPI_ALL_INTS              (SPI_SMS_INT | SPI_TX_INT | SPI_RX_INT | SPI_TO_INT | SPI_OVR_INT)
+ 
+-/*
+- * SSP Masked Interrupt Status Register - SSP_MIS
+- */
+-/* Receive Overrun Masked Interrupt status */
+-#define SSP_MIS_MASK_RORMIS		(0x1UL << 0)
+-/* Receive Timeout Masked Interrupt status */
+-#define SSP_MIS_MASK_RTMIS		(0x1UL << 1)
+-/* Receive FIFO Masked Interrupt status */
+-#define SSP_MIS_MASK_RXMIS		(0x1UL << 2)
+-/* Transmit FIFO Masked Interrupt status */
+-#define SSP_MIS_MASK_TXMIS		(0x1UL << 3)
+-
+-/*
+- * SSP Interrupt Clear Register - SSP_ICR
+- */
+-/* Receive Overrun Raw Clear Interrupt bit */
+-#define SSP_ICR_MASK_RORIC		(0x1UL << 0)
+-/* Receive Timeout Clear Interrupt bit */
+-#define SSP_ICR_MASK_RTIC		(0x1UL << 1)
+-
+-/*
+- * SSP DMA Control Register - SSP_DMACR
+- */
+-/* Receive DMA Enable bit */
+-#define SSP_DMACR_MASK_RXDMAE		(0x1UL << 0)
+-/* Transmit DMA Enable bit */
+-#define SSP_DMACR_MASK_TXDMAE		(0x1UL << 1)
+-
+-/*
+- * SSP Integration Test control Register - SSP_ITCR
+- */
+-#define SSP_ITCR_MASK_ITEN		(0x1UL << 0)
+-#define SSP_ITCR_MASK_TESTFIFO		(0x1UL << 1)
+-
+-/*
+- * SSP Integration Test Input Register - SSP_ITIP
+- */
+-#define ITIP_MASK_SSPRXD		 (0x1UL << 0)
+-#define ITIP_MASK_SSPFSSIN		 (0x1UL << 1)
+-#define ITIP_MASK_SSPCLKIN		 (0x1UL << 2)
+-#define ITIP_MASK_RXDMAC		 (0x1UL << 3)
+-#define ITIP_MASK_TXDMAC		 (0x1UL << 4)
+-#define ITIP_MASK_SSPTXDIN		 (0x1UL << 5)
+-
+-/*
+- * SSP Integration Test output Register - SSP_ITOP
+- */
+-#define ITOP_MASK_SSPTXD		 (0x1UL << 0)
+-#define ITOP_MASK_SSPFSSOUT		 (0x1UL << 1)
+-#define ITOP_MASK_SSPCLKOUT		 (0x1UL << 2)
+-#define ITOP_MASK_SSPOEn		 (0x1UL << 3)
+-#define ITOP_MASK_SSPCTLOEn		 (0x1UL << 4)
+-#define ITOP_MASK_RORINTR		 (0x1UL << 5)
+-#define ITOP_MASK_RTINTR		 (0x1UL << 6)
+-#define ITOP_MASK_RXINTR		 (0x1UL << 7)
+-#define ITOP_MASK_TXINTR		 (0x1UL << 8)
+-#define ITOP_MASK_INTR			 (0x1UL << 9)
+-#define ITOP_MASK_RXDMABREQ		 (0x1UL << 10)
+-#define ITOP_MASK_RXDMASREQ		 (0x1UL << 11)
+-#define ITOP_MASK_TXDMABREQ		 (0x1UL << 12)
+-#define ITOP_MASK_TXDMASREQ		 (0x1UL << 13)
+-
+-/*
+- * SSP Test Data Register - SSP_TDR
+- */
+-#define TDR_MASK_TESTDATA		(0xFFFFFFFF)
++#define SPI_POLLING_TIMEOUT 1000
+ 
+ /*
+  * Message State
+@@ -245,46 +136,9 @@
+ #define STATE_ERROR			((void *) -1)
+ 
+ /*
+- * SSP State - Whether Enabled or Disabled
+- */
+-#define SSP_DISABLED			(0)
+-#define SSP_ENABLED			(1)
+-
+-/*
+- * SSP DMA State - Whether DMA Enabled or Disabled
+- */
+-#define SSP_DMA_DISABLED		(0)
+-#define SSP_DMA_ENABLED			(1)
+-
+-/*
+- * SSP Clock Defaults
+- */
+-#define SSP_DEFAULT_CLKRATE 0x2
+-#define SSP_DEFAULT_PRESCALE 0x40
+-
+-/*
+- * SSP Clock Parameter ranges
+- */
+-#define CPSDVR_MIN 0x02
+-#define CPSDVR_MAX 0xFE
+-#define SCR_MIN 0x00
+-#define SCR_MAX 0xFF
+-
+-/*
+- * SSP Interrupt related Macros
+- */
+-#define DEFAULT_SSP_REG_IMSC  0x0UL
+-#define DISABLE_ALL_INTERRUPTS DEFAULT_SSP_REG_IMSC
+-#define ENABLE_ALL_INTERRUPTS (~DEFAULT_SSP_REG_IMSC)
+-
+-#define CLEAR_ALL_INTERRUPTS  0x3
+-
+-#define SPI_POLLING_TIMEOUT 1000
+-
+-/*
+  * The type of reading going on on this chip
+  */
+-enum ssp_reading {
++enum spi_reading {
+ 	READING_NULL,
+ 	READING_U8,
+ 	READING_U16,
+@@ -294,7 +148,7 @@ enum ssp_reading {
+ /**
+  * The type of writing going on on this chip
+  */
+-enum ssp_writing {
++enum spi_writing {
+ 	WRITING_NULL,
+ 	WRITING_U8,
+ 	WRITING_U16,
+@@ -303,10 +157,10 @@ enum ssp_writing {
+ 
+ /**
+  * struct vendor_data - vendor-specific config parameters
+- * for PL022 derivates
++ * for LPC31xx derivatives
+  * @fifodepth: depth of FIFOs (both)
+  * @max_bpw: maximum number of bits per word
+- * @unidir: supports unidirection transfers
++ * @unidir: supports unidirectional transfers
+  * @extended_cr: 32 bit wide control register 0 with extra
+  * features and extra features in CR1 as found in the ST variants
+  * @pl023: supports a subset of the ST extensions called "PL023"
+@@ -321,8 +175,8 @@ struct vendor_data {
+ };
+ 
+ /**
+- * struct pl022 - This is the private SSP driver data structure
+- * @adev: AMBA device model hookup
++ * struct lpc31xx - This is the private SSP driver data structure
++ * @pdev: Platform device model hookup
+  * @vendor: vendor data for the IP block
+  * @phybase: the physical memory where the SSP device resides
+  * @virtbase: the virtual memory where the SSP is mapped
+@@ -332,7 +186,7 @@ struct vendor_data {
+  * @kworker: thread struct for message pump
+  * @kworker_task: pointer to task for message pump kworker thread
+  * @pump_messages: work struct for scheduling work to the message pump
+- * @queue_lock: spinlock to syncronise access to message queue
++ * @queue_lock: spinlock to synchronize access to message queue
+  * @queue: message queue
+  * @busy: message pump is busy
+  * @running: message pump is running
+@@ -353,18 +207,17 @@ struct vendor_data {
+  * @exp_fifo_level: expected FIFO level
+  * @dma_rx_channel: optional channel for RX DMA
+  * @dma_tx_channel: optional channel for TX DMA
+- * @sgt_rx: scattertable for the RX transfer
+- * @sgt_tx: scattertable for the TX transfer
++ * @sgt_rx: scatter table for the RX transfer
++ * @sgt_tx: scatter table for the TX transfer
+  * @dummypage: a dummy page used for driving data on the bus with DMA
+  */
+-struct pl022 {
+-	struct amba_device		*adev;
+-	struct vendor_data		*vendor;
++struct lpc31xx {
++	struct platform_device		*pdev;
+ 	resource_size_t			phybase;
+ 	void __iomem			*virtbase;
+ 	struct clk			*clk;
+ 	struct spi_master		*master;
+-	struct pl022_ssp_controller	*master_info;
++	struct lpc31xx_spi_controller	*master_info;
+ 	/* Message per-transfer pump */
+ 	struct tasklet_struct		pump_transfers;
+ 	struct spi_message		*cur_msg;
+@@ -375,13 +228,13 @@ struct pl022 {
+ 	void				*tx_end;
+ 	void				*rx;
+ 	void				*rx_end;
+-	enum ssp_reading		read;
+-	enum ssp_writing		write;
++	enum spi_reading		read;
++	enum spi_writing		write;
+ 	u32				exp_fifo_level;
+-	enum ssp_rx_level_trig		rx_lev_trig;
+-	enum ssp_tx_level_trig		tx_lev_trig;
++	enum spi_rx_level_trig		rx_lev_trig;
++	enum spi_tx_level_trig		tx_lev_trig;
+ 	/* DMA settings */
+-#ifdef CONFIG_DMA_ENGINE
++#ifdef CONFIG_DMA_ENGINE_X
+ 	struct dma_chan			*dma_rx_channel;
+ 	struct dma_chan			*dma_tx_channel;
+ 	struct sg_table			sgt_rx;
+@@ -415,8 +268,8 @@ struct chip_data {
+ 	u16 cpsr;
+ 	u8 n_bytes;
+ 	bool enable_dma;
+-	enum ssp_reading read;
+-	enum ssp_writing write;
++	enum spi_reading read;
++	enum spi_writing write;
+ 	void (*cs_control) (u32 command);
+ 	int xfer_type;
+ };
+@@ -430,21 +283,21 @@ struct chip_data {
+  */
+ static void null_cs_control(u32 command)
+ {
+-	pr_debug("pl022: dummy chip select control, CS=0x%x\n", command);
++	pr_debug("lpc31xx: dummy chip select control, CS=0x%x\n", command);
+ }
+ 
+ /**
+  * giveback - current spi_message is over, schedule next message and call
+  * callback of this message. Assumes that caller already
+  * set message->status; dma and pio irqs are blocked
+- * @pl022: SSP driver private data structure
++ * @lpc31xx: SSP driver private data structure
+  */
+-static void giveback(struct pl022 *pl022)
++static void giveback(struct lpc31xx *lpc31xx)
+ {
+ 	struct spi_transfer *last_transfer;
+-	pl022->next_msg_cs_active = false;
++	lpc31xx->next_msg_cs_active = false;
+ 
+-	last_transfer = list_entry(pl022->cur_msg->transfers.prev,
++	last_transfer = list_entry(lpc31xx->cur_msg->transfers.prev,
+ 					struct spi_transfer,
+ 					transfer_list);
+ 
+@@ -470,163 +323,97 @@ static void giveback(struct pl022 *pl022)
+ 		 * could invalidate the cs_control() callback...
+ 		 */
+ 		/* get a pointer to the next message, if any */
+-		next_msg = spi_get_next_queued_message(pl022->master);
++		next_msg = spi_get_next_queued_message(lpc31xx->master);
+ 
+ 		/*
+ 		 * see if the next and current messages point
+ 		 * to the same spi device.
+ 		 */
+-		if (next_msg && next_msg->spi != pl022->cur_msg->spi)
++		if (next_msg && next_msg->spi != lpc31xx->cur_msg->spi)
+ 			next_msg = NULL;
+-		if (!next_msg || pl022->cur_msg->state == STATE_ERROR)
+-			pl022->cur_chip->cs_control(SSP_CHIP_DESELECT);
++		if (!next_msg || lpc31xx->cur_msg->state == STATE_ERROR)
++			lpc31xx->cur_chip->cs_control(SSP_CHIP_DESELECT);
+ 		else
+-			pl022->next_msg_cs_active = true;
++			lpc31xx->next_msg_cs_active = true;
+ 
+ 	}
+ 
+-	pl022->cur_msg = NULL;
+-	pl022->cur_transfer = NULL;
+-	pl022->cur_chip = NULL;
+-	spi_finalize_current_message(pl022->master);
++	lpc31xx->cur_msg = NULL;
++	lpc31xx->cur_transfer = NULL;
++	lpc31xx->cur_chip = NULL;
++	spi_finalize_current_message(lpc31xx->master);
+ }
+ 
+ /**
+  * flush - flush the FIFO to reach a clean state
+- * @pl022: SSP driver private data structure
++ * @lpc31xx: SSP driver private data structure
+  */
+-static int flush(struct pl022 *pl022)
++static int flush(struct lpc31xx *lpc31xx)
+ {
+ 	unsigned long limit = loops_per_jiffy << 1;
+ 
+-	dev_dbg(&pl022->adev->dev, "flush\n");
++	dev_dbg(&lpc31xx->pdev->dev, "flush\n");
+ 	do {
+-		while (readw(SSP_SR(pl022->virtbase)) & SSP_SR_MASK_RNE)
+-			readw(SSP_DR(pl022->virtbase));
+-	} while ((readw(SSP_SR(pl022->virtbase)) & SSP_SR_MASK_BSY) && limit--);
++		while (readw(SSP_SR(lpc31xx->virtbase)) & SSP_SR_MASK_RNE)
++			readw(SSP_DR(lpc31xx->virtbase));
++	} while ((readw(SSP_SR(lpc31xx->virtbase)) & SSP_SR_MASK_BSY) && limit--);
+ 
+-	pl022->exp_fifo_level = 0;
++	lpc31xx->exp_fifo_level = 0;
+ 
+ 	return limit;
+ }
+ 
+ /**
+  * restore_state - Load configuration of current chip
+- * @pl022: SSP driver private data structure
++ * @lpc31xx: SSP driver private data structure
+  */
+-static void restore_state(struct pl022 *pl022)
++static void restore_state(struct lpc31xx *lpc31xx)
+ {
+-	struct chip_data *chip = pl022->cur_chip;
++	struct chip_data *chip = lpc31xx->cur_chip;
+ 
+-	if (pl022->vendor->extended_cr)
+-		writel(chip->cr0, SSP_CR0(pl022->virtbase));
++#if JDS
++	if (lpc31xx->vendor->extended_cr)
++		writel(chip->cr0, SSP_CR0(lpc31xx->virtbase));
+ 	else
+-		writew(chip->cr0, SSP_CR0(pl022->virtbase));
+-	writew(chip->cr1, SSP_CR1(pl022->virtbase));
+-	writew(chip->dmacr, SSP_DMACR(pl022->virtbase));
+-	writew(chip->cpsr, SSP_CPSR(pl022->virtbase));
+-	writew(DISABLE_ALL_INTERRUPTS, SSP_IMSC(pl022->virtbase));
+-	writew(CLEAR_ALL_INTERRUPTS, SSP_ICR(pl022->virtbase));
++		writew(chip->cr0, SSP_CR0(lpc31xx->virtbase));
++	writew(chip->cr1, SSP_CR1(lpc31xx->virtbase));
++	writew(chip->dmacr, SSP_DMACR(lpc31xx->virtbase));
++	writew(chip->cpsr, SSP_CPSR(lpc31xx->virtbase));
++	writew(DISABLE_ALL_INTERRUPTS, SSP_IMSC(lpc31xx->virtbase));
++	writew(CLEAR_ALL_INTERRUPTS, SSP_ICR(lpc31xx->virtbase));
++#endif
+ }
+ 
+-/*
+- * Default SSP Register Values
+- */
+-#define DEFAULT_SSP_REG_CR0 ( \
+-	GEN_MASK_BITS(SSP_DATA_BITS_12, SSP_CR0_MASK_DSS, 0)	| \
+-	GEN_MASK_BITS(SSP_INTERFACE_MOTOROLA_SPI, SSP_CR0_MASK_FRF, 4) | \
+-	GEN_MASK_BITS(SSP_CLK_POL_IDLE_LOW, SSP_CR0_MASK_SPO, 6) | \
+-	GEN_MASK_BITS(SSP_CLK_SECOND_EDGE, SSP_CR0_MASK_SPH, 7) | \
+-	GEN_MASK_BITS(SSP_DEFAULT_CLKRATE, SSP_CR0_MASK_SCR, 8) \
+-)
+-
+-/* ST versions have slightly different bit layout */
+-#define DEFAULT_SSP_REG_CR0_ST ( \
+-	GEN_MASK_BITS(SSP_DATA_BITS_12, SSP_CR0_MASK_DSS_ST, 0)	| \
+-	GEN_MASK_BITS(SSP_MICROWIRE_CHANNEL_FULL_DUPLEX, SSP_CR0_MASK_HALFDUP_ST, 5) | \
+-	GEN_MASK_BITS(SSP_CLK_POL_IDLE_LOW, SSP_CR0_MASK_SPO, 6) | \
+-	GEN_MASK_BITS(SSP_CLK_SECOND_EDGE, SSP_CR0_MASK_SPH, 7) | \
+-	GEN_MASK_BITS(SSP_DEFAULT_CLKRATE, SSP_CR0_MASK_SCR, 8) | \
+-	GEN_MASK_BITS(SSP_BITS_8, SSP_CR0_MASK_CSS_ST, 16)	| \
+-	GEN_MASK_BITS(SSP_INTERFACE_MOTOROLA_SPI, SSP_CR0_MASK_FRF_ST, 21) \
+-)
+-
+-/* The PL023 version is slightly different again */
+-#define DEFAULT_SSP_REG_CR0_ST_PL023 ( \
+-	GEN_MASK_BITS(SSP_DATA_BITS_12, SSP_CR0_MASK_DSS_ST, 0)	| \
+-	GEN_MASK_BITS(SSP_CLK_POL_IDLE_LOW, SSP_CR0_MASK_SPO, 6) | \
+-	GEN_MASK_BITS(SSP_CLK_SECOND_EDGE, SSP_CR0_MASK_SPH, 7) | \
+-	GEN_MASK_BITS(SSP_DEFAULT_CLKRATE, SSP_CR0_MASK_SCR, 8) \
+-)
+-
+-#define DEFAULT_SSP_REG_CR1 ( \
+-	GEN_MASK_BITS(LOOPBACK_DISABLED, SSP_CR1_MASK_LBM, 0) | \
+-	GEN_MASK_BITS(SSP_DISABLED, SSP_CR1_MASK_SSE, 1) | \
+-	GEN_MASK_BITS(SSP_MASTER, SSP_CR1_MASK_MS, 2) | \
+-	GEN_MASK_BITS(DO_NOT_DRIVE_TX, SSP_CR1_MASK_SOD, 3) \
+-)
+-
+-/* ST versions extend this register to use all 16 bits */
+-#define DEFAULT_SSP_REG_CR1_ST ( \
+-	DEFAULT_SSP_REG_CR1 | \
+-	GEN_MASK_BITS(SSP_RX_MSB, SSP_CR1_MASK_RENDN_ST, 4) | \
+-	GEN_MASK_BITS(SSP_TX_MSB, SSP_CR1_MASK_TENDN_ST, 5) | \
+-	GEN_MASK_BITS(SSP_MWIRE_WAIT_ZERO, SSP_CR1_MASK_MWAIT_ST, 6) |\
+-	GEN_MASK_BITS(SSP_RX_1_OR_MORE_ELEM, SSP_CR1_MASK_RXIFLSEL_ST, 7) | \
+-	GEN_MASK_BITS(SSP_TX_1_OR_MORE_EMPTY_LOC, SSP_CR1_MASK_TXIFLSEL_ST, 10) \
+-)
+-
+-/*
+- * The PL023 variant has further differences: no loopback mode, no microwire
+- * support, and a new clock feedback delay setting.
+- */
+-#define DEFAULT_SSP_REG_CR1_ST_PL023 ( \
+-	GEN_MASK_BITS(SSP_DISABLED, SSP_CR1_MASK_SSE, 1) | \
+-	GEN_MASK_BITS(SSP_MASTER, SSP_CR1_MASK_MS, 2) | \
+-	GEN_MASK_BITS(DO_NOT_DRIVE_TX, SSP_CR1_MASK_SOD, 3) | \
+-	GEN_MASK_BITS(SSP_RX_MSB, SSP_CR1_MASK_RENDN_ST, 4) | \
+-	GEN_MASK_BITS(SSP_TX_MSB, SSP_CR1_MASK_TENDN_ST, 5) | \
+-	GEN_MASK_BITS(SSP_RX_1_OR_MORE_ELEM, SSP_CR1_MASK_RXIFLSEL_ST, 7) | \
+-	GEN_MASK_BITS(SSP_TX_1_OR_MORE_EMPTY_LOC, SSP_CR1_MASK_TXIFLSEL_ST, 10) | \
+-	GEN_MASK_BITS(SSP_FEEDBACK_CLK_DELAY_NONE, SSP_CR1_MASK_FBCLKDEL_ST, 13) \
+-)
+-
+-#define DEFAULT_SSP_REG_CPSR ( \
+-	GEN_MASK_BITS(SSP_DEFAULT_PRESCALE, SSP_CPSR_MASK_CPSDVSR, 0) \
+-)
+-
+-#define DEFAULT_SSP_REG_DMACR (\
+-	GEN_MASK_BITS(SSP_DMA_DISABLED, SSP_DMACR_MASK_RXDMAE, 0) | \
+-	GEN_MASK_BITS(SSP_DMA_DISABLED, SSP_DMACR_MASK_TXDMAE, 1) \
+-)
+ 
+ /**
+- * load_ssp_default_config - Load default configuration for SSP
+- * @pl022: SSP driver private data structure
++ * load_spi_default_config - Load default configuration for SSP
++ * @lpc31xx: SSP driver private data structure
+  */
+-static void load_ssp_default_config(struct pl022 *pl022)
++static void load_spi_default_config(struct lpc31xx *lpc31xx)
+ {
+-	if (pl022->vendor->pl023) {
+-		writel(DEFAULT_SSP_REG_CR0_ST_PL023, SSP_CR0(pl022->virtbase));
+-		writew(DEFAULT_SSP_REG_CR1_ST_PL023, SSP_CR1(pl022->virtbase));
+-	} else if (pl022->vendor->extended_cr) {
+-		writel(DEFAULT_SSP_REG_CR0_ST, SSP_CR0(pl022->virtbase));
+-		writew(DEFAULT_SSP_REG_CR1_ST, SSP_CR1(pl022->virtbase));
++#if JDS
++	if (lpc31xx->vendor->pl023) {
++		writel(DEFAULT_SSP_REG_CR0_ST_PL023, SSP_CR0(lpc31xx->virtbase));
++		writew(DEFAULT_SSP_REG_CR1_ST_PL023, SSP_CR1(lpc31xx->virtbase));
++	} else if (lpc31xx->vendor->extended_cr) {
++		writel(DEFAULT_SSP_REG_CR0_ST, SSP_CR0(lpc31xx->virtbase));
++		writew(DEFAULT_SSP_REG_CR1_ST, SSP_CR1(lpc31xx->virtbase));
+ 	} else {
+-		writew(DEFAULT_SSP_REG_CR0, SSP_CR0(pl022->virtbase));
+-		writew(DEFAULT_SSP_REG_CR1, SSP_CR1(pl022->virtbase));
++		writew(DEFAULT_SSP_REG_CR0, SSP_CR0(lpc31xx->virtbase));
++		writew(DEFAULT_SSP_REG_CR1, SSP_CR1(lpc31xx->virtbase));
+ 	}
+-	writew(DEFAULT_SSP_REG_DMACR, SSP_DMACR(pl022->virtbase));
+-	writew(DEFAULT_SSP_REG_CPSR, SSP_CPSR(pl022->virtbase));
+-	writew(DISABLE_ALL_INTERRUPTS, SSP_IMSC(pl022->virtbase));
+-	writew(CLEAR_ALL_INTERRUPTS, SSP_ICR(pl022->virtbase));
++	writew(DEFAULT_SSP_REG_DMACR, SSP_DMACR(lpc31xx->virtbase));
++	writew(DEFAULT_SSP_REG_CPSR, SSP_CPSR(lpc31xx->virtbase));
++	writew(DISABLE_ALL_INTERRUPTS, SSP_IMSC(lpc31xx->virtbase));
++	writew(CLEAR_ALL_INTERRUPTS, SSP_ICR(lpc31xx->virtbase));
++#endif
+ }
+ 
+ /**
+  * This will write to TX and read from RX according to the parameters
+- * set in pl022.
++ * set in lpc31xx.
+  */
+-static void readwriter(struct pl022 *pl022)
++static void readwriter(struct lpc31xx *lpc31xx)
+ {
+ 
+ 	/*
+@@ -639,81 +426,81 @@ static void readwriter(struct pl022 *pl022)
+ 	 * unused RX FIFO fill length, regardless of what the TX
+ 	 * FIFO status flag indicates.
+ 	 */
+-	dev_dbg(&pl022->adev->dev,
++	dev_dbg(&lpc31xx->pdev->dev,
+ 		"%s, rx: %p, rxend: %p, tx: %p, txend: %p\n",
+-		__func__, pl022->rx, pl022->rx_end, pl022->tx, pl022->tx_end);
++		__func__, lpc31xx->rx, lpc31xx->rx_end, lpc31xx->tx, lpc31xx->tx_end);
+ 
+ 	/* Read as much as you can */
+-	while ((readw(SSP_SR(pl022->virtbase)) & SSP_SR_MASK_RNE)
+-	       && (pl022->rx < pl022->rx_end)) {
+-		switch (pl022->read) {
++	while ((readw(SSP_SR(lpc31xx->virtbase)) & SSP_SR_MASK_RNE)
++	       && (lpc31xx->rx < lpc31xx->rx_end)) {
++		switch (lpc31xx->read) {
+ 		case READING_NULL:
+-			readw(SSP_DR(pl022->virtbase));
++			readw(SSP_DR(lpc31xx->virtbase));
+ 			break;
+ 		case READING_U8:
+-			*(u8 *) (pl022->rx) =
+-				readw(SSP_DR(pl022->virtbase)) & 0xFFU;
++			*(u8 *) (lpc31xx->rx) =
++				readw(SSP_DR(lpc31xx->virtbase)) & 0xFFU;
+ 			break;
+ 		case READING_U16:
+-			*(u16 *) (pl022->rx) =
+-				(u16) readw(SSP_DR(pl022->virtbase));
++			*(u16 *) (lpc31xx->rx) =
++				(u16) readw(SSP_DR(lpc31xx->virtbase));
+ 			break;
+ 		case READING_U32:
+-			*(u32 *) (pl022->rx) =
+-				readl(SSP_DR(pl022->virtbase));
++			*(u32 *) (lpc31xx->rx) =
++				readl(SSP_DR(lpc31xx->virtbase));
+ 			break;
+ 		}
+-		pl022->rx += (pl022->cur_chip->n_bytes);
+-		pl022->exp_fifo_level--;
++		lpc31xx->rx += (lpc31xx->cur_chip->n_bytes);
++		lpc31xx->exp_fifo_level--;
+ 	}
+ 	/*
+ 	 * Write as much as possible up to the RX FIFO size
+ 	 */
+-	while ((pl022->exp_fifo_level < pl022->vendor->fifodepth)
+-	       && (pl022->tx < pl022->tx_end)) {
+-		switch (pl022->write) {
++	while ((lpc31xx->exp_fifo_level < lpc31xx->vendor->fifodepth)
++	       && (lpc31xx->tx < lpc31xx->tx_end)) {
++		switch (lpc31xx->write) {
+ 		case WRITING_NULL:
+-			writew(0x0, SSP_DR(pl022->virtbase));
++			writew(0x0, SSP_DR(lpc31xx->virtbase));
+ 			break;
+ 		case WRITING_U8:
+-			writew(*(u8 *) (pl022->tx), SSP_DR(pl022->virtbase));
++			writew(*(u8 *) (lpc31xx->tx), SSP_DR(lpc31xx->virtbase));
+ 			break;
+ 		case WRITING_U16:
+-			writew((*(u16 *) (pl022->tx)), SSP_DR(pl022->virtbase));
++			writew((*(u16 *) (lpc31xx->tx)), SSP_DR(lpc31xx->virtbase));
+ 			break;
+ 		case WRITING_U32:
+-			writel(*(u32 *) (pl022->tx), SSP_DR(pl022->virtbase));
++			writel(*(u32 *) (lpc31xx->tx), SSP_DR(lpc31xx->virtbase));
+ 			break;
+ 		}
+-		pl022->tx += (pl022->cur_chip->n_bytes);
+-		pl022->exp_fifo_level++;
++		lpc31xx->tx += (lpc31xx->cur_chip->n_bytes);
++		lpc31xx->exp_fifo_level++;
+ 		/*
+ 		 * This inner reader takes care of things appearing in the RX
+ 		 * FIFO as we're transmitting. This will happen a lot since the
+ 		 * clock starts running when you put things into the TX FIFO,
+ 		 * and then things are continuously clocked into the RX FIFO.
+ 		 */
+-		while ((readw(SSP_SR(pl022->virtbase)) & SSP_SR_MASK_RNE)
+-		       && (pl022->rx < pl022->rx_end)) {
+-			switch (pl022->read) {
++		while ((readw(SSP_SR(lpc31xx->virtbase)) & SSP_SR_MASK_RNE)
++		       && (lpc31xx->rx < lpc31xx->rx_end)) {
++			switch (lpc31xx->read) {
+ 			case READING_NULL:
+-				readw(SSP_DR(pl022->virtbase));
++				readw(SSP_DR(lpc31xx->virtbase));
+ 				break;
+ 			case READING_U8:
+-				*(u8 *) (pl022->rx) =
+-					readw(SSP_DR(pl022->virtbase)) & 0xFFU;
++				*(u8 *) (lpc31xx->rx) =
++					readw(SSP_DR(lpc31xx->virtbase)) & 0xFFU;
+ 				break;
+ 			case READING_U16:
+-				*(u16 *) (pl022->rx) =
+-					(u16) readw(SSP_DR(pl022->virtbase));
++				*(u16 *) (lpc31xx->rx) =
++					(u16) readw(SSP_DR(lpc31xx->virtbase));
+ 				break;
+ 			case READING_U32:
+-				*(u32 *) (pl022->rx) =
+-					readl(SSP_DR(pl022->virtbase));
++				*(u32 *) (lpc31xx->rx) =
++					readl(SSP_DR(lpc31xx->virtbase));
+ 				break;
+ 			}
+-			pl022->rx += (pl022->cur_chip->n_bytes);
+-			pl022->exp_fifo_level--;
++			lpc31xx->rx += (lpc31xx->cur_chip->n_bytes);
++			lpc31xx->exp_fifo_level--;
+ 		}
+ 	}
+ 	/*
+@@ -724,21 +511,21 @@ static void readwriter(struct pl022 *pl022)
+ 
+ /**
+  * next_transfer - Move to the Next transfer in the current spi message
+- * @pl022: SSP driver private data structure
++ * @lpc31xx: SSP driver private data structure
+  *
+  * This function moves though the linked list of spi transfers in the
+  * current spi message and returns with the state of current spi
+  * message i.e whether its last transfer is done(STATE_DONE) or
+  * Next transfer is ready(STATE_RUNNING)
+  */
+-static void *next_transfer(struct pl022 *pl022)
++static void *next_transfer(struct lpc31xx *lpc31xx)
+ {
+-	struct spi_message *msg = pl022->cur_msg;
+-	struct spi_transfer *trans = pl022->cur_transfer;
++	struct spi_message *msg = lpc31xx->cur_msg;
++	struct spi_transfer *trans = lpc31xx->cur_transfer;
+ 
+ 	/* Move to next transfer */
+ 	if (trans->transfer_list.next != &msg->transfers) {
+-		pl022->cur_transfer =
++		lpc31xx->cur_transfer =
+ 		    list_entry(trans->transfer_list.next,
+ 			       struct spi_transfer, transfer_list);
+ 		return STATE_RUNNING;
+@@ -750,24 +537,24 @@ static void *next_transfer(struct pl022 *pl022)
+  * This DMA functionality is only compiled in if we have
+  * access to the generic DMA devices/DMA engine.
+  */
+-#ifdef CONFIG_DMA_ENGINE
+-static void unmap_free_dma_scatter(struct pl022 *pl022)
++#ifdef CONFIG_DMA_ENGINE_X
++static void unmap_free_dma_scatter(struct lpc31xx *lpc31xx)
+ {
+ 	/* Unmap and free the SG tables */
+-	dma_unmap_sg(pl022->dma_tx_channel->device->dev, pl022->sgt_tx.sgl,
+-		     pl022->sgt_tx.nents, DMA_TO_DEVICE);
+-	dma_unmap_sg(pl022->dma_rx_channel->device->dev, pl022->sgt_rx.sgl,
+-		     pl022->sgt_rx.nents, DMA_FROM_DEVICE);
+-	sg_free_table(&pl022->sgt_rx);
+-	sg_free_table(&pl022->sgt_tx);
++	dma_unmap_sg(lpc31xx->dma_tx_channel->device->dev, lpc31xx->sgt_tx.sgl,
++		     lpc31xx->sgt_tx.nents, DMA_TO_DEVICE);
++	dma_unmap_sg(lpc31xx->dma_rx_channel->device->dev, lpc31xx->sgt_rx.sgl,
++		     lpc31xx->sgt_rx.nents, DMA_FROM_DEVICE);
++	sg_free_table(&lpc31xx->sgt_rx);
++	sg_free_table(&lpc31xx->sgt_tx);
+ }
+ 
+ static void dma_callback(void *data)
+ {
+-	struct pl022 *pl022 = data;
+-	struct spi_message *msg = pl022->cur_msg;
++	struct lpc31xx *lpc31xx = data;
++	struct spi_message *msg = lpc31xx->cur_msg;
+ 
+-	BUG_ON(!pl022->sgt_rx.sgl);
++	BUG_ON(!lpc31xx->sgt_rx.sgl);
+ 
+ #ifdef VERBOSE_DEBUG
+ 	/*
+@@ -780,13 +567,13 @@ static void dma_callback(void *data)
+ 		struct scatterlist *sg;
+ 		unsigned int i;
+ 
+-		dma_sync_sg_for_cpu(&pl022->adev->dev,
+-				    pl022->sgt_rx.sgl,
+-				    pl022->sgt_rx.nents,
++		dma_sync_sg_for_cpu(&lpc31xx->pdev->dev,
++				    lpc31xx->sgt_rx.sgl,
++				    lpc31xx->sgt_rx.nents,
+ 				    DMA_FROM_DEVICE);
+ 
+-		for_each_sg(pl022->sgt_rx.sgl, sg, pl022->sgt_rx.nents, i) {
+-			dev_dbg(&pl022->adev->dev, "SPI RX SG ENTRY: %d", i);
++		for_each_sg(lpc31xx->sgt_rx.sgl, sg, lpc31xx->sgt_rx.nents, i) {
++			dev_dbg(&lpc31xx->pdev->dev, "SPI RX SG ENTRY: %d", i);
+ 			print_hex_dump(KERN_ERR, "SPI RX: ",
+ 				       DUMP_PREFIX_OFFSET,
+ 				       16,
+@@ -795,8 +582,8 @@ static void dma_callback(void *data)
+ 				       sg_dma_len(sg),
+ 				       1);
+ 		}
+-		for_each_sg(pl022->sgt_tx.sgl, sg, pl022->sgt_tx.nents, i) {
+-			dev_dbg(&pl022->adev->dev, "SPI TX SG ENTRY: %d", i);
++		for_each_sg(lpc31xx->sgt_tx.sgl, sg, lpc31xx->sgt_tx.nents, i) {
++			dev_dbg(&lpc31xx->pdev->dev, "SPI TX SG ENTRY: %d", i);
+ 			print_hex_dump(KERN_ERR, "SPI TX: ",
+ 				       DUMP_PREFIX_OFFSET,
+ 				       16,
+@@ -808,20 +595,20 @@ static void dma_callback(void *data)
+ 	}
+ #endif
+ 
+-	unmap_free_dma_scatter(pl022);
++	unmap_free_dma_scatter(lpc31xx);
+ 
+ 	/* Update total bytes transferred */
+-	msg->actual_length += pl022->cur_transfer->len;
+-	if (pl022->cur_transfer->cs_change)
+-		pl022->cur_chip->
++	msg->actual_length += lpc31xx->cur_transfer->len;
++	if (lpc31xx->cur_transfer->cs_change)
++		lpc31xx->cur_chip->
+ 			cs_control(SSP_CHIP_DESELECT);
+ 
+ 	/* Move to next transfer */
+-	msg->state = next_transfer(pl022);
+-	tasklet_schedule(&pl022->pump_transfers);
++	msg->state = next_transfer(lpc31xx);
++	tasklet_schedule(&lpc31xx->pump_transfers);
+ }
+ 
+-static void setup_dma_scatter(struct pl022 *pl022,
++static void setup_dma_scatter(struct lpc31xx *lpc31xx,
+ 			      void *buffer,
+ 			      unsigned int length,
+ 			      struct sg_table *sgtab)
+@@ -848,7 +635,7 @@ static void setup_dma_scatter(struct pl022 *pl022,
+ 				    mapbytes, offset_in_page(bufp));
+ 			bufp += mapbytes;
+ 			bytesleft -= mapbytes;
+-			dev_dbg(&pl022->adev->dev,
++			dev_dbg(&lpc31xx->pdev->dev,
+ 				"set RX/TX target page @ %p, %d bytes, %d left\n",
+ 				bufp, mapbytes, bytesleft);
+ 		}
+@@ -859,10 +646,10 @@ static void setup_dma_scatter(struct pl022 *pl022,
+ 				mapbytes = bytesleft;
+ 			else
+ 				mapbytes = PAGE_SIZE;
+-			sg_set_page(sg, virt_to_page(pl022->dummypage),
++			sg_set_page(sg, virt_to_page(lpc31xx->dummypage),
+ 				    mapbytes, 0);
+ 			bytesleft -= mapbytes;
+-			dev_dbg(&pl022->adev->dev,
++			dev_dbg(&lpc31xx->pdev->dev,
+ 				"set RX/TX to dummy page %d bytes, %d left\n",
+ 				mapbytes, bytesleft);
+ 
+@@ -873,25 +660,25 @@ static void setup_dma_scatter(struct pl022 *pl022,
+ 
+ /**
+  * configure_dma - configures the channels for the next transfer
+- * @pl022: SSP driver's private data structure
++ * @lpc31xx: SSP driver's private data structure
+  */
+-static int configure_dma(struct pl022 *pl022)
++static int configure_dma(struct lpc31xx *lpc31xx)
+ {
+ 	struct dma_slave_config rx_conf = {
+-		.src_addr = SSP_DR(pl022->phybase),
++		.src_addr = SSP_DR(lpc31xx->phybase),
+ 		.direction = DMA_DEV_TO_MEM,
+ 		.device_fc = false,
+ 	};
+ 	struct dma_slave_config tx_conf = {
+-		.dst_addr = SSP_DR(pl022->phybase),
++		.dst_addr = SSP_DR(lpc31xx->phybase),
+ 		.direction = DMA_MEM_TO_DEV,
+ 		.device_fc = false,
+ 	};
+ 	unsigned int pages;
+ 	int ret;
+ 	int rx_sglen, tx_sglen;
+-	struct dma_chan *rxchan = pl022->dma_rx_channel;
+-	struct dma_chan *txchan = pl022->dma_tx_channel;
++	struct dma_chan *rxchan = lpc31xx->dma_rx_channel;
++	struct dma_chan *txchan = lpc31xx->dma_tx_channel;
+ 	struct dma_async_tx_descriptor *rxdesc;
+ 	struct dma_async_tx_descriptor *txdesc;
+ 
+@@ -905,7 +692,7 @@ static int configure_dma(struct pl022 *pl022)
+ 	 * not trigger on 2 elements this needs explicit mapping rather than
+ 	 * calculation.
+ 	 */
+-	switch (pl022->rx_lev_trig) {
++	switch (lpc31xx->rx_lev_trig) {
+ 	case SSP_RX_1_OR_MORE_ELEM:
+ 		rx_conf.src_maxburst = 1;
+ 		break;
+@@ -922,11 +709,11 @@ static int configure_dma(struct pl022 *pl022)
+ 		rx_conf.src_maxburst = 32;
+ 		break;
+ 	default:
+-		rx_conf.src_maxburst = pl022->vendor->fifodepth >> 1;
++		rx_conf.src_maxburst = lpc31xx->vendor->fifodepth >> 1;
+ 		break;
+ 	}
+ 
+-	switch (pl022->tx_lev_trig) {
++	switch (lpc31xx->tx_lev_trig) {
+ 	case SSP_TX_1_OR_MORE_EMPTY_LOC:
+ 		tx_conf.dst_maxburst = 1;
+ 		break;
+@@ -943,11 +730,11 @@ static int configure_dma(struct pl022 *pl022)
+ 		tx_conf.dst_maxburst = 32;
+ 		break;
+ 	default:
+-		tx_conf.dst_maxburst = pl022->vendor->fifodepth >> 1;
++		tx_conf.dst_maxburst = lpc31xx->vendor->fifodepth >> 1;
+ 		break;
+ 	}
+ 
+-	switch (pl022->read) {
++	switch (lpc31xx->read) {
+ 	case READING_NULL:
+ 		/* Use the same as for writing */
+ 		rx_conf.src_addr_width = DMA_SLAVE_BUSWIDTH_UNDEFINED;
+@@ -963,7 +750,7 @@ static int configure_dma(struct pl022 *pl022)
+ 		break;
+ 	}
+ 
+-	switch (pl022->write) {
++	switch (lpc31xx->write) {
+ 	case WRITING_NULL:
+ 		/* Use the same as for reading */
+ 		tx_conf.dst_addr_width = DMA_SLAVE_BUSWIDTH_UNDEFINED;
+@@ -990,37 +777,37 @@ static int configure_dma(struct pl022 *pl022)
+ 	dmaengine_slave_config(txchan, &tx_conf);
+ 
+ 	/* Create sglists for the transfers */
+-	pages = DIV_ROUND_UP(pl022->cur_transfer->len, PAGE_SIZE);
+-	dev_dbg(&pl022->adev->dev, "using %d pages for transfer\n", pages);
++	pages = DIV_ROUND_UP(lpc31xx->cur_transfer->len, PAGE_SIZE);
++	dev_dbg(&lpc31xx->pdev->dev, "using %d pages for transfer\n", pages);
+ 
+-	ret = sg_alloc_table(&pl022->sgt_rx, pages, GFP_ATOMIC);
++	ret = sg_alloc_table(&lpc31xx->sgt_rx, pages, GFP_ATOMIC);
+ 	if (ret)
+ 		goto err_alloc_rx_sg;
+ 
+-	ret = sg_alloc_table(&pl022->sgt_tx, pages, GFP_ATOMIC);
++	ret = sg_alloc_table(&lpc31xx->sgt_tx, pages, GFP_ATOMIC);
+ 	if (ret)
+ 		goto err_alloc_tx_sg;
+ 
+ 	/* Fill in the scatterlists for the RX+TX buffers */
+-	setup_dma_scatter(pl022, pl022->rx,
+-			  pl022->cur_transfer->len, &pl022->sgt_rx);
+-	setup_dma_scatter(pl022, pl022->tx,
+-			  pl022->cur_transfer->len, &pl022->sgt_tx);
++	setup_dma_scatter(lpc31xx, lpc31xx->rx,
++			  lpc31xx->cur_transfer->len, &lpc31xx->sgt_rx);
++	setup_dma_scatter(lpc31xx, lpc31xx->tx,
++			  lpc31xx->cur_transfer->len, &lpc31xx->sgt_tx);
+ 
+ 	/* Map DMA buffers */
+-	rx_sglen = dma_map_sg(rxchan->device->dev, pl022->sgt_rx.sgl,
+-			   pl022->sgt_rx.nents, DMA_FROM_DEVICE);
++	rx_sglen = dma_map_sg(rxchan->device->dev, lpc31xx->sgt_rx.sgl,
++			   lpc31xx->sgt_rx.nents, DMA_FROM_DEVICE);
+ 	if (!rx_sglen)
+ 		goto err_rx_sgmap;
+ 
+-	tx_sglen = dma_map_sg(txchan->device->dev, pl022->sgt_tx.sgl,
+-			   pl022->sgt_tx.nents, DMA_TO_DEVICE);
++	tx_sglen = dma_map_sg(txchan->device->dev, lpc31xx->sgt_tx.sgl,
++			   lpc31xx->sgt_tx.nents, DMA_TO_DEVICE);
+ 	if (!tx_sglen)
+ 		goto err_tx_sgmap;
+ 
+-	/* Send both scatterlists */
++	/* Send both scatter lists */
+ 	rxdesc = dmaengine_prep_slave_sg(rxchan,
+-				      pl022->sgt_rx.sgl,
++				      lpc31xx->sgt_rx.sgl,
+ 				      rx_sglen,
+ 				      DMA_DEV_TO_MEM,
+ 				      DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+@@ -1028,7 +815,7 @@ static int configure_dma(struct pl022 *pl022)
+ 		goto err_rxdesc;
+ 
+ 	txdesc = dmaengine_prep_slave_sg(txchan,
+-				      pl022->sgt_tx.sgl,
++				      lpc31xx->sgt_tx.sgl,
+ 				      tx_sglen,
+ 				      DMA_MEM_TO_DEV,
+ 				      DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
+@@ -1037,14 +824,14 @@ static int configure_dma(struct pl022 *pl022)
+ 
+ 	/* Put the callback on the RX transfer only, that should finish last */
+ 	rxdesc->callback = dma_callback;
+-	rxdesc->callback_param = pl022;
++	rxdesc->callback_param = lpc31xx;
+ 
+ 	/* Submit and fire RX and TX with TX last so we're ready to read! */
+ 	dmaengine_submit(rxdesc);
+ 	dmaengine_submit(txdesc);
+ 	dma_async_issue_pending(rxchan);
+ 	dma_async_issue_pending(txchan);
+-	pl022->dma_running = true;
++	lpc31xx->dma_running = true;
+ 
+ 	return 0;
+ 
+@@ -1052,20 +839,20 @@ err_txdesc:
+ 	dmaengine_terminate_all(txchan);
+ err_rxdesc:
+ 	dmaengine_terminate_all(rxchan);
+-	dma_unmap_sg(txchan->device->dev, pl022->sgt_tx.sgl,
+-		     pl022->sgt_tx.nents, DMA_TO_DEVICE);
++	dma_unmap_sg(txchan->device->dev, lpc31xx->sgt_tx.sgl,
++		     lpc31xx->sgt_tx.nents, DMA_TO_DEVICE);
+ err_tx_sgmap:
+-	dma_unmap_sg(rxchan->device->dev, pl022->sgt_rx.sgl,
+-		     pl022->sgt_tx.nents, DMA_FROM_DEVICE);
++	dma_unmap_sg(rxchan->device->dev, lpc31xx->sgt_rx.sgl,
++		     lpc31xx->sgt_tx.nents, DMA_FROM_DEVICE);
+ err_rx_sgmap:
+-	sg_free_table(&pl022->sgt_tx);
++	sg_free_table(&lpc31xx->sgt_tx);
+ err_alloc_tx_sg:
+-	sg_free_table(&pl022->sgt_rx);
++	sg_free_table(&lpc31xx->sgt_rx);
+ err_alloc_rx_sg:
+ 	return -ENOMEM;
+ }
+ 
+-static int __devinit pl022_dma_probe(struct pl022 *pl022)
++static int __devinit lpc31xx_dma_probe(struct lpc31xx *lpc31xx)
+ {
+ 	dma_cap_mask_t mask;
+ 
+@@ -1076,110 +863,110 @@ static int __devinit pl022_dma_probe(struct pl022 *pl022)
+ 	 * We need both RX and TX channels to do DMA, else do none
+ 	 * of them.
+ 	 */
+-	pl022->dma_rx_channel = dma_request_channel(mask,
+-					    pl022->master_info->dma_filter,
+-					    pl022->master_info->dma_rx_param);
+-	if (!pl022->dma_rx_channel) {
+-		dev_dbg(&pl022->adev->dev, "no RX DMA channel!\n");
++	lpc31xx->dma_rx_channel = dma_request_channel(mask,
++					    lpc31xx->master_info->dma_filter,
++					    lpc31xx->master_info->dma_rx_param);
++	if (!lpc31xx->dma_rx_channel) {
++		dev_dbg(&lpc31xx->pdev->dev, "no RX DMA channel!\n");
+ 		goto err_no_rxchan;
+ 	}
+ 
+-	pl022->dma_tx_channel = dma_request_channel(mask,
+-					    pl022->master_info->dma_filter,
+-					    pl022->master_info->dma_tx_param);
+-	if (!pl022->dma_tx_channel) {
+-		dev_dbg(&pl022->adev->dev, "no TX DMA channel!\n");
++	lpc31xx->dma_tx_channel = dma_request_channel(mask,
++					    lpc31xx->master_info->dma_filter,
++					    lpc31xx->master_info->dma_tx_param);
++	if (!lpc31xx->dma_tx_channel) {
++		dev_dbg(&lpc31xx->pdev->dev, "no TX DMA channel!\n");
+ 		goto err_no_txchan;
+ 	}
+ 
+-	pl022->dummypage = kmalloc(PAGE_SIZE, GFP_KERNEL);
+-	if (!pl022->dummypage) {
+-		dev_dbg(&pl022->adev->dev, "no DMA dummypage!\n");
++	lpc31xx->dummypage = kmalloc(PAGE_SIZE, GFP_KERNEL);
++	if (!lpc31xx->dummypage) {
++		dev_dbg(&lpc31xx->pdev->dev, "no DMA dummypage!\n");
+ 		goto err_no_dummypage;
+ 	}
+ 
+-	dev_info(&pl022->adev->dev, "setup for DMA on RX %s, TX %s\n",
+-		 dma_chan_name(pl022->dma_rx_channel),
+-		 dma_chan_name(pl022->dma_tx_channel));
++	dev_info(&lpc31xx->pdev->dev, "setup for DMA on RX %s, TX %s\n",
++		 dma_chan_name(lpc31xx->dma_rx_channel),
++		 dma_chan_name(lpc31xx->dma_tx_channel));
+ 
+ 	return 0;
+ 
+ err_no_dummypage:
+-	dma_release_channel(pl022->dma_tx_channel);
++	dma_release_channel(lpc31xx->dma_tx_channel);
+ err_no_txchan:
+-	dma_release_channel(pl022->dma_rx_channel);
+-	pl022->dma_rx_channel = NULL;
++	dma_release_channel(lpc31xx->dma_rx_channel);
++	lpc31xx->dma_rx_channel = NULL;
+ err_no_rxchan:
+-	dev_err(&pl022->adev->dev,
++	dev_err(&lpc31xx->pdev->dev,
+ 			"Failed to work in dma mode, work without dma!\n");
+ 	return -ENODEV;
+ }
+ 
+-static void terminate_dma(struct pl022 *pl022)
++static void terminate_dma(struct lpc31xx *lpc31xx)
+ {
+-	struct dma_chan *rxchan = pl022->dma_rx_channel;
+-	struct dma_chan *txchan = pl022->dma_tx_channel;
++	struct dma_chan *rxchan = lpc31xx->dma_rx_channel;
++	struct dma_chan *txchan = lpc31xx->dma_tx_channel;
+ 
+ 	dmaengine_terminate_all(rxchan);
+ 	dmaengine_terminate_all(txchan);
+-	unmap_free_dma_scatter(pl022);
+-	pl022->dma_running = false;
++	unmap_free_dma_scatter(lpc31xx);
++	lpc31xx->dma_running = false;
+ }
+ 
+-static void pl022_dma_remove(struct pl022 *pl022)
++static void lpc31xx_dma_remove(struct lpc31xx *lpc31xx)
+ {
+-	if (pl022->dma_running)
+-		terminate_dma(pl022);
+-	if (pl022->dma_tx_channel)
+-		dma_release_channel(pl022->dma_tx_channel);
+-	if (pl022->dma_rx_channel)
+-		dma_release_channel(pl022->dma_rx_channel);
+-	kfree(pl022->dummypage);
++	if (lpc31xx->dma_running)
++		terminate_dma(lpc31xx);
++	if (lpc31xx->dma_tx_channel)
++		dma_release_channel(lpc31xx->dma_tx_channel);
++	if (lpc31xx->dma_rx_channel)
++		dma_release_channel(lpc31xx->dma_rx_channel);
++	kfree(lpc31xx->dummypage);
+ }
+ 
+ #else
+-static inline int configure_dma(struct pl022 *pl022)
++static inline int configure_dma(struct lpc31xx *lpc31xx)
+ {
+ 	return -ENODEV;
+ }
+ 
+-static inline int pl022_dma_probe(struct pl022 *pl022)
++static inline int lpc31xx_dma_probe(struct lpc31xx *lpc31xx)
+ {
+ 	return 0;
+ }
+ 
+-static inline void pl022_dma_remove(struct pl022 *pl022)
++static inline void lpc31xx_dma_remove(struct lpc31xx *lpc31xx)
+ {
+ }
+ #endif
+ 
+ /**
+- * pl022_interrupt_handler - Interrupt handler for SSP controller
++ * lpc31xx_interrupt_handler - Interrupt handler for SSP controller
+  *
+  * This function handles interrupts generated for an interrupt based transfer.
+  * If a receive overrun (ROR) interrupt is there then we disable SSP, flag the
+  * current message's state as STATE_ERROR and schedule the tasklet
+- * pump_transfers which will do the postprocessing of the current message by
++ * pump_transfers which will do the post processing of the current message by
+  * calling giveback(). Otherwise it reads data from RX FIFO till there is no
+  * more data, and writes data in TX FIFO till it is not full. If we complete
+  * the transfer we move to the next transfer and schedule the tasklet.
+  */
+-static irqreturn_t pl022_interrupt_handler(int irq, void *dev_id)
++static irqreturn_t lpc31xx_interrupt_handler(int irq, void *dev_id)
+ {
+-	struct pl022 *pl022 = dev_id;
+-	struct spi_message *msg = pl022->cur_msg;
++	struct lpc31xx *lpc31xx = dev_id;
++	struct spi_message *msg = lpc31xx->cur_msg;
+ 	u16 irq_status = 0;
+ 	u16 flag = 0;
+ 
+ 	if (unlikely(!msg)) {
+-		dev_err(&pl022->adev->dev,
++		dev_err(&lpc31xx->pdev->dev,
+ 			"bad message state in interrupt handler");
+ 		/* Never fail */
+ 		return IRQ_HANDLED;
+ 	}
+-
++#if JDS
+ 	/* Read the Interrupt Status Register */
+-	irq_status = readw(SSP_MIS(pl022->virtbase));
++	irq_status = readw(SSP_MIS(lpc31xx->virtbase));
+ 
+ 	if (unlikely(!irq_status))
+ 		return IRQ_NONE;
+@@ -1194,12 +981,12 @@ static irqreturn_t pl022_interrupt_handler(int irq, void *dev_id)
+ 		 * Overrun interrupt - bail out since our Data has been
+ 		 * corrupted
+ 		 */
+-		dev_err(&pl022->adev->dev, "FIFO overrun\n");
+-		if (readw(SSP_SR(pl022->virtbase)) & SSP_SR_MASK_RFF)
+-			dev_err(&pl022->adev->dev,
++		dev_err(&lpc31xx->pdev->dev, "FIFO overrun\n");
++		if (readw(SSP_SR(lpc31xx->virtbase)) & SSP_SR_MASK_RFF)
++			dev_err(&lpc31xx->pdev->dev,
+ 				"RXFIFO is full\n");
+-		if (readw(SSP_SR(pl022->virtbase)) & SSP_SR_MASK_TNF)
+-			dev_err(&pl022->adev->dev,
++		if (readw(SSP_SR(lpc31xx->virtbase)) & SSP_SR_MASK_TNF)
++			dev_err(&lpc31xx->pdev->dev,
+ 				"TXFIFO is full\n");
+ 
+ 		/*
+@@ -1208,25 +995,25 @@ static irqreturn_t pl022_interrupt_handler(int irq, void *dev_id)
+ 		 * retried.
+ 		 */
+ 		writew(DISABLE_ALL_INTERRUPTS,
+-		       SSP_IMSC(pl022->virtbase));
+-		writew(CLEAR_ALL_INTERRUPTS, SSP_ICR(pl022->virtbase));
+-		writew((readw(SSP_CR1(pl022->virtbase)) &
+-			(~SSP_CR1_MASK_SSE)), SSP_CR1(pl022->virtbase));
++		       SSP_IMSC(lpc31xx->virtbase));
++		writew(CLEAR_ALL_INTERRUPTS, SSP_ICR(lpc31xx->virtbase));
++		writew((readw(SSP_CR1(lpc31xx->virtbase)) &
++			(~SSP_CR1_MASK_SSE)), SSP_CR1(lpc31xx->virtbase));
+ 		msg->state = STATE_ERROR;
+ 
+ 		/* Schedule message queue handler */
+-		tasklet_schedule(&pl022->pump_transfers);
++		tasklet_schedule(&lpc31xx->pump_transfers);
+ 		return IRQ_HANDLED;
+ 	}
+ 
+-	readwriter(pl022);
++	readwriter(lpc31xx);
+ 
+-	if ((pl022->tx == pl022->tx_end) && (flag == 0)) {
++	if ((lpc31xx->tx == lpc31xx->tx_end) && (flag == 0)) {
+ 		flag = 1;
+ 		/* Disable Transmit interrupt, enable receive interrupt */
+-		writew((readw(SSP_IMSC(pl022->virtbase)) &
++		writew((readw(SSP_IMSC(lpc31xx->virtbase)) &
+ 		       ~SSP_IMSC_MASK_TXIM) | SSP_IMSC_MASK_RXIM,
+-		       SSP_IMSC(pl022->virtbase));
++		       SSP_IMSC(lpc31xx->virtbase));
+ 	}
+ 
+ 	/*
+@@ -1234,27 +1021,27 @@ static irqreturn_t pl022_interrupt_handler(int irq, void *dev_id)
+ 	 * we can conclude the entire transaction once RX is complete.
+ 	 * At this point, all TX will always be finished.
+ 	 */
+-	if (pl022->rx >= pl022->rx_end) {
++	if (lpc31xx->rx >= lpc31xx->rx_end) {
+ 		writew(DISABLE_ALL_INTERRUPTS,
+-		       SSP_IMSC(pl022->virtbase));
+-		writew(CLEAR_ALL_INTERRUPTS, SSP_ICR(pl022->virtbase));
+-		if (unlikely(pl022->rx > pl022->rx_end)) {
+-			dev_warn(&pl022->adev->dev, "read %u surplus "
++		       SSP_IMSC(lpc31xx->virtbase));
++		writew(CLEAR_ALL_INTERRUPTS, SSP_ICR(lpc31xx->virtbase));
++		if (unlikely(lpc31xx->rx > lpc31xx->rx_end)) {
++			dev_warn(&lpc31xx->pdev->dev, "read %u surplus "
+ 				 "bytes (did you request an odd "
+ 				 "number of bytes on a 16bit bus?)\n",
+-				 (u32) (pl022->rx - pl022->rx_end));
++				 (u32) (lpc31xx->rx - lpc31xx->rx_end));
+ 		}
+ 		/* Update total bytes transferred */
+-		msg->actual_length += pl022->cur_transfer->len;
+-		if (pl022->cur_transfer->cs_change)
+-			pl022->cur_chip->
++		msg->actual_length += lpc31xx->cur_transfer->len;
++		if (lpc31xx->cur_transfer->cs_change)
++			lpc31xx->cur_chip->
+ 				cs_control(SSP_CHIP_DESELECT);
+ 		/* Move to next transfer */
+-		msg->state = next_transfer(pl022);
+-		tasklet_schedule(&pl022->pump_transfers);
++		msg->state = next_transfer(lpc31xx);
++		tasklet_schedule(&lpc31xx->pump_transfers);
+ 		return IRQ_HANDLED;
+ 	}
+-
++#endif
+ 	return IRQ_HANDLED;
+ }
+ 
+@@ -1262,29 +1049,29 @@ static irqreturn_t pl022_interrupt_handler(int irq, void *dev_id)
+  * This sets up the pointers to memory for the next message to
+  * send out on the SPI bus.
+  */
+-static int set_up_next_transfer(struct pl022 *pl022,
++static int set_up_next_transfer(struct lpc31xx *lpc31xx,
+ 				struct spi_transfer *transfer)
+ {
+ 	int residue;
+ 
+ 	/* Sanity check the message for this bus width */
+-	residue = pl022->cur_transfer->len % pl022->cur_chip->n_bytes;
++	residue = lpc31xx->cur_transfer->len % lpc31xx->cur_chip->n_bytes;
+ 	if (unlikely(residue != 0)) {
+-		dev_err(&pl022->adev->dev,
++		dev_err(&lpc31xx->pdev->dev,
+ 			"message of %u bytes to transmit but the current "
+ 			"chip bus has a data width of %u bytes!\n",
+-			pl022->cur_transfer->len,
+-			pl022->cur_chip->n_bytes);
+-		dev_err(&pl022->adev->dev, "skipping this message\n");
++			lpc31xx->cur_transfer->len,
++			lpc31xx->cur_chip->n_bytes);
++		dev_err(&lpc31xx->pdev->dev, "skipping this message\n");
+ 		return -EIO;
+ 	}
+-	pl022->tx = (void *)transfer->tx_buf;
+-	pl022->tx_end = pl022->tx + pl022->cur_transfer->len;
+-	pl022->rx = (void *)transfer->rx_buf;
+-	pl022->rx_end = pl022->rx + pl022->cur_transfer->len;
+-	pl022->write =
+-	    pl022->tx ? pl022->cur_chip->write : WRITING_NULL;
+-	pl022->read = pl022->rx ? pl022->cur_chip->read : READING_NULL;
++	lpc31xx->tx = (void *)transfer->tx_buf;
++	lpc31xx->tx_end = lpc31xx->tx + lpc31xx->cur_transfer->len;
++	lpc31xx->rx = (void *)transfer->rx_buf;
++	lpc31xx->rx_end = lpc31xx->rx + lpc31xx->cur_transfer->len;
++	lpc31xx->write =
++	    lpc31xx->tx ? lpc31xx->cur_chip->write : WRITING_NULL;
++	lpc31xx->read = lpc31xx->rx ? lpc31xx->cur_chip->read : READING_NULL;
+ 	return 0;
+ }
+ 
+@@ -1296,26 +1083,26 @@ static int set_up_next_transfer(struct pl022 *pl022,
+  */
+ static void pump_transfers(unsigned long data)
+ {
+-	struct pl022 *pl022 = (struct pl022 *) data;
++	struct lpc31xx *lpc31xx = (struct lpc31xx *) data;
+ 	struct spi_message *message = NULL;
+ 	struct spi_transfer *transfer = NULL;
+ 	struct spi_transfer *previous = NULL;
+ 
+ 	/* Get current state information */
+-	message = pl022->cur_msg;
+-	transfer = pl022->cur_transfer;
++	message = lpc31xx->cur_msg;
++	transfer = lpc31xx->cur_transfer;
+ 
+ 	/* Handle for abort */
+ 	if (message->state == STATE_ERROR) {
+ 		message->status = -EIO;
+-		giveback(pl022);
++		giveback(lpc31xx);
+ 		return;
+ 	}
+ 
+ 	/* Handle end of message */
+ 	if (message->state == STATE_DONE) {
+ 		message->status = 0;
+-		giveback(pl022);
++		giveback(lpc31xx);
+ 		return;
+ 	}
+ 
+@@ -1333,24 +1120,24 @@ static void pump_transfers(unsigned long data)
+ 
+ 		/* Reselect chip select only if cs_change was requested */
+ 		if (previous->cs_change)
+-			pl022->cur_chip->cs_control(SSP_CHIP_SELECT);
++			lpc31xx->cur_chip->cs_control(SSP_CHIP_SELECT);
+ 	} else {
+ 		/* STATE_START */
+ 		message->state = STATE_RUNNING;
+ 	}
+ 
+-	if (set_up_next_transfer(pl022, transfer)) {
++	if (set_up_next_transfer(lpc31xx, transfer)) {
+ 		message->state = STATE_ERROR;
+ 		message->status = -EIO;
+-		giveback(pl022);
++		giveback(lpc31xx);
+ 		return;
+ 	}
+ 	/* Flush the FIFOs and let's go! */
+-	flush(pl022);
++	flush(lpc31xx);
+ 
+-	if (pl022->cur_chip->enable_dma) {
+-		if (configure_dma(pl022)) {
+-			dev_dbg(&pl022->adev->dev,
++	if (lpc31xx->cur_chip->enable_dma) {
++		if (configure_dma(lpc31xx)) {
++			dev_dbg(&lpc31xx->pdev->dev,
+ 				"configuration of DMA failed, fall back to interrupt mode\n");
+ 			goto err_config_dma;
+ 		}
+@@ -1359,11 +1146,12 @@ static void pump_transfers(unsigned long data)
+ 
+ err_config_dma:
+ 	/* enable all interrupts except RX */
+-	writew(ENABLE_ALL_INTERRUPTS & ~SSP_IMSC_MASK_RXIM, SSP_IMSC(pl022->virtbase));
++	writew(ENABLE_ALL_INTERRUPTS & ~SSP_IMSC_MASK_RXIM, SSP_IMSC(lpc31xx->virtbase));
+ }
+ 
+-static void do_interrupt_dma_transfer(struct pl022 *pl022)
++static void do_interrupt_dma_transfer(struct lpc31xx *lpc31xx)
+ {
++#if JDS
+ 	/*
+ 	 * Default is to enable all interrupts except RX -
+ 	 * this will be enabled once TX is complete
+@@ -1371,21 +1159,21 @@ static void do_interrupt_dma_transfer(struct pl022 *pl022)
+ 	u32 irqflags = ENABLE_ALL_INTERRUPTS & ~SSP_IMSC_MASK_RXIM;
+ 
+ 	/* Enable target chip, if not already active */
+-	if (!pl022->next_msg_cs_active)
+-		pl022->cur_chip->cs_control(SSP_CHIP_SELECT);
++	if (!lpc31xx->next_msg_cs_active)
++		lpc31xx->cur_chip->cs_control(SSP_CHIP_SELECT);
+ 
+-	if (set_up_next_transfer(pl022, pl022->cur_transfer)) {
++	if (set_up_next_transfer(lpc31xx, lpc31xx->cur_transfer)) {
+ 		/* Error path */
+-		pl022->cur_msg->state = STATE_ERROR;
+-		pl022->cur_msg->status = -EIO;
+-		giveback(pl022);
++		lpc31xx->cur_msg->state = STATE_ERROR;
++		lpc31xx->cur_msg->status = -EIO;
++		giveback(lpc31xx);
+ 		return;
+ 	}
+ 	/* If we're using DMA, set up DMA here */
+-	if (pl022->cur_chip->enable_dma) {
++	if (lpc31xx->cur_chip->enable_dma) {
+ 		/* Configure DMA transfer */
+-		if (configure_dma(pl022)) {
+-			dev_dbg(&pl022->adev->dev,
++		if (configure_dma(lpc31xx)) {
++			dev_dbg(&lpc31xx->pdev->dev,
+ 				"configuration of DMA failed, fall back to interrupt mode\n");
+ 			goto err_config_dma;
+ 		}
+@@ -1394,12 +1182,13 @@ static void do_interrupt_dma_transfer(struct pl022 *pl022)
+ 	}
+ err_config_dma:
+ 	/* Enable SSP, turn on interrupts */
+-	writew((readw(SSP_CR1(pl022->virtbase)) | SSP_CR1_MASK_SSE),
+-	       SSP_CR1(pl022->virtbase));
+-	writew(irqflags, SSP_IMSC(pl022->virtbase));
++	writew((readw(SSP_CR1(lpc31xx->virtbase)) | SSP_CR1_MASK_SSE),
++	       SSP_CR1(lpc31xx->virtbase));
++	writew(irqflags, SSP_IMSC(lpc31xx->virtbase));
++#endif
+ }
+ 
+-static void do_polling_transfer(struct pl022 *pl022)
++static void do_polling_transfer(struct lpc31xx *lpc31xx)
+ {
+ 	struct spi_message *message = NULL;
+ 	struct spi_transfer *transfer = NULL;
+@@ -1407,14 +1196,14 @@ static void do_polling_transfer(struct pl022 *pl022)
+ 	struct chip_data *chip;
+ 	unsigned long time, timeout;
+ 
+-	chip = pl022->cur_chip;
+-	message = pl022->cur_msg;
++	chip = lpc31xx->cur_chip;
++	message = lpc31xx->cur_msg;
+ 
+ 	while (message->state != STATE_DONE) {
+ 		/* Handle for abort */
+ 		if (message->state == STATE_ERROR)
+ 			break;
+-		transfer = pl022->cur_transfer;
++		transfer = lpc31xx->cur_transfer;
+ 
+ 		/* Delay if requested at end of transfer */
+ 		if (message->state == STATE_RUNNING) {
+@@ -1424,33 +1213,33 @@ static void do_polling_transfer(struct pl022 *pl022)
+ 			if (previous->delay_usecs)
+ 				udelay(previous->delay_usecs);
+ 			if (previous->cs_change)
+-				pl022->cur_chip->cs_control(SSP_CHIP_SELECT);
++				lpc31xx->cur_chip->cs_control(SSP_CHIP_SELECT);
+ 		} else {
+ 			/* STATE_START */
+ 			message->state = STATE_RUNNING;
+-			if (!pl022->next_msg_cs_active)
+-				pl022->cur_chip->cs_control(SSP_CHIP_SELECT);
++			if (!lpc31xx->next_msg_cs_active)
++				lpc31xx->cur_chip->cs_control(SSP_CHIP_SELECT);
+ 		}
+ 
+ 		/* Configuration Changing Per Transfer */
+-		if (set_up_next_transfer(pl022, transfer)) {
++		if (set_up_next_transfer(lpc31xx, transfer)) {
+ 			/* Error path */
+ 			message->state = STATE_ERROR;
+ 			break;
+ 		}
+ 		/* Flush FIFOs and enable SSP */
+-		flush(pl022);
+-		writew((readw(SSP_CR1(pl022->virtbase)) | SSP_CR1_MASK_SSE),
+-		       SSP_CR1(pl022->virtbase));
++		flush(lpc31xx);
++		writew((readw(SSP_CR1(lpc31xx->virtbase)) | SSP_CR1_MASK_SSE),
++		       SSP_CR1(lpc31xx->virtbase));
+ 
+-		dev_dbg(&pl022->adev->dev, "polling transfer ongoing ...\n");
++		dev_dbg(&lpc31xx->pdev->dev, "polling transfer ongoing ...\n");
+ 
+ 		timeout = jiffies + msecs_to_jiffies(SPI_POLLING_TIMEOUT);
+-		while (pl022->tx < pl022->tx_end || pl022->rx < pl022->rx_end) {
++		while (lpc31xx->tx < lpc31xx->tx_end || lpc31xx->rx < lpc31xx->rx_end) {
+ 			time = jiffies;
+-			readwriter(pl022);
++			readwriter(lpc31xx);
+ 			if (time_after(time, timeout)) {
+-				dev_warn(&pl022->adev->dev,
++				dev_warn(&lpc31xx->pdev->dev,
+ 				"%s: timeout!\n", __func__);
+ 				message->state = STATE_ERROR;
+ 				goto out;
+@@ -1459,11 +1248,11 @@ static void do_polling_transfer(struct pl022 *pl022)
+ 		}
+ 
+ 		/* Update total byte transferred */
+-		message->actual_length += pl022->cur_transfer->len;
+-		if (pl022->cur_transfer->cs_change)
+-			pl022->cur_chip->cs_control(SSP_CHIP_DESELECT);
++		message->actual_length += lpc31xx->cur_transfer->len;
++		if (lpc31xx->cur_transfer->cs_change)
++			lpc31xx->cur_chip->cs_control(SSP_CHIP_DESELECT);
+ 		/* Move to next transfer */
+-		message->state = next_transfer(pl022);
++		message->state = next_transfer(lpc31xx);
+ 	}
+ out:
+ 	/* Handle end of message */
+@@ -1472,92 +1261,93 @@ out:
+ 	else
+ 		message->status = -EIO;
+ 
+-	giveback(pl022);
++	giveback(lpc31xx);
+ 	return;
+ }
+ 
+-static int pl022_transfer_one_message(struct spi_master *master,
++static int lpc31xx_transfer_one_message(struct spi_master *master,
+ 				      struct spi_message *msg)
+ {
+-	struct pl022 *pl022 = spi_master_get_devdata(master);
++	struct lpc31xx *lpc31xx = spi_master_get_devdata(master);
+ 
+ 	/* Initial message state */
+-	pl022->cur_msg = msg;
++	lpc31xx->cur_msg = msg;
+ 	msg->state = STATE_START;
+ 
+-	pl022->cur_transfer = list_entry(msg->transfers.next,
++	lpc31xx->cur_transfer = list_entry(msg->transfers.next,
+ 					 struct spi_transfer, transfer_list);
+ 
+ 	/* Setup the SPI using the per chip configuration */
+-	pl022->cur_chip = spi_get_ctldata(msg->spi);
++	lpc31xx->cur_chip = spi_get_ctldata(msg->spi);
+ 
+-	restore_state(pl022);
+-	flush(pl022);
++	restore_state(lpc31xx);
++	flush(lpc31xx);
+ 
+-	if (pl022->cur_chip->xfer_type == POLLING_TRANSFER)
+-		do_polling_transfer(pl022);
++	if (lpc31xx->cur_chip->xfer_type == POLLING_TRANSFER)
++		do_polling_transfer(lpc31xx);
+ 	else
+-		do_interrupt_dma_transfer(pl022);
++		do_interrupt_dma_transfer(lpc31xx);
+ 
+ 	return 0;
+ }
+ 
+-static int pl022_prepare_transfer_hardware(struct spi_master *master)
++static int lpc31xx_prepare_transfer_hardware(struct spi_master *master)
+ {
+-	struct pl022 *pl022 = spi_master_get_devdata(master);
++	struct lpc31xx *lpc31xx = spi_master_get_devdata(master);
+ 
+ 	/*
+ 	 * Just make sure we have all we need to run the transfer by syncing
+ 	 * with the runtime PM framework.
+ 	 */
+-	pm_runtime_get_sync(&pl022->adev->dev);
++	pm_runtime_get_sync(&lpc31xx->pdev->dev);
+ 	return 0;
+ }
+ 
+-static int pl022_unprepare_transfer_hardware(struct spi_master *master)
++static int lpc31xx_unprepare_transfer_hardware(struct spi_master *master)
+ {
+-	struct pl022 *pl022 = spi_master_get_devdata(master);
++	struct lpc31xx *lpc31xx = spi_master_get_devdata(master);
+ 
+-	/* nothing more to do - disable spi/ssp and power off */
+-	writew((readw(SSP_CR1(pl022->virtbase)) &
+-		(~SSP_CR1_MASK_SSE)), SSP_CR1(pl022->virtbase));
++	/* nothing more to do - disable spi/spi and power off */
++	writew((readw(SSP_CR1(lpc31xx->virtbase)) &
++		(~SSP_CR1_MASK_SSE)), SSP_CR1(lpc31xx->virtbase));
+ 
+-	if (pl022->master_info->autosuspend_delay > 0) {
+-		pm_runtime_mark_last_busy(&pl022->adev->dev);
+-		pm_runtime_put_autosuspend(&pl022->adev->dev);
++	if (lpc31xx->master_info->autosuspend_delay > 0) {
++		pm_runtime_mark_last_busy(&lpc31xx->pdev->dev);
++		pm_runtime_put_autosuspend(&lpc31xx->pdev->dev);
+ 	} else {
+-		pm_runtime_put(&pl022->adev->dev);
++		pm_runtime_put(&lpc31xx->pdev->dev);
+ 	}
+ 
+ 	return 0;
+ }
+ 
+-static int verify_controller_parameters(struct pl022 *pl022,
+-				struct pl022_config_chip const *chip_info)
++static int verify_controller_parameters(struct lpc31xx *lpc31xx,
++				struct lpc31xx_config_chip const *chip_info)
+ {
++#if JDS
+ 	if ((chip_info->iface < SSP_INTERFACE_MOTOROLA_SPI)
+ 	    || (chip_info->iface > SSP_INTERFACE_UNIDIRECTIONAL)) {
+-		dev_err(&pl022->adev->dev,
++		dev_err(&lpc31xx->pdev->dev,
+ 			"interface is configured incorrectly\n");
+ 		return -EINVAL;
+ 	}
+ 	if ((chip_info->iface == SSP_INTERFACE_UNIDIRECTIONAL) &&
+-	    (!pl022->vendor->unidir)) {
+-		dev_err(&pl022->adev->dev,
++	    (!lpc31xx->vendor->unidir)) {
++		dev_err(&lpc31xx->pdev->dev,
+ 			"unidirectional mode not supported in this "
+ 			"hardware version\n");
+ 		return -EINVAL;
+ 	}
+ 	if ((chip_info->hierarchy != SSP_MASTER)
+ 	    && (chip_info->hierarchy != SSP_SLAVE)) {
+-		dev_err(&pl022->adev->dev,
++		dev_err(&lpc31xx->pdev->dev,
+ 			"hierarchy is configured incorrectly\n");
+ 		return -EINVAL;
+ 	}
+ 	if ((chip_info->com_mode != INTERRUPT_TRANSFER)
+ 	    && (chip_info->com_mode != DMA_TRANSFER)
+ 	    && (chip_info->com_mode != POLLING_TRANSFER)) {
+-		dev_err(&pl022->adev->dev,
++		dev_err(&lpc31xx->pdev->dev,
+ 			"Communication mode is configured incorrectly\n");
+ 		return -EINVAL;
+ 	}
+@@ -1568,21 +1358,21 @@ static int verify_controller_parameters(struct pl022 *pl022,
+ 		/* These are always OK, all variants can handle this */
+ 		break;
+ 	case SSP_RX_16_OR_MORE_ELEM:
+-		if (pl022->vendor->fifodepth < 16) {
+-			dev_err(&pl022->adev->dev,
++		if (lpc31xx->vendor->fifodepth < 16) {
++			dev_err(&lpc31xx->pdev->dev,
+ 			"RX FIFO Trigger Level is configured incorrectly\n");
+ 			return -EINVAL;
+ 		}
+ 		break;
+ 	case SSP_RX_32_OR_MORE_ELEM:
+-		if (pl022->vendor->fifodepth < 32) {
+-			dev_err(&pl022->adev->dev,
++		if (lpc31xx->vendor->fifodepth < 32) {
++			dev_err(&lpc31xx->pdev->dev,
+ 			"RX FIFO Trigger Level is configured incorrectly\n");
+ 			return -EINVAL;
+ 		}
+ 		break;
+ 	default:
+-		dev_err(&pl022->adev->dev,
++		dev_err(&lpc31xx->pdev->dev,
+ 			"RX FIFO Trigger Level is configured incorrectly\n");
+ 		return -EINVAL;
+ 		break;
+@@ -1594,21 +1384,21 @@ static int verify_controller_parameters(struct pl022 *pl022,
+ 		/* These are always OK, all variants can handle this */
+ 		break;
+ 	case SSP_TX_16_OR_MORE_EMPTY_LOC:
+-		if (pl022->vendor->fifodepth < 16) {
+-			dev_err(&pl022->adev->dev,
++		if (lpc31xx->vendor->fifodepth < 16) {
++			dev_err(&lpc31xx->pdev->dev,
+ 			"TX FIFO Trigger Level is configured incorrectly\n");
+ 			return -EINVAL;
+ 		}
+ 		break;
+ 	case SSP_TX_32_OR_MORE_EMPTY_LOC:
+-		if (pl022->vendor->fifodepth < 32) {
+-			dev_err(&pl022->adev->dev,
++		if (lpc31xx->vendor->fifodepth < 32) {
++			dev_err(&lpc31xx->pdev->dev,
+ 			"TX FIFO Trigger Level is configured incorrectly\n");
+ 			return -EINVAL;
+ 		}
+ 		break;
+ 	default:
+-		dev_err(&pl022->adev->dev,
++		dev_err(&lpc31xx->pdev->dev,
+ 			"TX FIFO Trigger Level is configured incorrectly\n");
+ 		return -EINVAL;
+ 		break;
+@@ -1616,35 +1406,36 @@ static int verify_controller_parameters(struct pl022 *pl022,
+ 	if (chip_info->iface == SSP_INTERFACE_NATIONAL_MICROWIRE) {
+ 		if ((chip_info->ctrl_len < SSP_BITS_4)
+ 		    || (chip_info->ctrl_len > SSP_BITS_32)) {
+-			dev_err(&pl022->adev->dev,
++			dev_err(&lpc31xx->pdev->dev,
+ 				"CTRL LEN is configured incorrectly\n");
+ 			return -EINVAL;
+ 		}
+ 		if ((chip_info->wait_state != SSP_MWIRE_WAIT_ZERO)
+ 		    && (chip_info->wait_state != SSP_MWIRE_WAIT_ONE)) {
+-			dev_err(&pl022->adev->dev,
++			dev_err(&lpc31xx->pdev->dev,
+ 				"Wait State is configured incorrectly\n");
+ 			return -EINVAL;
+ 		}
+ 		/* Half duplex is only available in the ST Micro version */
+-		if (pl022->vendor->extended_cr) {
++		if (lpc31xx->vendor->extended_cr) {
+ 			if ((chip_info->duplex !=
+ 			     SSP_MICROWIRE_CHANNEL_FULL_DUPLEX)
+ 			    && (chip_info->duplex !=
+ 				SSP_MICROWIRE_CHANNEL_HALF_DUPLEX)) {
+-				dev_err(&pl022->adev->dev,
++				dev_err(&lpc31xx->pdev->dev,
+ 					"Microwire duplex mode is configured incorrectly\n");
+ 				return -EINVAL;
+ 			}
+ 		} else {
+ 			if (chip_info->duplex != SSP_MICROWIRE_CHANNEL_FULL_DUPLEX)
+-				dev_err(&pl022->adev->dev,
++				dev_err(&lpc31xx->pdev->dev,
+ 					"Microwire half duplex mode requested,"
+ 					" but this is only available in the"
+-					" ST version of PL022\n");
++					" ST version of LPC31xx\n");
+ 			return -EINVAL;
+ 		}
+ 	}
++#endif
+ 	return 0;
+ }
+ 
+@@ -1653,22 +1444,23 @@ static inline u32 spi_rate(u32 rate, u16 cpsdvsr, u16 scr)
+ 	return rate / (cpsdvsr * (1 + scr));
+ }
+ 
+-static int calculate_effective_freq(struct pl022 *pl022, int freq, struct
+-				    ssp_clock_params * clk_freq)
++static int calculate_effective_freq(struct lpc31xx *lpc31xx, int freq, struct
++				    spi_clock_params * clk_freq)
+ {
++#if JDS
+ 	/* Lets calculate the frequency parameters */
+ 	u16 cpsdvsr = CPSDVR_MIN, scr = SCR_MIN;
+ 	u32 rate, max_tclk, min_tclk, best_freq = 0, best_cpsdvsr = 0,
+ 		best_scr = 0, tmp, found = 0;
+ 
+-	rate = clk_get_rate(pl022->clk);
++	rate = clk_get_rate(lpc31xx->clk);
+ 	/* cpsdvscr = 2 & scr 0 */
+ 	max_tclk = spi_rate(rate, CPSDVR_MIN, SCR_MIN);
+ 	/* cpsdvsr = 254 & scr = 255 */
+ 	min_tclk = spi_rate(rate, CPSDVR_MAX, SCR_MAX);
+ 
+ 	if (!((freq <= max_tclk) && (freq >= min_tclk))) {
+-		dev_err(&pl022->adev->dev,
++		dev_err(&lpc31xx->pdev->dev,
+ 			"controller data is incorrect: out of range frequency");
+ 		return -EINVAL;
+ 	}
+@@ -1703,12 +1495,12 @@ static int calculate_effective_freq(struct pl022 *pl022, int freq, struct
+ 
+ 	clk_freq->cpsdvsr = (u8) (best_cpsdvsr & 0xFF);
+ 	clk_freq->scr = (u8) (best_scr & 0xFF);
+-	dev_dbg(&pl022->adev->dev,
++	dev_dbg(&lpc31xx->pdev->dev,
+ 		"SSP Target Frequency is: %u, Effective Frequency is %u\n",
+ 		freq, best_freq);
+-	dev_dbg(&pl022->adev->dev, "SSP cpsdvsr = %d, scr = %d\n",
++	dev_dbg(&lpc31xx->pdev->dev, "SSP cpsdvsr = %d, scr = %d\n",
+ 		clk_freq->cpsdvsr, clk_freq->scr);
+-
++#endif
+ 	return 0;
+ }
+ 
+@@ -1716,7 +1508,7 @@ static int calculate_effective_freq(struct pl022 *pl022, int freq, struct
+  * A piece of default chip info unless the platform
+  * supplies it.
+  */
+-static const struct pl022_config_chip pl022_default_chip_info = {
++static const struct lpc31xx_config_chip lpc31xx_default_chip_info = {
+ 	.com_mode = POLLING_TRANSFER,
+ 	.iface = SSP_INTERFACE_MOTOROLA_SPI,
+ 	.hierarchy = SSP_SLAVE,
+@@ -1730,7 +1522,7 @@ static const struct pl022_config_chip pl022_default_chip_info = {
+ };
+ 
+ /**
+- * pl022_setup - setup function registered to SPI master framework
++ * lpc31xx_setup - setup function registered to SPI master framework
+  * @spi: spi device which is requesting setup
+  *
+  * This function is registered to the SPI framework for this SPI master
+@@ -1741,13 +1533,13 @@ static const struct pl022_config_chip pl022_default_chip_info = {
+  * controller hardware here, that is not done until the actual transfer
+  * commence.
+  */
+-static int pl022_setup(struct spi_device *spi)
++static int lpc31xx_setup(struct spi_device *spi)
+ {
+-	struct pl022_config_chip const *chip_info;
++	struct lpc31xx_config_chip const *chip_info;
+ 	struct chip_data *chip;
+-	struct ssp_clock_params clk_freq = { .cpsdvsr = 0, .scr = 0};
++	struct spi_clock_params clk_freq = { .cpsdvsr = 0, .scr = 0};
+ 	int status = 0;
+-	struct pl022 *pl022 = spi_master_get_devdata(spi->master);
++	struct lpc31xx *lpc31xx = spi_master_get_devdata(spi->master);
+ 	unsigned int bits = spi->bits_per_word;
+ 	u32 tmp;
+ 
+@@ -1772,7 +1564,7 @@ static int pl022_setup(struct spi_device *spi)
+ 	chip_info = spi->controller_data;
+ 
+ 	if (chip_info == NULL) {
+-		chip_info = &pl022_default_chip_info;
++		chip_info = &lpc31xx_default_chip_info;
+ 		/* spi_board_info.controller_data not is supplied */
+ 		dev_dbg(&spi->dev,
+ 			"using default controller_data settings\n");
+@@ -1780,13 +1572,14 @@ static int pl022_setup(struct spi_device *spi)
+ 		dev_dbg(&spi->dev,
+ 			"using user supplied controller_data settings\n");
+ 
++#if JDS
+ 	/*
+ 	 * We can override with custom divisors, else we use the board
+ 	 * frequency setting
+ 	 */
+ 	if ((0 == chip_info->clk_freq.cpsdvsr)
+ 	    && (0 == chip_info->clk_freq.scr)) {
+-		status = calculate_effective_freq(pl022,
++		status = calculate_effective_freq(lpc31xx,
+ 						  spi->max_speed_hz,
+ 						  &clk_freq);
+ 		if (status < 0)
+@@ -1805,14 +1598,14 @@ static int pl022_setup(struct spi_device *spi)
+ 		goto err_config_params;
+ 	}
+ 
+-	status = verify_controller_parameters(pl022, chip_info);
++	status = verify_controller_parameters(lpc31xx, chip_info);
+ 	if (status) {
+ 		dev_err(&spi->dev, "controller data is incorrect");
+ 		goto err_config_params;
+ 	}
+ 
+-	pl022->rx_lev_trig = chip_info->rx_lev_trig;
+-	pl022->tx_lev_trig = chip_info->tx_lev_trig;
++	lpc31xx->rx_lev_trig = chip_info->rx_lev_trig;
++	lpc31xx->tx_lev_trig = chip_info->tx_lev_trig;
+ 
+ 	/* Now set controller state based on controller data */
+ 	chip->xfer_type = chip_info->com_mode;
+@@ -1822,9 +1615,10 @@ static int pl022_setup(struct spi_device *spi)
+ 			 "chip select function is NULL for this chip\n");
+ 	} else
+ 		chip->cs_control = chip_info->cs_control;
++#endif
+ 
+ 	if (bits <= 3) {
+-		/* PL022 doesn't support less than 4-bits */
++		/* LPC31xx doesn't support less than 4-bits */
+ 		status = -ENOTSUPP;
+ 		goto err_config_params;
+ 	} else if (bits <= 8) {
+@@ -1838,7 +1632,7 @@ static int pl022_setup(struct spi_device *spi)
+ 		chip->read = READING_U16;
+ 		chip->write = WRITING_U16;
+ 	} else {
+-		if (pl022->vendor->max_bpw >= 32) {
++		if (lpc31xx->vendor->max_bpw >= 32) {
+ 			dev_dbg(&spi->dev, "17 <= n <= 32 bits per word\n");
+ 			chip->n_bytes = 4;
+ 			chip->read = READING_U32;
+@@ -1847,20 +1641,21 @@ static int pl022_setup(struct spi_device *spi)
+ 			dev_err(&spi->dev,
+ 				"illegal data size for this controller!\n");
+ 			dev_err(&spi->dev,
+-				"a standard pl022 can only handle "
++				"a standard lpc31xx can only handle "
+ 				"1 <= n <= 16 bit words\n");
+ 			status = -ENOTSUPP;
+ 			goto err_config_params;
+ 		}
+ 	}
+ 
++#if JDS
+ 	/* Now Initialize all register settings required for this chip */
+ 	chip->cr0 = 0;
+ 	chip->cr1 = 0;
+ 	chip->dmacr = 0;
+ 	chip->cpsr = 0;
+ 	if ((chip_info->com_mode == DMA_TRANSFER)
+-	    && ((pl022->master_info)->enable_dma)) {
++	    && ((lpc31xx->master_info)->enable_dma)) {
+ 		chip->enable_dma = true;
+ 		dev_dbg(&spi->dev, "DMA mode set in controller state\n");
+ 		SSP_WRITE_BITS(chip->dmacr, SSP_DMA_ENABLED,
+@@ -1879,15 +1674,15 @@ static int pl022_setup(struct spi_device *spi)
+ 	chip->cpsr = clk_freq.cpsdvsr;
+ 
+ 	/* Special setup for the ST micro extended control registers */
+-	if (pl022->vendor->extended_cr) {
++	if (lpc31xx->vendor->extended_cr) {
+ 		u32 etx;
+ 
+-		if (pl022->vendor->pl023) {
++		if (lpc31xx->vendor->pl023) {
+ 			/* These bits are only in the PL023 */
+ 			SSP_WRITE_BITS(chip->cr1, chip_info->clkdelay,
+ 				       SSP_CR1_MASK_FBCLKDEL_ST, 13);
+ 		} else {
+-			/* These bits are in the PL022 but not PL023 */
++			/* These bits are in the LPC31xx but not PL023 */
+ 			SSP_WRITE_BITS(chip->cr0, chip_info->duplex,
+ 				       SSP_CR0_MASK_HALFDUP_ST, 5);
+ 			SSP_WRITE_BITS(chip->cr0, chip_info->ctrl_len,
+@@ -1935,7 +1730,7 @@ static int pl022_setup(struct spi_device *spi)
+ 
+ 	SSP_WRITE_BITS(chip->cr0, clk_freq.scr, SSP_CR0_MASK_SCR, 8);
+ 	/* Loopback is available on all versions except PL023 */
+-	if (pl022->vendor->loopback) {
++	if (lpc31xx->vendor->loopback) {
+ 		if (spi->mode & SPI_LOOP)
+ 			tmp = LOOPBACK_ENABLED;
+ 		else
+@@ -1946,6 +1741,7 @@ static int pl022_setup(struct spi_device *spi)
+ 	SSP_WRITE_BITS(chip->cr1, chip_info->hierarchy, SSP_CR1_MASK_MS, 2);
+ 	SSP_WRITE_BITS(chip->cr1, chip_info->slave_tx_disable, SSP_CR1_MASK_SOD,
+ 		3);
++#endif
+ 
+ 	/* Save controller_state */
+ 	spi_set_ctldata(spi, chip);
+@@ -1957,13 +1753,13 @@ static int pl022_setup(struct spi_device *spi)
+ }
+ 
+ /**
+- * pl022_cleanup - cleanup function registered to SPI master framework
++ * lpc31xx_cleanup - cleanup function registered to SPI master framework
+  * @spi: spi device which is requesting cleanup
+  *
+  * This function is registered to the SPI framework for this SPI master
+  * controller. It will free the runtime state of chip.
+  */
+-static void pl022_cleanup(struct spi_device *spi)
++static void lpc31xx_cleanup(struct spi_device *spi)
+ {
+ 	struct chip_data *chip = spi_get_ctldata(spi);
+ 
+@@ -1972,35 +1768,27 @@ static void pl022_cleanup(struct spi_device *spi)
+ }
+ 
+ static int __devinit
+-pl022_probe(struct amba_device *adev, const struct amba_id *id)
++lpc31xx_probe(struct platform_device *pdev)
+ {
+-	struct device *dev = &adev->dev;
+-	struct pl022_ssp_controller *platform_info = adev->dev.platform_data;
++	struct device *dev = &pdev->dev;
+ 	struct spi_master *master;
+-	struct pl022 *pl022 = NULL;	/*Data for this driver */
++	struct lpc31xx *lpc31xx = NULL;	/*Data for this driver */
+ 	int status = 0;
+ 
+-	dev_info(&adev->dev,
+-		 "ARM PL022 driver, device ID: 0x%08x\n", adev->periphid);
+-	if (platform_info == NULL) {
+-		dev_err(&adev->dev, "probe - no platform data supplied\n");
+-		status = -ENODEV;
+-		goto err_no_pdata;
+-	}
++	dev_info(&pdev->dev, "NXP LPC31xx SPI driver\n");
+ 
+ 	/* Allocate master with space for data */
+-	master = spi_alloc_master(dev, sizeof(struct pl022));
++	master = spi_alloc_master(dev, sizeof(struct lpc31xx));
+ 	if (master == NULL) {
+-		dev_err(&adev->dev, "probe - cannot alloc SPI master\n");
++		dev_err(&pdev->dev, "probe - cannot alloc SPI master\n");
+ 		status = -ENOMEM;
+ 		goto err_no_master;
+ 	}
+ 
+-	pl022 = spi_master_get_devdata(master);
+-	pl022->master = master;
+-	pl022->master_info = platform_info;
+-	pl022->adev = adev;
+-	pl022->vendor = id->data;
++	lpc31xx = spi_master_get_devdata(master);
++	lpc31xx->master = master;
++	lpc31xx->master_info = platform_info;
++	lpc31xx->pdev = pdev;
+ 
+ 	/*
+ 	 * Bus Number Which has been Assigned to this SSP controller
+@@ -2008,83 +1796,83 @@ pl022_probe(struct amba_device *adev, const struct amba_id *id)
+ 	 */
+ 	master->bus_num = platform_info->bus_id;
+ 	master->num_chipselect = platform_info->num_chipselect;
+-	master->cleanup = pl022_cleanup;
+-	master->setup = pl022_setup;
+-	master->prepare_transfer_hardware = pl022_prepare_transfer_hardware;
+-	master->transfer_one_message = pl022_transfer_one_message;
+-	master->unprepare_transfer_hardware = pl022_unprepare_transfer_hardware;
++	master->cleanup = lpc31xx_cleanup;
++	master->setup = lpc31xx_setup;
++	master->prepare_transfer_hardware = lpc31xx_prepare_transfer_hardware;
++	master->transfer_one_message = lpc31xx_transfer_one_message;
++	master->unprepare_transfer_hardware = lpc31xx_unprepare_transfer_hardware;
+ 	master->rt = platform_info->rt;
+ 
+ 	/*
+ 	 * Supports mode 0-3, loopback, and active low CS. Transfers are
+-	 * always MS bit first on the original pl022.
++	 * always MS bit first on the original lpc31xx.
+ 	 */
+ 	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH | SPI_LOOP;
+-	if (pl022->vendor->extended_cr)
++	if (lpc31xx->vendor->extended_cr)
+ 		master->mode_bits |= SPI_LSB_FIRST;
+ 
+-	dev_dbg(&adev->dev, "BUSNO: %d\n", master->bus_num);
++	dev_dbg(&pdev->dev, "BUSNO: %d\n", master->bus_num);
+ 
+-	status = amba_request_regions(adev, NULL);
++	status = amba_request_regions(pdev, NULL);
+ 	if (status)
+ 		goto err_no_ioregion;
+ 
+-	pl022->phybase = adev->res.start;
+-	pl022->virtbase = ioremap(adev->res.start, resource_size(&adev->res));
+-	if (pl022->virtbase == NULL) {
++	lpc31xx->phybase = pdev->res.start;
++	lpc31xx->virtbase = ioremap(pdev->res.start, resource_size(&pdev->res));
++	if (lpc31xx->virtbase == NULL) {
+ 		status = -ENOMEM;
+ 		goto err_no_ioremap;
+ 	}
+-	printk(KERN_INFO "pl022: mapped registers from 0x%08x to %p\n",
+-	       adev->res.start, pl022->virtbase);
++	printk(KERN_INFO "lpc31xx: mapped registers from 0x%08x to %p\n",
++	       pdev->res.start, lpc31xx->virtbase);
+ 
+-	pl022->clk = clk_get(&adev->dev, NULL);
+-	if (IS_ERR(pl022->clk)) {
+-		status = PTR_ERR(pl022->clk);
+-		dev_err(&adev->dev, "could not retrieve SSP/SPI bus clock\n");
++	lpc31xx->clk = clk_get(&pdev->dev, NULL);
++	if (IS_ERR(lpc31xx->clk)) {
++		status = PTR_ERR(lpc31xx->clk);
++		dev_err(&pdev->dev, "could not retrieve SSP/SPI bus clock\n");
+ 		goto err_no_clk;
+ 	}
+ 
+-	status = clk_prepare(pl022->clk);
++	status = clk_prepare(lpc31xx->clk);
+ 	if (status) {
+-		dev_err(&adev->dev, "could not prepare SSP/SPI bus clock\n");
++		dev_err(&pdev->dev, "could not prepare SSP/SPI bus clock\n");
+ 		goto  err_clk_prep;
+ 	}
+ 
+-	status = clk_enable(pl022->clk);
++	status = clk_enable(lpc31xx->clk);
+ 	if (status) {
+-		dev_err(&adev->dev, "could not enable SSP/SPI bus clock\n");
++		dev_err(&pdev->dev, "could not enable SSP/SPI bus clock\n");
+ 		goto err_no_clk_en;
+ 	}
+ 
+ 	/* Initialize transfer pump */
+-	tasklet_init(&pl022->pump_transfers, pump_transfers,
+-		     (unsigned long)pl022);
++	tasklet_init(&lpc31xx->pump_transfers, pump_transfers,
++		     (unsigned long)lpc31xx);
+ 
+ 	/* Disable SSP */
+-	writew((readw(SSP_CR1(pl022->virtbase)) & (~SSP_CR1_MASK_SSE)),
+-	       SSP_CR1(pl022->virtbase));
+-	load_ssp_default_config(pl022);
++	writew((readw(SSP_CR1(lpc31xx->virtbase)) & (~SSP_CR1_MASK_SSE)),
++	       SSP_CR1(lpc31xx->virtbase));
++	load_spi_default_config(lpc31xx);
+ 
+-	status = request_irq(adev->irq[0], pl022_interrupt_handler, 0, "pl022",
+-			     pl022);
++	status = request_irq(pdev->irq[0], lpc31xx_interrupt_handler, 0, "lpc31xx",
++			     lpc31xx);
+ 	if (status < 0) {
+-		dev_err(&adev->dev, "probe - cannot get IRQ (%d)\n", status);
++		dev_err(&pdev->dev, "probe - cannot get IRQ (%d)\n", status);
+ 		goto err_no_irq;
+ 	}
+ 
+ 	/* Get DMA channels */
+ 	if (platform_info->enable_dma) {
+-		status = pl022_dma_probe(pl022);
++		status = lpc31xx_dma_probe(lpc31xx);
+ 		if (status != 0)
+ 			platform_info->enable_dma = 0;
+ 	}
+ 
+ 	/* Register with the SPI framework */
+-	amba_set_drvdata(adev, pl022);
++	amba_set_drvdata(pdev, lpc31xx);
+ 	status = spi_register_master(master);
+ 	if (status != 0) {
+-		dev_err(&adev->dev,
++		dev_err(&pdev->dev,
+ 			"probe - problem registering spi master\n");
+ 		goto err_spi_register;
+ 	}
+@@ -2092,7 +1880,7 @@ pl022_probe(struct amba_device *adev, const struct amba_id *id)
+ 
+ 	/* let runtime pm put suspend */
+ 	if (platform_info->autosuspend_delay > 0) {
+-		dev_info(&adev->dev,
++		dev_info(&pdev->dev,
+ 			"will use autosuspend for runtime pm, delay %dms\n",
+ 			platform_info->autosuspend_delay);
+ 		pm_runtime_set_autosuspend_delay(dev,
+@@ -2106,19 +1894,19 @@ pl022_probe(struct amba_device *adev, const struct amba_id *id)
+ 
+  err_spi_register:
+ 	if (platform_info->enable_dma)
+-		pl022_dma_remove(pl022);
++		lpc31xx_dma_remove(lpc31xx);
+ 
+-	free_irq(adev->irq[0], pl022);
++	free_irq(pdev->irq[0], lpc31xx);
+  err_no_irq:
+-	clk_disable(pl022->clk);
++	clk_disable(lpc31xx->clk);
+  err_no_clk_en:
+-	clk_unprepare(pl022->clk);
++	clk_unprepare(lpc31xx->clk);
+  err_clk_prep:
+-	clk_put(pl022->clk);
++	clk_put(lpc31xx->clk);
+  err_no_clk:
+-	iounmap(pl022->virtbase);
++	iounmap(lpc31xx->virtbase);
+  err_no_ioremap:
+-	amba_release_regions(adev);
++	amba_release_regions(pdev);
+  err_no_ioregion:
+ 	spi_master_put(master);
+  err_no_master:
+@@ -2127,43 +1915,43 @@ pl022_probe(struct amba_device *adev, const struct amba_id *id)
+ }
+ 
+ static int __devexit
+-pl022_remove(struct amba_device *adev)
++lpc31xx_remove(struct platform_device *pdev)
+ {
+-	struct pl022 *pl022 = amba_get_drvdata(adev);
++	struct lpc31xx *lpc31xx = platform_get_drvdata(pdev);
+ 
+-	if (!pl022)
++	if (!lpc31xx)
+ 		return 0;
+ 
+ 	/*
+ 	 * undo pm_runtime_put() in probe.  I assume that we're not
+ 	 * accessing the primecell here.
+ 	 */
+-	pm_runtime_get_noresume(&adev->dev);
+-
+-	load_ssp_default_config(pl022);
+-	if (pl022->master_info->enable_dma)
+-		pl022_dma_remove(pl022);
+-
+-	free_irq(adev->irq[0], pl022);
+-	clk_disable(pl022->clk);
+-	clk_unprepare(pl022->clk);
+-	clk_put(pl022->clk);
+-	iounmap(pl022->virtbase);
+-	amba_release_regions(adev);
+-	tasklet_disable(&pl022->pump_transfers);
+-	spi_unregister_master(pl022->master);
+-	spi_master_put(pl022->master);
+-	amba_set_drvdata(adev, NULL);
++	pm_runtime_get_noresume(&pdev->dev);
++
++	load_spi_default_config(lpc31xx);
++	if (lpc31xx->master_info->enable_dma)
++		lpc31xx_dma_remove(lpc31xx);
++
++	free_irq(pdev->irq[0], lpc31xx);
++	clk_disable(lpc31xx->clk);
++	clk_unprepare(lpc31xx->clk);
++	clk_put(lpc31xx->clk);
++	iounmap(lpc31xx->virtbase);
++	amba_release_regions(pdev);
++	tasklet_disable(&lpc31xx->pump_transfers);
++	spi_unregister_master(lpc31xx->master);
++	spi_master_put(lpc31xx->master);
++	amba_set_drvdata(pdev, NULL);
+ 	return 0;
+ }
+ 
+ #ifdef CONFIG_SUSPEND
+-static int pl022_suspend(struct device *dev)
++static int lpc31xx_suspend(struct device *dev)
+ {
+-	struct pl022 *pl022 = dev_get_drvdata(dev);
++	struct lpc31xx *lpc31xx = dev_get_drvdata(dev);
+ 	int ret;
+ 
+-	ret = spi_master_suspend(pl022->master);
++	ret = spi_master_suspend(lpc31xx->master);
+ 	if (ret) {
+ 		dev_warn(dev, "cannot suspend master\n");
+ 		return ret;
+@@ -2173,13 +1961,13 @@ static int pl022_suspend(struct device *dev)
+ 	return 0;
+ }
+ 
+-static int pl022_resume(struct device *dev)
++static int lpc31xx_resume(struct device *dev)
+ {
+-	struct pl022 *pl022 = dev_get_drvdata(dev);
++	struct lpc31xx *lpc31xx = dev_get_drvdata(dev);
+ 	int ret;
+ 
+ 	/* Start the queue running */
+-	ret = spi_master_resume(pl022->master);
++	ret = spi_master_resume(lpc31xx->master);
+ 	if (ret)
+ 		dev_err(dev, "problem starting queue (%d)\n", ret);
+ 	else
+@@ -2190,129 +1978,53 @@ static int pl022_resume(struct device *dev)
+ #endif	/* CONFIG_PM */
+ 
+ #ifdef CONFIG_PM_RUNTIME
+-static int pl022_runtime_suspend(struct device *dev)
++static int lpc31xx_runtime_suspend(struct device *dev)
+ {
+-	struct pl022 *pl022 = dev_get_drvdata(dev);
++	struct lpc31xx *lpc31xx = dev_get_drvdata(dev);
+ 
+-	clk_disable(pl022->clk);
++	clk_disable(lpc31xx->clk);
+ 
+ 	return 0;
+ }
+ 
+-static int pl022_runtime_resume(struct device *dev)
++static int lpc31xx_runtime_resume(struct device *dev)
+ {
+-	struct pl022 *pl022 = dev_get_drvdata(dev);
++	struct lpc31xx *lpc31xx = dev_get_drvdata(dev);
+ 
+-	clk_enable(pl022->clk);
++	clk_enable(lpc31xx->clk);
+ 
+ 	return 0;
+ }
+ #endif
+ 
+-static const struct dev_pm_ops pl022_dev_pm_ops = {
+-	SET_SYSTEM_SLEEP_PM_OPS(pl022_suspend, pl022_resume)
+-	SET_RUNTIME_PM_OPS(pl022_runtime_suspend, pl022_runtime_resume, NULL)
+-};
+-
+-static struct vendor_data vendor_arm = {
+-	.fifodepth = 8,
+-	.max_bpw = 16,
+-	.unidir = false,
+-	.extended_cr = false,
+-	.pl023 = false,
+-	.loopback = true,
+-};
+-
+-static struct vendor_data vendor_st = {
+-	.fifodepth = 32,
+-	.max_bpw = 32,
+-	.unidir = false,
+-	.extended_cr = true,
+-	.pl023 = false,
+-	.loopback = true,
+-};
+-
+-static struct vendor_data vendor_st_pl023 = {
+-	.fifodepth = 32,
+-	.max_bpw = 32,
+-	.unidir = false,
+-	.extended_cr = true,
+-	.pl023 = true,
+-	.loopback = false,
+-};
+-
+-static struct vendor_data vendor_db5500_pl023 = {
+-	.fifodepth = 32,
+-	.max_bpw = 32,
+-	.unidir = false,
+-	.extended_cr = true,
+-	.pl023 = true,
+-	.loopback = true,
+-};
+-
+-static struct amba_id pl022_ids[] = {
+-	{
+-		/*
+-		 * ARM PL022 variant, this has a 16bit wide
+-		 * and 8 locations deep TX/RX FIFO
+-		 */
+-		.id	= 0x00041022,
+-		.mask	= 0x000fffff,
+-		.data	= &vendor_arm,
+-	},
+-	{
+-		/*
+-		 * ST Micro derivative, this has 32bit wide
+-		 * and 32 locations deep TX/RX FIFO
+-		 */
+-		.id	= 0x01080022,
+-		.mask	= 0xffffffff,
+-		.data	= &vendor_st,
+-	},
+-	{
+-		/*
+-		 * ST-Ericsson derivative "PL023" (this is not
+-		 * an official ARM number), this is a PL022 SSP block
+-		 * stripped to SPI mode only, it has 32bit wide
+-		 * and 32 locations deep TX/RX FIFO but no extended
+-		 * CR0/CR1 register
+-		 */
+-		.id	= 0x00080023,
+-		.mask	= 0xffffffff,
+-		.data	= &vendor_st_pl023,
+-	},
+-	{
+-		.id	= 0x10080023,
+-		.mask	= 0xffffffff,
+-		.data	= &vendor_db5500_pl023,
+-	},
+-	{ 0, 0 },
++static const struct dev_pm_ops lpc31xx_dev_pm_ops = {
++	SET_SYSTEM_SLEEP_PM_OPS(lpc31xx_suspend, lpc31xx_resume)
++	SET_RUNTIME_PM_OPS(lpc31xx_runtime_suspend, lpc31xx_runtime_resume, NULL)
+ };
+ 
+-MODULE_DEVICE_TABLE(amba, pl022_ids);
+ 
+-static struct amba_driver pl022_driver = {
+-	.drv = {
+-		.name	= "ssp-pl022",
+-		.pm	= &pl022_dev_pm_ops,
++static struct platform_driver lpc31xx_spi_driver = {
++	.probe		= lpc31xx_probe,
++	.remove		= __devexit_p(lpc31xx_remove),
++	.driver = {
++		.name	= "spi-lpc31xx",
++		.pm	= &lpc31xx_dev_pm_ops,
++		.owner	= THIS_MODULE,
+ 	},
+-	.id_table	= pl022_ids,
+-	.probe		= pl022_probe,
+-	.remove		= __devexit_p(pl022_remove),
+ };
+ 
+-static int __init pl022_init(void)
++static int __init lpc31xx_init(void)
+ {
+-	return amba_driver_register(&pl022_driver);
++	return platform_driver_register(&lpc31xx_spi_driver);
+ }
+-subsys_initcall(pl022_init);
++subsys_initcall(lpc31xx_init);
+ 
+-static void __exit pl022_exit(void)
++static void __exit lpc31xx_exit(void)
+ {
+-	amba_driver_unregister(&pl022_driver);
++	platform_driver_unregister(&lpc31xx_spi_driver);
+ }
+-module_exit(pl022_exit);
++module_exit(lpc31xx_exit);
+ 
+-MODULE_AUTHOR("Linus Walleij <linus.walleij@stericsson.com>");
+-MODULE_DESCRIPTION("PL022 SSP Controller Driver");
++MODULE_AUTHOR("Kevin Wells <kevin.wells@nxp.com");
++MODULE_DESCRIPTION("LPC31xx SPI Controller Driver");
+ MODULE_LICENSE("GPL");
