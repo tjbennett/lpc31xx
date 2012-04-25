@@ -1,5 +1,5 @@
 Bottom: 2a2dc86b7f46bcec2da42086f5947f4378c33a14
-Top:    2a2dc86b7f46bcec2da42086f5947f4378c33a14
+Top:    4598ab8477a6eba7b2e846db1f0fe0b9f028612a
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-04-24 21:24:47 -0400
 
@@ -9,4 +9,131 @@ spi-temp
 
 ---
 
-
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+index e1f2e51..31346cf 100644
+--- a/arch/arm/boot/dts/ea3131.dts
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -46,7 +46,7 @@
+ 	};
+ 	spi@15002000 {
+ 		gpios = <&gpio_spi 4 0  /* chip selects */
+-			 &gpio_ebi_i2stx_0 3 0>; 
++			 &gpio_ebi_i2stx_0 3 0>;
+ 		s25sl032a@0 {
+ 			compatible = "code,s25sl032a";
+ 			reg = <0>;
+@@ -56,12 +56,11 @@
+ 			compatible = "ti,ads7846";
+ 			reg = <1>;
+ 			spi-max-frequency = <1200000>;
+-			interrupts = <20>;
+ 			vref_delay_usecs = <100>;
+ 			x-plate-ohms = <419>;
+ 			y-plate-ohms = <486>;
+ 			interrupt-parent = <&evtr>;
+-			pen-irq = <7 4>;
++			interrupts = <7 4>;
+ 			gpio-pendown = <&gpio_gpio 4 0>;
+ 		};
+ 	};
+diff --git a/drivers/input/touchscreen/ads7846.c b/drivers/input/touchscreen/ads7846.c
+index 5d43429..6b34ca5 100644
+--- a/drivers/input/touchscreen/ads7846.c
++++ b/drivers/input/touchscreen/ads7846.c
+@@ -1233,6 +1233,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
+ 	const __be32 *prop;
+ 	int len, err;
+ 
++	printk("JDS ads7846_probe irq %d\n", spi->irq);
+ 	if (!spi->irq) {
+ 		dev_dbg(&spi->dev, "no IRQ?\n");
+ 		return -ENODEV;
+@@ -1442,6 +1443,7 @@ printk("JDS - pendown %x\n", pdata->gpio_pendown);
+ 	input_free_device(input_dev);
+ 	kfree(packet);
+ 	kfree(ts);
++	printk("JDS ads error out\n");
+ 	return err;
+ }
+ 
+@@ -1487,9 +1489,6 @@ static struct spi_driver ads7846_driver = {
+ 		.name	= "ads7846",
+ 		.owner	= THIS_MODULE,
+ 		.pm	= &ads7846_pm,
+-#ifdef CONFIG_OF
+-		.of_match_table = ads7846_of_match,
+-#endif
+ 	},
+ 	.probe		= ads7846_probe,
+ 	.remove		= __devexit_p(ads7846_remove),
+@@ -1500,3 +1499,8 @@ module_spi_driver(ads7846_driver);
+ MODULE_DESCRIPTION("ADS7846 TouchScreen Driver");
+ MODULE_LICENSE("GPL");
+ MODULE_ALIAS("spi:ads7846");
++MODULE_ALIAS("tsc2046");
++MODULE_ALIAS("ads7843");
++MODULE_ALIAS("ads7845");
++MODULE_ALIAS("ad7873");
++MODULE_ALIAS("ad7843");
+diff --git a/drivers/spi/spi-lpc31xx.c b/drivers/spi/spi-lpc31xx.c
+index c003f24..c544e3a 100644
+--- a/drivers/spi/spi-lpc31xx.c
++++ b/drivers/spi/spi-lpc31xx.c
+@@ -10,8 +10,7 @@
+  * published by the Free Software Foundation.
+  */
+ 
+-#define DEBUG
+-//#define jds_printk printk
++
+ #define jds_printk(format, arg...) ({if (0) printk(format, ##arg);})
+ 
+ #include <linux/io.h>
+@@ -464,13 +463,13 @@ static int lpc31xx_spi_setup(struct spi_device *spi)
+ 		int err;
+ 
+ 		err = lpc31xx_spi_calc_divisors(espi, chip, spi->max_speed_hz);
+-		jds_printk("spi calc err %d\n", err);
++		jds_printk("JDS - spi calc err %d\n", err);
+ 		if (err != 0) {
+ 			spi_set_ctldata(spi, NULL);
+ 			return err;
+ 		}
+ 		chip->rate = spi->max_speed_hz;
+-		jds_printk("spi max %d\n", spi->max_speed_hz);
++		jds_printk("JDS - spi max %d\n", spi->max_speed_hz);
+ 	}
+ 
+ 	lpc31xx_spi_cs_control(spi, false);
+@@ -940,9 +939,11 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
+ 	 * fit into the FIFO and can be transferred with a single interrupt.
+ 	 * So in these cases we will be using PIO and don't bother for DMA.
+ 	 */
++#if 0
+ 	if (espi->dma_rx && t->len > SPI_FIFO_DEPTH)
+ 		lpc31xx_spi_dma_transfer(espi);
+ 	else
++#endif
+ 		lpc31xx_spi_pio_transfer(espi);
+ 
+ 	/*
+@@ -1296,7 +1297,7 @@ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
+ 		return -ENOMEM;
+ 	}
+ 	master->setup = lpc31xx_spi_setup;
+-	master->transfer = lpc31xx_spi_transfer;
++	//master->transfer = lpc31xx_spi_transfer;
+ 	master->cleanup = lpc31xx_spi_cleanup;
+ 	master->bus_num = pdev->id;
+ 	master->num_chipselect = SPI_NUM_SLAVES;
+@@ -1344,8 +1345,10 @@ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
+ 	}
+ 	disable_irq(espi->irq);
+ 
++#if 0
+ 	if (lpc31xx_spi_setup_dma(espi))
+ 		dev_warn(&pdev->dev, "DMA setup failed. Falling back to PIO\n");
++#endif
+ 
+ 	espi->wq = create_singlethread_workqueue("lpc31xx_spid");
+ 	if (!espi->wq) {
