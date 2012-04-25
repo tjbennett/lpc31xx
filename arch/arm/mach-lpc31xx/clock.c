@@ -1064,6 +1064,7 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK("pnx-i2c.1", NULL, clk_i2c1)
 	_REGISTER_CLOCK("1300a000.i2c", NULL, clk_i2c0)
 	_REGISTER_CLOCK("1300a400.i2c", NULL, clk_i2c1)
+	_REGISTER_CLOCK("15002000.spi", NULL, clk_spi_clk)
 	_REGISTER_CLOCK(NULL, "nand_s0", clk_nand_s0)
 	_REGISTER_CLOCK(NULL, "nand_ecc", clk_nand_ecc)
 	_REGISTER_CLOCK(NULL, "nand_clk", clk_nand_clk)
