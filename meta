@@ -1,6 +1,6 @@
 Version: 1
-Previous: 2c86928785d9e40e208fea735ffba69651a98a32
-Head: 0549cabec05a6ec75fe10cd09acdcb64be2513ff
+Previous: ce8fe6a233ddebbae66567a66a030beb0d16b376
+Head: dde81ec1f47489c21bd3ed3215c9734f4fbbfda6
 Applied:
   roland-dt-1.patch: fdd5d5d4094ddaebdfd597022100ac5ce9bd25e7
   base.patch: 84572d10a50c1c38f9f59ea106fd70d419596520
@@ -40,7 +40,6 @@ Applied:
   clean-val315x: 76aad244c5f8185746cda6d6b2abb1c38bf84936
   uart.patch: e6c21bc87fccedf4bc83ab81c5b856baef494d71
   spi-temp: 93e448effa713983857c2d912230a7bca5170fa2
-  spi-rewrite: e08334aabd2b46592db6400f28b865e82f5fe430
-  refresh-temp: 0549cabec05a6ec75fe10cd09acdcb64be2513ff
+  spi-rewrite: dde81ec1f47489c21bd3ed3215c9734f4fbbfda6
 Unapplied:
 Hidden:
