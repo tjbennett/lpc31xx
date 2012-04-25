@@ -1233,6 +1233,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 	const __be32 *prop;
 	int len, err;
 
+	printk("JDS ads7846_probe irq %d\n", spi->irq);
 	if (!spi->irq) {
 		dev_dbg(&spi->dev, "no IRQ?\n");
 		return -ENODEV;
@@ -1442,6 +1443,7 @@ printk("JDS - pendown %x\n", pdata->gpio_pendown);
 	input_free_device(input_dev);
 	kfree(packet);
 	kfree(ts);
+	printk("JDS ads error out\n");
 	return err;
 }
 
@@ -1487,9 +1489,6 @@ static struct spi_driver ads7846_driver = {
 		.name	= "ads7846",
 		.owner	= THIS_MODULE,
 		.pm	= &ads7846_pm,
-#ifdef CONFIG_OF
-		.of_match_table = ads7846_of_match,
-#endif
 	},
 	.probe		= ads7846_probe,
 	.remove		= __devexit_p(ads7846_remove),
@@ -1500,3 +1499,8 @@ module_spi_driver(ads7846_driver);
 MODULE_DESCRIPTION("ADS7846 TouchScreen Driver");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("spi:ads7846");
+MODULE_ALIAS("tsc2046");
+MODULE_ALIAS("ads7843");
+MODULE_ALIAS("ads7845");
+MODULE_ALIAS("ad7873");
+MODULE_ALIAS("ad7843");
