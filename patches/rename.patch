@@ -1,7 +1,7 @@
-Bottom: 7848d073e98af671658d76327524c005c5b76a67
-Top:    e2b41773be940140735262ae8948b9f2c0e9f0dd
+Bottom: 172df830eaaf7ef93114d863233d332303d27b4b
+Top:    ad25c4440c8a9706a6df647f684d7a1ce635ca8d
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-04-21 23:43:51 -0400
+Date:   2012-05-03 21:29:06 -0400
 
 rename to lpc31xx
 
@@ -2290,7 +2290,7 @@ similarity index 100%
 rename from drivers/mtd/nand/lpc313x_nand.c
 rename to drivers/mtd/nand/lpc31xx_nand.c
 diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
-index c406882..bffa652 100644
+index b116562..6bf1c3d 100644
 --- a/drivers/spi/Makefile
 +++ b/drivers/spi/Makefile
 @@ -32,7 +32,7 @@ obj-$(CONFIG_SPI_FSL_SPI)		+= spi-fsl-spi.o

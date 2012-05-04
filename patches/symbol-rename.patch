@@ -1,7 +1,7 @@
-Bottom: e2b41773be940140735262ae8948b9f2c0e9f0dd
-Top:    8edfdc6322c6926de0f142279f3df5f83fdfb563
+Bottom: ad25c4440c8a9706a6df647f684d7a1ce635ca8d
+Top:    3c09815b76e3c9d25dd86b63536c97f20208fb05
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-04-21 23:43:51 -0400
+Date:   2012-05-03 21:29:06 -0400
 
 r2
 
@@ -5311,7 +5311,7 @@ index bd2680a..f7090b5 100644
  MODULE_LICENSE("GPL v2");
  
 diff --git a/drivers/spi/Kconfig b/drivers/spi/Kconfig
-index e2580f7..3f1059a 100644
+index 95acfdd..bb7f916 100644
 --- a/drivers/spi/Kconfig
 +++ b/drivers/spi/Kconfig
 @@ -403,11 +403,11 @@ config SPI_NUC900
@@ -5330,7 +5330,7 @@ index e2580f7..3f1059a 100644
  #
  # Add new SPI master controllers in alphabetical order above this line
 diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
-index bffa652..04a0154 100644
+index 6bf1c3d..a454b19 100644
 --- a/drivers/spi/Makefile
 +++ b/drivers/spi/Makefile
 @@ -32,7 +32,7 @@ obj-$(CONFIG_SPI_FSL_SPI)		+= spi-fsl-spi.o

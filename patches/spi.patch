@@ -1,7 +1,7 @@
-Bottom: 22df07b69f5a43d1bee12ac290f45207ca95eb10
-Top:    7d471e97b5eca7e9633f0accc3f87bfacf5c795b
+Bottom: bdbbf1264269701e71f52e885e0945f06c2388fb
+Top:    c8e5347e188c4c351f074bb3ca50a414869c9652
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-04-21 23:43:46 -0400
+Date:   2012-05-03 21:29:00 -0400
 
 spi support lpc31xx
 
@@ -70,7 +70,7 @@ index f5e380a..2d0e0bb 100644
  {
  	int i;
 diff --git a/drivers/spi/Kconfig b/drivers/spi/Kconfig
-index 3ed7483..e2580f7 100644
+index 00c0240..95acfdd 100644
 --- a/drivers/spi/Kconfig
 +++ b/drivers/spi/Kconfig
 @@ -403,6 +403,12 @@ config SPI_NUC900
@@ -87,7 +87,7 @@ index 3ed7483..e2580f7 100644
  # Add new SPI master controllers in alphabetical order above this line
  #
 diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
-index a1d48e0..c406882 100644
+index 9d75d21..b116562 100644
 --- a/drivers/spi/Makefile
 +++ b/drivers/spi/Makefile
 @@ -32,6 +32,7 @@ obj-$(CONFIG_SPI_FSL_SPI)		+= spi-fsl-spi.o
