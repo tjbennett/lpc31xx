@@ -30,7 +30,7 @@
 #include <mach/hardware.h>
 #include <mach/gpio.h>
 
-#include "lpc313x_pwm.h"
+#include "lpc31xx-pwm.h"
 
 static int pwm_value = 0;
 
