@@ -590,7 +590,7 @@ void lpc313x_mci_setup_bus(struct lpc313x_mci_slot *slot)
 
 static void lpc313x_mci_select_slot(struct lpc313x_mci_slot *slot, int enable)
 {
-	if (slot->gpio_select >= 0) {
+	if (gpio_is_valid(slot->gpio_select)) {
 		printk("lpc313x_mci_select_slot %d\n", slot->gpio_select);
 		gpio_set_value(slot->gpio_select, enable);
 	}
@@ -603,7 +603,7 @@ static void lpc313x_mci_set_power(struct lpc313x_mci_slot *slot, int enable)
 	 * power management so use the always enable power
 	 * jumper.
 	 */
-	if (slot->gpio_power >= 0) {
+	if (gpio_is_valid(slot->gpio_power)) {
 		printk("lpc313x_mci_set_power %d\n", slot->gpio_power);
 		gpio_set_value(slot->gpio_power, enable);
 	}
@@ -740,7 +740,7 @@ static int lpc313x_mci_get_wp(struct mmc_host *mmc)
 	int			read_only = -ENOSYS;
 	struct lpc313x_mci_slot	*slot = mmc_priv(mmc);
 
-	if (slot->gpio_wp >= 0) {
+	if (gpio_is_valid(slot->gpio_wp)) {
 		read_only =  gpio_get_value(slot->gpio_wp);
 		dev_dbg(&mmc->class_dev, "card is %s\n",
 				read_only ? "read-only" : "read-write");
@@ -753,7 +753,7 @@ static int lpc313x_mci_get_cd(struct lpc313x_mci_slot *slot)
 {
 	int			present = -ENOSYS;
 
-	if (slot->gpio_cd >= 0) {
+	if (gpio_is_valid(slot->gpio_cd)) {
 		present = !gpio_get_value(slot->gpio_cd);
 		dev_vdbg(&slot->mmc->class_dev, "card is %spresent\n", present ? "" : "not ");
 	}
@@ -1357,6 +1357,7 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 	const u32 *voltage_ranges;
 	const int *width;
 	int i, ret, num_ranges, level;
+	enum of_gpio_flags flags;
 
 	mmc = mmc_alloc_host(sizeof(struct lpc313x_mci_slot), &host->pdev->dev);
 
@@ -1368,19 +1369,20 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 
 	slot->mmc = mmc;
 	slot->host = host;
-	slot->gpio_cd = of_get_named_gpio(np, "gpio-cd", 0);
-	if (slot->gpio_cd >= 0) {
+
+	slot->gpio_cd = of_get_named_gpio_flags(np, "gpios", 0, &flags);
+	if (gpio_is_valid(slot->gpio_cd)) {
 		gpio_request(slot->gpio_cd, "mmc cd");
 		gpio_direction_input(slot->gpio_cd);
 	}
-	slot->gpio_wp = of_get_named_gpio(np, "gpio-wp", 0);
-	if (slot->gpio_wp >= 0)
+	slot->gpio_wp = of_get_named_gpio_flags(np, "gpios", 1, &flags);
+	if (gpio_is_valid(slot->gpio_wp))
 		gpio_request(slot->gpio_cd, "mmc wp");
-	slot->gpio_power = of_get_named_gpio(np, "gpio-power", 0);
-	if (slot->gpio_power >= 0)
+	slot->gpio_power = of_get_named_gpio_flags(np, "gpios", 2, &flags);
+	if (gpio_is_valid(slot->gpio_power))
 		gpio_request(slot->gpio_cd, "mmc power");
-	slot->gpio_select = of_get_named_gpio(np, "gpio-select", 0);
-	if (slot->gpio_select >= 0)
+	slot->gpio_select = of_get_named_gpio_flags(np, "gpios", 3, &flags);
+	if (gpio_is_valid(slot->gpio_select))
 		gpio_request(slot->gpio_select, "mmc select");
 
 	mmc->ops = &lpc313x_mci_ops;
@@ -1558,7 +1560,10 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 	SYS_MUX_GPIO_MCI = 1;
 
 	/* set the pins as driven by IP in IOCONF */
+#if 0
+	/* fixme */
 	GPIO_DRV_IP(IOCONF_EBI_MCI, 0xF0000003);
+#endif
 
 	/* set delay gates */
 	SYS_SDMMC_DELAYMODES = 0x1B;
