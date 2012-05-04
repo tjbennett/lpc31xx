@@ -99,18 +99,18 @@ struct lpc31xx_mci {
 	dma_addr_t		sg_dma;
 	dma_sg_ll_t		*sg_cpu;
 #endif
-	u32			cmd_status;
-	u32			data_status;
-	u32			stop_cmdr;
-	u32			dir_status;
+	uint32_t			cmd_status;
+	uint32_t			data_status;
+	uint32_t			stop_cmdr;
+	uint32_t			dir_status;
 	struct tasklet_struct	tasklet;
 	unsigned long		pending_events;
 	unsigned long		completed_events;
 	enum lpc31xx_mci_state	state;
 	struct list_head	queue;
 
-	u32			bus_hz;
-	u32			current_speed;
+	uint32_t			bus_hz;
+	uint32_t			current_speed;
 	struct platform_device	*pdev;
 	int slot_count;
 	struct lpc31xx_mci_slot	*slot[MAX_MCI_SLOTS];
@@ -120,7 +120,7 @@ struct lpc31xx_mci_slot {
 	struct mmc_host		*mmc;
 	struct lpc31xx_mci	*host;
 
-	u32			ctype;
+	uint32_t			ctype;
 
 	struct mmc_request	*mrq;
 	struct list_head	queue_node;
@@ -266,17 +266,17 @@ static void lpc31xx_mci_init_debugfs(struct lpc31xx_mci_slot *slot)
 	if (!node)
 		goto err;
 
-	node = debugfs_create_u32("state", S_IRUSR, root, (u32 *)&host->state);
+	node = debugfs_create_u32("state", S_IRUSR, root, (uint32_t *)&host->state);
 	if (!node)
 		goto err;
 
 	node = debugfs_create_x32("pending_events", S_IRUSR, root,
-				     (u32 *)&host->pending_events);
+				     (uint32_t *)&host->pending_events);
 	if (!node)
 		goto err;
 
 	node = debugfs_create_x32("completed_events", S_IRUSR, root,
-				     (u32 *)&host->completed_events);
+				     (uint32_t *)&host->completed_events);
 	if (!node)
 		goto err;
 
@@ -289,7 +289,7 @@ err:
 
 static inline unsigned ns_to_clocks(unsigned clkrate, unsigned ns)
 {
-	u32 clks;
+	uint32_t clks;
 	if (clkrate > 1000000)
 		clks =  (ns * (clkrate / 1000000) + 999) / 1000;
 	else
@@ -313,11 +313,11 @@ static void lpc31xx_mci_set_timeout(struct lpc31xx_mci *host,
 	mci_writel(host, SDMMC_TMOUT, /*0xffffffff); */ (timeout << 8) | (70));
 }
 
-static u32 lpc31xx_mci_prepare_command(struct mmc_host *mmc,
+static uint32_t lpc31xx_mci_prepare_command(struct mmc_host *mmc,
 				 struct mmc_command *cmd)
 {
 	struct mmc_data	*data;
-	u32		cmdr;
+	uint32_t		cmdr;
 
 	cmd->error = -EINPROGRESS;
 	cmdr = cmd->opcode;
@@ -355,7 +355,7 @@ static u32 lpc31xx_mci_prepare_command(struct mmc_host *mmc,
 
 
 static void lpc31xx_mci_start_command(struct lpc31xx_mci *host,
-		struct mmc_command *cmd, u32 cmd_flags)
+		struct mmc_command *cmd, uint32_t cmd_flags)
 {
  	int tmo = 50;
  	host->cmd = cmd;
@@ -455,11 +455,11 @@ static int lpc31xx_mci_submit_data_dma(struct lpc31xx_mci *host, struct mmc_data
 				   direction);
 
 	dev_vdbg(&host->pdev->dev, "sd sg_cpu: 0x%08x sg_dma:0x%08x sg_len:%d \n",
-		(u32)host->sg_cpu, (u32)host->sg_dma, sg_len);
+		(uint32_t)host->sg_cpu, (uint32_t)host->sg_dma, sg_len);
 
 	for (i = 0, j = 0; i < sg_len; i++) {
 		unsigned int length = sg_dma_len(&data->sg[i]);
-		u32 mem_addr = sg_dma_address(&data->sg[i]);
+		uint32_t mem_addr = sg_dma_address(&data->sg[i]);
 
 		while (length) {
 
@@ -571,7 +571,7 @@ static void lpc31xx_mci_submit_data(struct lpc31xx_mci *host, struct mmc_data *d
 void lpc31xx_mci_setup_bus(struct lpc31xx_mci_slot *slot)
 {
 	struct lpc31xx_mci *host = slot->host;
-	u32 div;
+	uint32_t div;
 
 	if (slot->clock != host->current_speed) {
 		div  = (((host->bus_hz + (host->bus_hz / 5)) / slot->clock)) >> 1;
@@ -628,7 +628,7 @@ static void lpc31xx_mci_start_request(struct lpc31xx_mci *host,
 	struct mmc_request	*mrq;
 	struct mmc_command	*cmd;
 	struct mmc_data		*data;
-	u32			cmdflags;
+	uint32_t			cmdflags;
 
 	mrq = slot->mrq;
 	/* now select the proper slot */
@@ -831,7 +831,7 @@ static void lpc31xx_mci_request_end(struct lpc31xx_mci *host, struct mmc_request
 static void lpc31xx_mci_command_complete(struct lpc31xx_mci *host,
 			struct mmc_command *cmd)
 {
-	u32		status = host->cmd_status;
+	uint32_t		status = host->cmd_status;
 
 	host->cmd_status = 0;
 
@@ -888,7 +888,7 @@ static void lpc31xx_mci_tasklet_func(unsigned long priv)
 	struct mmc_command	*cmd = host->cmd;
 	enum lpc31xx_mci_state	state = host->state;
 	enum lpc31xx_mci_state	prev_state;
-	u32			status;
+	uint32_t			status;
 
 	spin_lock(&host->lock);
 
@@ -1010,7 +1010,7 @@ unlock:
 
 inline static void lpc31xx_mci_push_data(struct lpc31xx_mci *host, void *buf, int cnt)
 {
-    u32* pData = (u32*)buf;
+    uint32_t* pData = (uint32_t*)buf;
 
     if (cnt % 4 != 0)
 	    printk("error not align 4\n");
@@ -1024,7 +1024,7 @@ inline static void lpc31xx_mci_push_data(struct lpc31xx_mci *host, void *buf, in
 
 inline static void lpc31xx_mci_pull_data(struct lpc31xx_mci *host, void *buf,int cnt)
 {
-    u32* pData = (u32*)buf;
+    uint32_t* pData = (uint32_t*)buf;
 
     if (cnt % 4 != 0)
 	    printk("error not align 4\n");
@@ -1041,7 +1041,7 @@ static void lpc31xx_mci_read_data_pio(struct lpc31xx_mci *host)
 	void			*buf = sg_virt(sg);
 	unsigned int		offset = host->pio_offset;
 	struct mmc_data		*data = host->data;
-	u32			status;
+	uint32_t			status;
 	unsigned int		nbytes = 0,len,old_len,count =0;
 
 	do {
@@ -1106,7 +1106,7 @@ static void lpc31xx_mci_write_data_pio(struct lpc31xx_mci *host)
 	void			*buf = sg_virt(sg);
 	unsigned int		offset = host->pio_offset;
 	struct mmc_data		*data = host->data;
-	u32			status;
+	uint32_t			status;
 	unsigned int		nbytes = 0,len;
 
 	do {
@@ -1165,7 +1165,7 @@ done:
 	lpc31xx_mci_set_pending(host, EVENT_XFER_COMPLETE);
 }
 
-static void lpc31xx_mci_cmd_interrupt(struct lpc31xx_mci *host, u32 status)
+static void lpc31xx_mci_cmd_interrupt(struct lpc31xx_mci *host, uint32_t status)
 {
 	if(!host->cmd_status)
 		host->cmd_status = status;
@@ -1178,7 +1178,7 @@ static void lpc31xx_mci_cmd_interrupt(struct lpc31xx_mci *host, u32 status)
 static irqreturn_t lpc31xx_mci_interrupt(int irq, void *dev_id)
 {
 	struct lpc31xx_mci	*host = dev_id;
-	u32			status,  pending;
+	uint32_t			status,  pending;
 	unsigned int		pass_count = 0;
 
 	spin_lock(&host->lock);
@@ -1374,7 +1374,7 @@ lpc31xx_mci_init_slot(struct lpc31xx_mci *host, struct device_node *np)
 {
 	struct mmc_host			*mmc;
 	struct lpc31xx_mci_slot		*slot;
-	const u32 *voltage_ranges;
+	const uint32_t *voltage_ranges;
 	const int *width;
 	int i, ret, num_ranges, level;
 	enum of_gpio_flags flags;
@@ -1425,7 +1425,7 @@ lpc31xx_mci_init_slot(struct lpc31xx_mci *host, struct device_node *np)
 
 	for (i = 0; i < num_ranges; i++) {
 		const int j = i * 2;
-		u32 mask;
+		uint32_t mask;
 
 		mask = mmc_vddrange_to_ocrmask(be32_to_cpu(voltage_ranges[j]),
 					       be32_to_cpu(voltage_ranges[j + 1]));
