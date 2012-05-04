@@ -70,8 +70,8 @@
 
 /* SoC CPU IO addressing */
 /* APB0 & APB1 address range*/
-#define IO_APB01_PHYS     (0x13000000)
-#define IO_APB01_SIZE     (0x0000B000)
+#define IO_APB1_PHYS      (0x13000000)
+#define IO_APB1_SIZE      (0x0000B000)
 /* APB2 address range*/
 #define IO_APB2_PHYS      (0x15000000)
 #define IO_APB2_SIZE      (0x00003000)
@@ -82,8 +82,8 @@
 #define IO_APB4_PHYS      (0x17000000)
 #define IO_APB4_SIZE      (0x00001000)
 /* DMA registers address range*/
-#define IO_DMA_REG_PHYS  (DMA_PHYS)
-#define IO_DMA_REG_SIZE  (0x0000800)
+#define IO_DMA_REG_PHYS   (DMA_PHYS)
+#define IO_DMA_REG_SIZE   (0x0000800)
 /* MPMC config registers address range*/
 #define IO_MPMC_CFG_PHYS  (0x17008000)
 #define IO_MPMC_CFG_SIZE  (0x00001000)
