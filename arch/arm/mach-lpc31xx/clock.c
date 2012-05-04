@@ -896,6 +896,42 @@ static struct clk clk_nand_aes = {
 	.id		= CGU_SB_NANDFLASH_AES_CLK_ID,
 };
 
+static struct clk clk_spi_pclk = {
+	.parent		= &sys_base,
+	.enable		= local_onoff_enable,
+	.enable_reg	= &CGU_SB->clk_pcr[CGU_SB_SPI_PCLK_ID],
+	.enable_mask	= CGU_SB_PCR_RUN,
+	.get_rate	= get_rate,
+	.id		= CGU_SB_SPI_PCLK_ID,
+};
+
+static struct clk clk_spi_pclk_gated = {
+	.parent		= &sys_base,
+	.enable		= local_onoff_enable,
+	.enable_reg	= &CGU_SB->clk_pcr[CGU_SB_SPI_PCLK_GATED_ID],
+	.enable_mask	= CGU_SB_PCR_RUN,
+	.get_rate	= get_rate,
+	.id		= CGU_SB_SPI_PCLK_GATED_ID,
+};
+
+static struct clk clk_spi_clk = {
+	.parent		= &sys_base,
+	.enable		= local_onoff_enable,
+	.enable_reg	= &CGU_SB->clk_pcr[CGU_SB_SPI_CLK_ID],
+	.enable_mask	= CGU_SB_PCR_RUN,
+	.get_rate	= get_rate,
+	.id		= CGU_SB_SPI_CLK_ID,
+};
+
+static struct clk clk_spi_clk_gated = {
+	.parent		= &sys_base,
+	.enable		= local_onoff_enable,
+	.enable_reg	= &CGU_SB->clk_pcr[CGU_SB_SPI_CLK_GATED_ID],
+	.enable_mask	= CGU_SB_PCR_RUN,
+	.get_rate	= get_rate,
+	.id		= CGU_SB_SPI_CLK_GATED_ID,
+};
+
 static DEFINE_MUTEX(clkm_lock);
 
 static inline void clk_lock(void)
@@ -1004,7 +1040,12 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK(NULL, "nand_clk", clk_nand_clk)
 	_REGISTER_CLOCK(NULL, "nand_pclk", clk_nand_pclk)
 	_REGISTER_CLOCK(NULL, "nand_aes", clk_nand_aes)
+	_REGISTER_CLOCK(NULL, "spi_pclk", clk_spi_pclk)
+	_REGISTER_CLOCK(NULL, "spi_pclk_gated", clk_spi_pclk_gated)
+	_REGISTER_CLOCK(NULL, "spi_clk", clk_spi_clk)
+	_REGISTER_CLOCK(NULL, "spi_clk_gated", clk_spi_clk_gated)
 };
+
 
 static int __init clk_init(void)
 {
