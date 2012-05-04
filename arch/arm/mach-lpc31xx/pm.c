@@ -1,9 +1,9 @@
-/*  linux/arch/arm/mach-lpc313x/leds.c
+/*  linux/arch/arm/mach-lpc31xx/leds.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- * LPC313x/4x/5x power management.
+ * LPC31xx/4x/5x power management.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,19 +34,19 @@
 #include <mach/hardware.h>
 
 
-#define LPC313x_ISRAM_VA io_p2v(ISRAM0_PHYS)
+#define LPC31xx_ISRAM_VA io_p2v(ISRAM0_PHYS)
 
 /*
  * Pointers used for sizing and copying suspend function data
  */
-extern int lpc313x_suspend_mem(void);
-extern int lpc313x_suspend_mem_sz;
+extern int lpc31xx_suspend_mem(void);
+extern int lpc31xx_suspend_mem_sz;
 
 
 /* Enable/Disable external refresh controller used by
  * auto clock scaling feature of CGU.
  */
-static void lpc313x_ext_refresh_en(int enable)
+static void lpc31xx_ext_refresh_en(int enable)
 {
 	if (enable)
 		SYS_MPMC_TESTMODE0 |= _BIT(12);
@@ -54,7 +54,7 @@ static void lpc313x_ext_refresh_en(int enable)
 		SYS_MPMC_TESTMODE0 &= ~_BIT(12);
 
 }
-static int lpc313x_pm_valid_state(suspend_state_t state)
+static int lpc31xx_pm_valid_state(suspend_state_t state)
 {
 	switch (state) {
 		case PM_SUSPEND_ON:
@@ -73,13 +73,13 @@ static suspend_state_t target_state;
 /*
  * Called after processes are frozen, but before we shutdown devices.
  */
-static int lpc313x_pm_begin(suspend_state_t state)
+static int lpc31xx_pm_begin(suspend_state_t state)
 {
 	target_state = state;
 	return 0;
 }
 
-static void lpc313x_clk_debug(void)
+static void lpc31xx_clk_debug(void)
 {
 #ifdef CONFIG_PM_DEBUG
 	u32 i, clk_pcr;
@@ -95,9 +95,9 @@ static void lpc313x_clk_debug(void)
 #endif
 }
 
-static int lpc313x_enter_sleep(u32 standby)
+static int lpc31xx_enter_sleep(u32 standby)
 {
-	int (*lpc313x_suspend_ptr) (u32);
+	int (*lpc31xx_suspend_ptr) (u32);
 	int i;
 	u32 base_clk_state = 0;
 
@@ -106,9 +106,9 @@ static int lpc313x_enter_sleep(u32 standby)
 #endif
 
 	/* print clocks which are still on */
-	lpc313x_clk_debug();
+	lpc31xx_clk_debug();
 
-	lpc313x_ext_refresh_en(0);
+	lpc31xx_ext_refresh_en(0);
 	/*
 	 * To simplify stand-by routine, set FFAST as source clock for the
 	 * non-active switch side of SYS, APB0, APB1, APB2 & APB3 domains.
@@ -138,7 +138,7 @@ static int lpc313x_enter_sleep(u32 standby)
 
 #if defined(BACKUP_ISRAM)
 	/* Allocate some space for temporary IRAM storage */
-	iram_swap_area = kmalloc(lpc313x_suspend_mem_sz, GFP_KERNEL);
+	iram_swap_area = kmalloc(lpc31xx_suspend_mem_sz, GFP_KERNEL);
 	if (!iram_swap_area) {
 		printk(KERN_ERR
 		       "PM Suspend: cannot allocate memory to save portion "
@@ -146,8 +146,8 @@ static int lpc313x_enter_sleep(u32 standby)
 		return -ENOMEM;
 	}
 	/* Backup a small area of IRAM used for the suspend code */
-	memcpy(iram_swap_area, (void *) LPC313x_ISRAM_VA,
-			lpc313x_suspend_mem_sz);
+	memcpy(iram_swap_area, (void *) LPC31xx_ISRAM_VA,
+			lpc31xx_suspend_mem_sz);
 #endif
 
 	/*
@@ -155,19 +155,19 @@ static int lpc313x_enter_sleep(u32 standby)
 	 * needs to run from IRAM as DRAM may no longer be available
 	 * when the PLL is stopped.
 	 */
-	memcpy((void *) LPC313x_ISRAM_VA, &lpc313x_suspend_mem,
-			lpc313x_suspend_mem_sz);
-	flush_icache_range((unsigned long)LPC313x_ISRAM_VA,
-		(unsigned long)(LPC313x_ISRAM_VA) + lpc313x_suspend_mem_sz);
+	memcpy((void *) LPC31xx_ISRAM_VA, &lpc31xx_suspend_mem,
+			lpc31xx_suspend_mem_sz);
+	flush_icache_range((unsigned long)LPC31xx_ISRAM_VA,
+		(unsigned long)(LPC31xx_ISRAM_VA) + lpc31xx_suspend_mem_sz);
 
 	/* Transfer to suspend code in IRAM */
-	lpc313x_suspend_ptr = (void *) LPC313x_ISRAM_VA;
-	(void) lpc313x_suspend_ptr(standby);
+	lpc31xx_suspend_ptr = (void *) LPC31xx_ISRAM_VA;
+	(void) lpc31xx_suspend_ptr(standby);
 
 #if defined(BACKUP_ISRAM)
 	/* Restore original IRAM contents */
-	memcpy((void *) LPC313x_ISRAM_VA, iram_swap_area,
-			lpc313x_suspend_mem_sz);
+	memcpy((void *) LPC31xx_ISRAM_VA, iram_swap_area,
+			lpc31xx_suspend_mem_sz);
 
 	kfree(iram_swap_area);
 #endif
@@ -187,14 +187,14 @@ static int lpc313x_enter_sleep(u32 standby)
 					CGU_SB_PCR_RUN | CGU_SB_PCR_AUTO;
 	}
 
-	lpc313x_ext_refresh_en(1);
+	lpc31xx_ext_refresh_en(1);
 
 	return 0;
 }
 
 
 
-static int lpc313x_pm_enter(suspend_state_t state)
+static int lpc31xx_pm_enter(suspend_state_t state)
 {
 	int ret = 0;
 
@@ -208,7 +208,7 @@ static int lpc313x_pm_enter(suspend_state_t state)
 		 * event router.
 		 */
 		case PM_SUSPEND_MEM:
-			ret = lpc313x_enter_sleep(0);
+			ret = lpc31xx_enter_sleep(0);
 			break;
 
 		/*
@@ -219,7 +219,7 @@ static int lpc313x_pm_enter(suspend_state_t state)
 		 * running without WAK_EN bit set in CGU.
 		 */
 		case PM_SUSPEND_STANDBY:
-			ret = lpc313x_enter_sleep(1);
+			ret = lpc31xx_enter_sleep(1);
 			break;
 
 		case PM_SUSPEND_ON:
@@ -241,7 +241,7 @@ error:
 /*
  * Called right prior to thawing processes.
  */
-static void lpc313x_pm_end(void)
+static void lpc31xx_pm_end(void)
 {
 	target_state = PM_SUSPEND_ON;
 }
@@ -251,21 +251,21 @@ static void lpc313x_pm_end(void)
  * For internal events to wake the chip we should not stop the module 
  * clocks. 
  */
-int lpc313x_entering_suspend_mem(void)
+int lpc31xx_entering_suspend_mem(void)
 {
 	return (target_state == PM_SUSPEND_MEM);
 }
-EXPORT_SYMBOL(lpc313x_entering_suspend_mem);
+EXPORT_SYMBOL(lpc31xx_entering_suspend_mem);
 
 
-static struct platform_suspend_ops lpc313x_pm_ops ={
-	.valid	= lpc313x_pm_valid_state,
-	.begin	= lpc313x_pm_begin,
-	.enter	= lpc313x_pm_enter,
-	.end	= lpc313x_pm_end,
+static struct platform_suspend_ops lpc31xx_pm_ops ={
+	.valid	= lpc31xx_pm_valid_state,
+	.begin	= lpc31xx_pm_begin,
+	.enter	= lpc31xx_pm_enter,
+	.end	= lpc31xx_pm_end,
 };
 
-static int __init lpc313x_pm_init(void)
+static int __init lpc31xx_pm_init(void)
 {
 	pr_info("LPC31: Power Management init.\n");
 
@@ -274,8 +274,8 @@ static int __init lpc313x_pm_init(void)
 	 */
 
 
-	suspend_set_ops(&lpc313x_pm_ops);
+	suspend_set_ops(&lpc31xx_pm_ops);
 
 	return 0;
 }
-arch_initcall(lpc313x_pm_init);
+arch_initcall(lpc31xx_pm_init);

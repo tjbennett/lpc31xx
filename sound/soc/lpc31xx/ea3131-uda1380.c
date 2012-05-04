@@ -1,5 +1,5 @@
 /*
- * sound/soc/lpc313x/lpc313x-uda1380.c
+ * sound/soc/lpc31xx/lpc31xx-uda1380.c
  *
  * Author: Kevin Wells <kevin.wells@nxp.com>
  *
@@ -43,7 +43,7 @@
 #include "lpc31xx-i2s.h"
 #include "lpc31xx-i2s-clocking.h"
 
-#define SND_MODNAME "lpc313x_uda1380"
+#define SND_MODNAME "lpc31xx_uda1380"
 
 static int ea3131_uda1380_hw_params(struct snd_pcm_substream *substream,
 			      struct snd_pcm_hw_params *params)
@@ -148,7 +148,7 @@ static struct snd_soc_dai_link ea3131_uda1380_dai[] = {
 };
 
 static struct snd_soc_card snd_soc_machine_ea3131 = {
-	.name = "lpc313x-i2s-uda1380",
+	.name = "lpc31xx-i2s-uda1380",
 	.dai_link = &ea3131_uda1380_dai[0],
 	.num_links = ARRAY_SIZE(ea3131_uda1380_dai),
 };
@@ -170,7 +170,7 @@ static int __devinit ea3131_asoc_probe(struct platform_device *pdev)
 	/*
 	 * Enable CODEC clock first or I2C will fail to the CODEC
 	 */
-	lpc313x_main_clk_rate(48000);
+	lpc31xx_main_clk_rate(48000);
 
 	snd_dev = platform_device_alloc("soc-audio", -1);
 	if (!snd_dev) {
@@ -214,7 +214,7 @@ err:
 static int __devexit ea3131_asoc_remove(struct platform_device *pdev)
 {
 	platform_device_unregister(ea3131_snd_device);
-	lpc313x_main_clk_rate(0);
+	lpc31xx_main_clk_rate(0);
 	ea3131_snd_device = NULL;
 	return 0;
 }

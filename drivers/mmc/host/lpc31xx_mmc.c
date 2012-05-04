@@ -1,7 +1,7 @@
 /*
- * LPC313x MultiMedia Card Interface driver
+ * LPC31xx MultiMedia Card Interface driver
  *
- * drivers/mmc/host/lpc313x_mmc.c
+ * drivers/mmc/host/lpc31xx_mmc.c
  *
  * Copyright (C) 2009 NXP Semiconductors
  *
@@ -54,12 +54,12 @@
 //#define USE_DMA
 //#define BURST_DMA
 
-#define LPC313x_MCI_DATA_ERROR_FLAGS	(SDMMC_INT_DTO | SDMMC_INT_DCRC | SDMMC_INT_HTO | SDMMC_INT_SBE | SDMMC_INT_EBE)
-#define LPC313x_MCI_CMD_ERROR_FLAGS	(SDMMC_INT_RTO | SDMMC_INT_RCRC | SDMMC_INT_RESP_ERR | SDMMC_INT_HLE)
-#define LPC313x_MCI_ERROR_FLAGS		(LPC313x_MCI_DATA_ERROR_FLAGS | LPC313x_MCI_CMD_ERROR_FLAGS | SDMMC_INT_HLE)
-#define LPC313x_MCI_SEND_STATUS		1
-#define LPC313x_MCI_RECV_STATUS		2
-#define LPC313x_MCI_DMA_THRESHOLD	16
+#define LPC31xx_MCI_DATA_ERROR_FLAGS	(SDMMC_INT_DTO | SDMMC_INT_DCRC | SDMMC_INT_HTO | SDMMC_INT_SBE | SDMMC_INT_EBE)
+#define LPC31xx_MCI_CMD_ERROR_FLAGS	(SDMMC_INT_RTO | SDMMC_INT_RCRC | SDMMC_INT_RESP_ERR | SDMMC_INT_HLE)
+#define LPC31xx_MCI_ERROR_FLAGS		(LPC31xx_MCI_DATA_ERROR_FLAGS | LPC31xx_MCI_CMD_ERROR_FLAGS | SDMMC_INT_HLE)
+#define LPC31xx_MCI_SEND_STATUS		1
+#define LPC31xx_MCI_RECV_STATUS		2
+#define LPC31xx_MCI_DMA_THRESHOLD	16
 
 enum {
 	EVENT_CMD_COMPLETE = 0,
@@ -70,7 +70,7 @@ enum {
 };
 
 
-enum lpc313x_mci_state {
+enum lpc31xx_mci_state {
 	STATE_IDLE = 0,
 	STATE_SENDING_CMD,
 	STATE_SENDING_DATA,
@@ -80,16 +80,16 @@ enum lpc313x_mci_state {
 };
 
 /*forward declaration */
-struct lpc313x_mci_slot;
+struct lpc31xx_mci_slot;
 
-struct lpc313x_mci {
+struct lpc31xx_mci {
 	spinlock_t		lock;
 	void __iomem		*regs;
 
 	struct scatterlist	*sg;
 	unsigned int		pio_offset;
 
-	struct lpc313x_mci_slot	*cur_slot;
+	struct lpc31xx_mci_slot	*cur_slot;
 	struct mmc_request	*mrq;
 	struct mmc_command	*cmd;
 	struct mmc_data		*data;
@@ -106,19 +106,19 @@ struct lpc313x_mci {
 	struct tasklet_struct	tasklet;
 	unsigned long		pending_events;
 	unsigned long		completed_events;
-	enum lpc313x_mci_state	state;
+	enum lpc31xx_mci_state	state;
 	struct list_head	queue;
 
 	u32			bus_hz;
 	u32			current_speed;
 	struct platform_device	*pdev;
 	int slot_count;
-	struct lpc313x_mci_slot	*slot[MAX_MCI_SLOTS];
+	struct lpc31xx_mci_slot	*slot[MAX_MCI_SLOTS];
 };
 
-struct lpc313x_mci_slot {
+struct lpc31xx_mci_slot {
 	struct mmc_host		*mmc;
-	struct lpc313x_mci	*host;
+	struct lpc31xx_mci	*host;
 
 	u32			ctype;
 
@@ -127,9 +127,9 @@ struct lpc313x_mci_slot {
 
 	unsigned int		clock;
 	unsigned long		flags;
-#define LPC313x_MMC_CARD_PRESENT	0
-#define LPC313x_MMC_CARD_NEED_INIT	1
-#define LPC313x_MMC_SHUTDOWN		2
+#define LPC31xx_MMC_CARD_PRESENT	0
+#define LPC31xx_MMC_CARD_NEED_INIT	1
+#define LPC31xx_MMC_SHUTDOWN		2
 	int			id;
 	int			irq;
 
@@ -142,23 +142,23 @@ struct lpc313x_mci_slot {
 };
 
 /* Register access macros */
-static inline uint32_t mci_readl(struct lpc313x_mci *host, uint32_t reg)
+static inline uint32_t mci_readl(struct lpc31xx_mci *host, uint32_t reg)
 {
 	return __raw_readl(host->regs + reg);
 }
 
-static inline void mci_writel(struct lpc313x_mci *host, uint32_t reg, uint32_t value)
+static inline void mci_writel(struct lpc31xx_mci *host, uint32_t reg, uint32_t value)
 {
 	__raw_writel(value, host->regs + reg);
 }
 
 
-#define lpc313x_mci_test_and_clear_pending(host, event)		\
+#define lpc31xx_mci_test_and_clear_pending(host, event)		\
 	test_and_clear_bit(event, &host->pending_events)
-#define lpc313x_mci_set_completed(host, event)			\
+#define lpc31xx_mci_set_completed(host, event)			\
 	set_bit(event, &host->completed_events)
 
-#define lpc313x_mci_set_pending(host, event)				\
+#define lpc31xx_mci_set_pending(host, event)				\
 	set_bit(event, &host->pending_events)
 
 #if defined (CONFIG_DEBUG_FS)
@@ -166,9 +166,9 @@ static inline void mci_writel(struct lpc313x_mci *host, uint32_t reg, uint32_t v
  * The debugfs stuff below is mostly optimized away when
  * CONFIG_DEBUG_FS is not set.
  */
-static int lpc313x_mci_req_show(struct seq_file *s, void *v)
+static int lpc31xx_mci_req_show(struct seq_file *s, void *v)
 {
-	struct lpc313x_mci_slot	*slot = s->private;
+	struct lpc31xx_mci_slot	*slot = s->private;
 	struct mmc_request	*mrq;
 	struct mmc_command	*cmd;
 	struct mmc_command	*stop;
@@ -206,20 +206,20 @@ static int lpc313x_mci_req_show(struct seq_file *s, void *v)
 	return 0;
 }
 
-static int lpc313x_mci_req_open(struct inode *inode, struct file *file)
+static int lpc31xx_mci_req_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, lpc313x_mci_req_show, inode->i_private);
+	return single_open(file, lpc31xx_mci_req_show, inode->i_private);
 }
 
-static const struct file_operations lpc313x_mci_req_fops = {
+static const struct file_operations lpc31xx_mci_req_fops = {
 	.owner		= THIS_MODULE,
-	.open		= lpc313x_mci_req_open,
+	.open		= lpc31xx_mci_req_open,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
 
-static int lpc313x_mci_regs_show(struct seq_file *s, void *v)
+static int lpc31xx_mci_regs_show(struct seq_file *s, void *v)
 {
 	seq_printf(s, "STATUS:\t0x%08x\n",SDMMC_STATUS);
 	seq_printf(s, "RINTSTS:\t0x%08x\n",SDMMC_RINTSTS);
@@ -231,23 +231,23 @@ static int lpc313x_mci_regs_show(struct seq_file *s, void *v)
 	return 0;
 }
 
-static int lpc313x_mci_regs_open(struct inode *inode, struct file *file)
+static int lpc31xx_mci_regs_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, lpc313x_mci_regs_show, inode->i_private);
+	return single_open(file, lpc31xx_mci_regs_show, inode->i_private);
 }
 
-static const struct file_operations lpc313x_mci_regs_fops = {
+static const struct file_operations lpc31xx_mci_regs_fops = {
 	.owner		= THIS_MODULE,
-	.open		= lpc313x_mci_regs_open,
+	.open		= lpc31xx_mci_regs_open,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
 
-static void lpc313x_mci_init_debugfs(struct lpc313x_mci_slot *slot)
+static void lpc31xx_mci_init_debugfs(struct lpc31xx_mci_slot *slot)
 {
 	struct mmc_host		*mmc = slot->mmc;
-	struct lpc313x_mci	*host = slot->host;
+	struct lpc31xx_mci	*host = slot->host;
 	struct dentry		*root;
 	struct dentry		*node;
 
@@ -256,13 +256,13 @@ static void lpc313x_mci_init_debugfs(struct lpc313x_mci_slot *slot)
 		return;
 
 	node = debugfs_create_file("regs", S_IRUSR, root, host,
-			&lpc313x_mci_regs_fops);
+			&lpc31xx_mci_regs_fops);
 	if (IS_ERR(node))
 		return;
 	if (!node)
 		goto err;
 
-	node = debugfs_create_file("req", S_IRUSR, root, slot, &lpc313x_mci_req_fops);
+	node = debugfs_create_file("req", S_IRUSR, root, slot, &lpc31xx_mci_req_fops);
 	if (!node)
 		goto err;
 
@@ -298,8 +298,8 @@ static inline unsigned ns_to_clocks(unsigned clkrate, unsigned ns)
 	return clks;
 }
 
-static void lpc313x_mci_set_timeout(struct lpc313x_mci *host,
-		struct lpc313x_mci_slot *slot, struct mmc_data *data)
+static void lpc31xx_mci_set_timeout(struct lpc31xx_mci *host,
+		struct lpc31xx_mci_slot *slot, struct mmc_data *data)
 {
 	unsigned timeout;
 
@@ -313,7 +313,7 @@ static void lpc313x_mci_set_timeout(struct lpc313x_mci *host,
 	mci_writel(host, SDMMC_TMOUT, /*0xffffffff); */ (timeout << 8) | (70));
 }
 
-static u32 lpc313x_mci_prepare_command(struct mmc_host *mmc,
+static u32 lpc31xx_mci_prepare_command(struct mmc_host *mmc,
 				 struct mmc_command *cmd)
 {
 	struct mmc_data	*data;
@@ -354,7 +354,7 @@ static u32 lpc313x_mci_prepare_command(struct mmc_host *mmc,
 }
 
 
-static void lpc313x_mci_start_command(struct lpc313x_mci *host,
+static void lpc31xx_mci_start_command(struct lpc31xx_mci *host,
 		struct mmc_command *cmd, u32 cmd_flags)
 {
  	int tmo = 50;
@@ -370,15 +370,15 @@ static void lpc313x_mci_start_command(struct lpc313x_mci *host,
 		cpu_relax();
 }
 
-static void send_stop_cmd(struct lpc313x_mci *host, struct mmc_data *data)
+static void send_stop_cmd(struct lpc31xx_mci *host, struct mmc_data *data)
 {
-	lpc313x_mci_start_command(host, data->stop, host->stop_cmdr);
+	lpc31xx_mci_start_command(host, data->stop, host->stop_cmdr);
 }
 
 
 #ifdef USE_DMA
 
-static void lpc313x_mci_dma_cleanup(struct lpc313x_mci *host)
+static void lpc31xx_mci_dma_cleanup(struct lpc31xx_mci *host)
 {
 	struct mmc_data			*data = host->data;
 
@@ -388,40 +388,40 @@ static void lpc313x_mci_dma_cleanup(struct lpc313x_mci *host)
 		      ? DMA_TO_DEVICE : DMA_FROM_DEVICE));
 }
 
-static void lpc313x_mci_stop_dma(struct lpc313x_mci *host)
+static void lpc31xx_mci_stop_dma(struct lpc31xx_mci *host)
 {
 	if (host->dma_chn > 0) {
 		dma_stop_channel(host->dma_chn);
-		lpc313x_mci_dma_cleanup(host);
+		lpc31xx_mci_dma_cleanup(host);
 	} else {
 		/* Data transfer was stopped by the interrupt handler */
-		lpc313x_mci_set_pending(host, EVENT_XFER_COMPLETE);
+		lpc31xx_mci_set_pending(host, EVENT_XFER_COMPLETE);
 	}
 }
 
 /* This function is called by the DMA driver from tasklet context. */
-static void lpc313x_mci_dma_complete(int chn, dma_irq_type_t type, void *arg)
+static void lpc31xx_mci_dma_complete(int chn, dma_irq_type_t type, void *arg)
 {
-	struct lpc313x_mci	*host = arg;
+	struct lpc31xx_mci	*host = arg;
 	struct mmc_data		*data = host->data;
 
 	dev_vdbg(&host->pdev->dev, "DMA complete\n");
 
 	spin_lock(&host->lock);
-	lpc313x_mci_dma_cleanup(host);
+	lpc31xx_mci_dma_cleanup(host);
 
 	/*
 	 * If the card was removed, data will be NULL. No point trying
 	 * to send the stop command or waiting for NBUSY in this case.
 	 */
 	if (data) {
-		lpc313x_mci_set_pending(host, EVENT_XFER_COMPLETE);
+		lpc31xx_mci_set_pending(host, EVENT_XFER_COMPLETE);
 		tasklet_schedule(&host->tasklet);
 	}
 	spin_unlock(&host->lock);
 }
 
-static int lpc313x_mci_submit_data_dma(struct lpc313x_mci *host, struct mmc_data *data)
+static int lpc31xx_mci_submit_data_dma(struct lpc31xx_mci *host, struct mmc_data *data)
 {
 	struct scatterlist		*sg;
 	unsigned int			i, direction, sg_len;
@@ -436,7 +436,7 @@ static int lpc313x_mci_submit_data_dma(struct lpc313x_mci *host, struct mmc_data
 	 * non-word-aligned buffers or lengths. Also, we don't bother
 	 * with all the DMA setup overhead for short transfers.
 	 */
-	if (data->blocks * data->blksz < LPC313x_MCI_DMA_THRESHOLD)
+	if (data->blocks * data->blksz < LPC31xx_MCI_DMA_THRESHOLD)
 		return -EINVAL;
 	if (data->blksz & 3)
 		return -EINVAL;
@@ -528,19 +528,19 @@ static int lpc313x_mci_submit_data_dma(struct lpc313x_mci *host, struct mmc_data
 }
 
 #else
-static int lpc313x_mci_submit_data_dma(struct lpc313x_mci *host, struct mmc_data *data)
+static int lpc31xx_mci_submit_data_dma(struct lpc31xx_mci *host, struct mmc_data *data)
 {
 	return -ENOSYS;
 }
 
-static void lpc313x_mci_stop_dma(struct lpc313x_mci *host)
+static void lpc31xx_mci_stop_dma(struct lpc31xx_mci *host)
 {
 	/* Data transfer was stopped by the interrupt handler */
-	lpc313x_mci_set_pending(host, EVENT_XFER_COMPLETE);
+	lpc31xx_mci_set_pending(host, EVENT_XFER_COMPLETE);
 }
 #endif
 
-static void lpc313x_mci_submit_data(struct lpc313x_mci *host, struct mmc_data *data)
+static void lpc31xx_mci_submit_data(struct lpc31xx_mci *host, struct mmc_data *data)
 {
 	data->error = -EINPROGRESS;
 
@@ -548,13 +548,13 @@ static void lpc313x_mci_submit_data(struct lpc313x_mci *host, struct mmc_data *d
 	host->sg = NULL;
 	host->data = data;
 
-	if (lpc313x_mci_submit_data_dma(host, data)) {
+	if (lpc31xx_mci_submit_data_dma(host, data)) {
 		host->sg = data->sg;
 		host->pio_offset = 0;
 		if (data->flags & MMC_DATA_READ)
-			host->dir_status = LPC313x_MCI_RECV_STATUS;
+			host->dir_status = LPC31xx_MCI_RECV_STATUS;
 		else
-			host->dir_status = LPC313x_MCI_SEND_STATUS;
+			host->dir_status = LPC31xx_MCI_SEND_STATUS;
 
 		//SDMMC_INTMASK |= (SDMMC_INT_RXDR | SDMMC_INT_TXDR);
 		mci_writel(host, SDMMC_CTRL, mci_readl(host, SDMMC_CTRL) & ~SDMMC_CTRL_DMA_ENABLE); // enable dma
@@ -568,9 +568,9 @@ static void lpc313x_mci_submit_data(struct lpc313x_mci *host, struct mmc_data *d
     while (mci_readl(host, SDMMC_CMD) & SDMMC_CMD_START); \
 }
 
-void lpc313x_mci_setup_bus(struct lpc313x_mci_slot *slot)
+void lpc31xx_mci_setup_bus(struct lpc31xx_mci_slot *slot)
 {
-	struct lpc313x_mci *host = slot->host;
+	struct lpc31xx_mci *host = slot->host;
 	u32 div;
 
 	if (slot->clock != host->current_speed) {
@@ -602,15 +602,15 @@ void lpc313x_mci_setup_bus(struct lpc313x_mci_slot *slot)
 	mci_writel(host, SDMMC_CTYPE, slot->ctype);
 }
 
-static void lpc313x_mci_select_slot(struct lpc313x_mci_slot *slot, int enable)
+static void lpc31xx_mci_select_slot(struct lpc31xx_mci_slot *slot, int enable)
 {
 	if (gpio_is_valid(slot->gpio_select)) {
-		printk("lpc313x_mci_select_slot %d\n", slot->gpio_select);
+		printk("lpc31xx_mci_select_slot %d\n", slot->gpio_select);
 		gpio_set_value(slot->gpio_select, enable);
 	}
 }
 
-static void lpc313x_mci_set_power(struct lpc313x_mci_slot *slot, int enable)
+static void lpc31xx_mci_set_power(struct lpc31xx_mci_slot *slot, int enable)
 {
 	/* on current version of EA board the card detect
 	 * pull-up in on switched power side. So can't do
@@ -622,8 +622,8 @@ static void lpc313x_mci_set_power(struct lpc313x_mci_slot *slot, int enable)
 	}
 }
 
-static void lpc313x_mci_start_request(struct lpc313x_mci *host,
-		struct lpc313x_mci_slot *slot)
+static void lpc31xx_mci_start_request(struct lpc31xx_mci *host,
+		struct lpc31xx_mci_slot *slot)
 {
 	struct mmc_request	*mrq;
 	struct mmc_command	*cmd;
@@ -634,12 +634,12 @@ static void lpc313x_mci_start_request(struct lpc313x_mci *host,
 	/* now select the proper slot */
 	if (host->cur_slot != slot) {
 		if (host->cur_slot)
-			lpc313x_mci_select_slot(host->cur_slot, 0);
-		lpc313x_mci_select_slot(slot, 1);
+			lpc31xx_mci_select_slot(host->cur_slot, 0);
+		lpc31xx_mci_select_slot(slot, 1);
 	}
 
 	/* Slot specific timing and width adjustment */
-	lpc313x_mci_setup_bus(slot);
+	lpc31xx_mci_setup_bus(slot);
 
 	host->cur_slot = slot;
 	host->mrq = mrq;
@@ -650,30 +650,30 @@ static void lpc313x_mci_start_request(struct lpc313x_mci *host,
 
 	data = mrq->data;
 	if (data) {
-		lpc313x_mci_set_timeout(host, slot, data);
+		lpc31xx_mci_set_timeout(host, slot, data);
 		mci_writel(host, SDMMC_BYTCNT,data->blksz*data->blocks);
 		mci_writel(host, SDMMC_BLKSIZ,data->blksz);
 	}
 
 	cmd = mrq->cmd;
-	cmdflags = lpc313x_mci_prepare_command(slot->mmc, cmd);
+	cmdflags = lpc31xx_mci_prepare_command(slot->mmc, cmd);
 
-	if (unlikely(test_and_clear_bit(LPC313x_MMC_CARD_NEED_INIT, &slot->flags))) 
+	if (unlikely(test_and_clear_bit(LPC31xx_MMC_CARD_NEED_INIT, &slot->flags)))
 	    cmdflags |= SDMMC_CMD_INIT; //this is the first command, let set send the initializtion clock
 	
 	if (data) //we may need to move this code to mci_start_command
-		lpc313x_mci_submit_data(host, data);
+		lpc31xx_mci_submit_data(host, data);
 
 	if (mrq->stop) 
-		host->stop_cmdr = lpc313x_mci_prepare_command(slot->mmc, mrq->stop);
+		host->stop_cmdr = lpc31xx_mci_prepare_command(slot->mmc, mrq->stop);
 
-	lpc313x_mci_start_command(host, cmd, cmdflags);
+	lpc31xx_mci_start_command(host, cmd, cmdflags);
 }
 
 
 
-static void lpc313x_mci_queue_request(struct lpc313x_mci *host,
-		struct lpc313x_mci_slot *slot, struct mmc_request *mrq)
+static void lpc31xx_mci_queue_request(struct lpc31xx_mci *host,
+		struct lpc31xx_mci_slot *slot, struct mmc_request *mrq)
 {
 	dev_vdbg(&slot->mmc->class_dev, "queue request: state=%d\n",
 			host->state);
@@ -683,7 +683,7 @@ static void lpc313x_mci_queue_request(struct lpc313x_mci *host,
 	slot->mrq = mrq;
 	if (host->state == STATE_IDLE) {
 		host->state = STATE_SENDING_CMD;
-		lpc313x_mci_start_request(host, slot);
+		lpc31xx_mci_start_request(host, slot);
 	} else {
 		list_add_tail(&slot->queue_node, &host->queue);
 	}
@@ -691,25 +691,25 @@ static void lpc313x_mci_queue_request(struct lpc313x_mci *host,
 }
 
 
-static void lpc313x_mci_request(struct mmc_host *mmc, struct mmc_request *mrq)
+static void lpc31xx_mci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 {
-	struct lpc313x_mci_slot	*slot = mmc_priv(mmc);
-	struct lpc313x_mci	*host = slot->host;
+	struct lpc31xx_mci_slot	*slot = mmc_priv(mmc);
+	struct lpc31xx_mci	*host = slot->host;
 
 	WARN_ON(slot->mrq);
 
-	if (!test_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags)) {
+	if (!test_bit(LPC31xx_MMC_CARD_PRESENT, &slot->flags)) {
 		mrq->cmd->error = -ENOMEDIUM;
 		mmc_request_done(mmc, mrq);
 		return;
 	}
 
-	lpc313x_mci_queue_request(host, slot, mrq);
+	lpc31xx_mci_queue_request(host, slot, mrq);
 }
 
-static void lpc313x_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
+static void lpc31xx_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 {
-	struct lpc313x_mci_slot	*slot = mmc_priv(mmc);
+	struct lpc31xx_mci_slot	*slot = mmc_priv(mmc);
 
 	slot->ctype = 0; // set default 1 bit mode
 	switch (ios->bus_width) {
@@ -739,7 +739,7 @@ static void lpc313x_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	switch (ios->power_mode) {
 	case MMC_POWER_UP:
-		set_bit(LPC313x_MMC_CARD_NEED_INIT, &slot->flags);
+		set_bit(LPC31xx_MMC_CARD_NEED_INIT, &slot->flags);
 		break;
 	default:
 		break;
@@ -748,10 +748,10 @@ static void lpc313x_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 
 
-static int lpc313x_mci_get_wp(struct mmc_host *mmc)
+static int lpc31xx_mci_get_wp(struct mmc_host *mmc)
 {
 	int			read_only = -ENOSYS;
-	struct lpc313x_mci_slot	*slot = mmc_priv(mmc);
+	struct lpc31xx_mci_slot	*slot = mmc_priv(mmc);
 
 	if (gpio_is_valid(slot->gpio_wp)) {
 		read_only =  gpio_get_value(slot->gpio_wp);
@@ -762,7 +762,7 @@ static int lpc313x_mci_get_wp(struct mmc_host *mmc)
 }
 
 
-static int lpc313x_mci_get_cd(struct lpc313x_mci_slot *slot)
+static int lpc31xx_mci_get_cd(struct lpc31xx_mci_slot *slot)
 {
 	int			present = -ENOSYS;
 
@@ -773,10 +773,10 @@ static int lpc313x_mci_get_cd(struct lpc313x_mci_slot *slot)
 	return present;
 }
 
-static void lpc313x_mci_enable_sdio_irq(struct mmc_host *mmc, int enable)
+static void lpc31xx_mci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
-	struct lpc313x_mci_slot	*slot = mmc_priv(mmc);
-	struct lpc313x_mci	*host = slot->host;
+	struct lpc31xx_mci_slot	*slot = mmc_priv(mmc);
+	struct lpc31xx_mci	*host = slot->host;
 	unsigned int reg;
 
 	if (enable) {
@@ -789,18 +789,18 @@ static void lpc313x_mci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 	}
 }
 
-static const struct mmc_host_ops lpc313x_mci_ops = {
-	.request	= lpc313x_mci_request,
-	.set_ios	= lpc313x_mci_set_ios,
-	.get_ro		= lpc313x_mci_get_wp,
-	.enable_sdio_irq= lpc313x_mci_enable_sdio_irq,
+static const struct mmc_host_ops lpc31xx_mci_ops = {
+	.request	= lpc31xx_mci_request,
+	.set_ios	= lpc31xx_mci_set_ios,
+	.get_ro		= lpc31xx_mci_get_wp,
+	.enable_sdio_irq= lpc31xx_mci_enable_sdio_irq,
 };
 
-static void lpc313x_mci_request_end(struct lpc313x_mci *host, struct mmc_request *mrq)
+static void lpc31xx_mci_request_end(struct lpc31xx_mci *host, struct mmc_request *mrq)
 	__releases(&host->lock)
 	__acquires(&host->lock)
 {
-	struct lpc313x_mci_slot	*slot = NULL;
+	struct lpc31xx_mci_slot	*slot = NULL;
 	struct mmc_host		*prev_mmc = host->cur_slot->mmc;
 
 	WARN_ON(host->cmd || host->data);
@@ -809,12 +809,12 @@ static void lpc313x_mci_request_end(struct lpc313x_mci *host, struct mmc_request
 	host->mrq = NULL;
 	if (!list_empty(&host->queue)) {
 		slot = list_entry(host->queue.next,
-				struct lpc313x_mci_slot, queue_node);
+				struct lpc31xx_mci_slot, queue_node);
 		list_del(&slot->queue_node);
 		dev_vdbg(&host->pdev->dev, "list not empty: %s is next\n",
 				mmc_hostname(slot->mmc));
 		host->state = STATE_SENDING_CMD;
-		lpc313x_mci_start_request(host, slot);
+		lpc31xx_mci_start_request(host, slot);
 	} else {
 		dev_vdbg(&host->pdev->dev, "list empty\n");
 		host->state = STATE_IDLE;
@@ -828,7 +828,7 @@ static void lpc313x_mci_request_end(struct lpc313x_mci *host, struct mmc_request
 	spin_lock(&host->lock);
 }
 
-static void lpc313x_mci_command_complete(struct lpc313x_mci *host,
+static void lpc31xx_mci_command_complete(struct lpc31xx_mci *host,
 			struct mmc_command *cmd)
 {
 	u32		status = host->cmd_status;
@@ -840,7 +840,7 @@ static void lpc313x_mci_command_complete(struct lpc313x_mci *host,
 	    if(cmd->flags & MMC_RSP_136) {
 
 		/* Read the response from the card (up to 16 bytes).
-		 * LPC313x MMC controller saves bits 127-96 in RESP3
+		 * LPC31xx MMC controller saves bits 127-96 in RESP3
 		 * for easy parsing. But the UNSTUFF_BITS macro in core/mmc.c
 		 * core/sd.c expect those bits be in resp[0]. Hence
 		 * reverse the response word order.
@@ -875,19 +875,19 @@ static void lpc313x_mci_command_complete(struct lpc313x_mci *host,
 
 		if (cmd->data) {
 			host->data = NULL;
-			lpc313x_mci_stop_dma(host);
+			lpc31xx_mci_stop_dma(host);
 		}
 	}
 }
 
-static void lpc313x_mci_tasklet_func(unsigned long priv)
+static void lpc31xx_mci_tasklet_func(unsigned long priv)
 {
-	struct lpc313x_mci	*host = (struct lpc313x_mci *)priv;
+	struct lpc31xx_mci	*host = (struct lpc31xx_mci *)priv;
 	struct mmc_request	*mrq = host->mrq;
 	struct mmc_data		*data = host->data;
 	struct mmc_command	*cmd = host->cmd;
-	enum lpc313x_mci_state	state = host->state;
-	enum lpc313x_mci_state	prev_state;
+	enum lpc31xx_mci_state	state = host->state;
+	enum lpc31xx_mci_state	prev_state;
 	u32			status;
 
 	spin_lock(&host->lock);
@@ -907,15 +907,15 @@ static void lpc313x_mci_tasklet_func(unsigned long priv)
 			break;
 
 		case STATE_SENDING_CMD:
-			if (!lpc313x_mci_test_and_clear_pending(host,
+			if (!lpc31xx_mci_test_and_clear_pending(host,
 						EVENT_CMD_COMPLETE))
 				break;
 
 			host->cmd = NULL;
-			lpc313x_mci_set_completed(host, EVENT_CMD_COMPLETE);
-			lpc313x_mci_command_complete(host, mrq->cmd);
+			lpc31xx_mci_set_completed(host, EVENT_CMD_COMPLETE);
+			lpc31xx_mci_command_complete(host, mrq->cmd);
 			if (!mrq->data || cmd->error) {
-				lpc313x_mci_request_end(host, host->mrq);
+				lpc31xx_mci_request_end(host, host->mrq);
 				goto unlock;
 			}
 
@@ -923,33 +923,33 @@ static void lpc313x_mci_tasklet_func(unsigned long priv)
 			/* fall through */
 
 		case STATE_SENDING_DATA:
-			if (lpc313x_mci_test_and_clear_pending(host,
+			if (lpc31xx_mci_test_and_clear_pending(host,
 						EVENT_DATA_ERROR)) {
-				lpc313x_mci_stop_dma(host);
+				lpc31xx_mci_stop_dma(host);
 				if (data->stop)
 					send_stop_cmd(host, data);
 				state = STATE_DATA_ERROR;
 				break;
 			}
 
-			if (!lpc313x_mci_test_and_clear_pending(host,
+			if (!lpc31xx_mci_test_and_clear_pending(host,
 						EVENT_XFER_COMPLETE))
 				break;
 
-			lpc313x_mci_set_completed(host, EVENT_XFER_COMPLETE);
+			lpc31xx_mci_set_completed(host, EVENT_XFER_COMPLETE);
 			prev_state = state = STATE_DATA_BUSY;
 			/* fall through */
 
 		case STATE_DATA_BUSY:
-			if (!lpc313x_mci_test_and_clear_pending(host,
+			if (!lpc31xx_mci_test_and_clear_pending(host,
 						EVENT_DATA_COMPLETE))
 				break;
 
 			host->data = NULL;
-			lpc313x_mci_set_completed(host, EVENT_DATA_COMPLETE);
+			lpc31xx_mci_set_completed(host, EVENT_DATA_COMPLETE);
 			status = host->data_status;
 
-			if (unlikely(status & LPC313x_MCI_DATA_ERROR_FLAGS)) {
+			if (unlikely(status & LPC31xx_MCI_DATA_ERROR_FLAGS)) {
 				if (status & SDMMC_INT_DTO) {
 					dev_err(&host->pdev->dev,
 							"data timeout error\n");
@@ -971,7 +971,7 @@ static void lpc313x_mci_tasklet_func(unsigned long priv)
 			}
 
 			if (!data->stop) {
-				lpc313x_mci_request_end(host, host->mrq);
+				lpc31xx_mci_request_end(host, host->mrq);
 				goto unlock;
 			}
 
@@ -981,16 +981,16 @@ static void lpc313x_mci_tasklet_func(unsigned long priv)
 			/* fall through */
 
 		case STATE_SENDING_STOP:
-			if (!lpc313x_mci_test_and_clear_pending(host,
+			if (!lpc31xx_mci_test_and_clear_pending(host,
 						EVENT_CMD_COMPLETE))
 				break;
 
 			host->cmd = NULL;
-			lpc313x_mci_command_complete(host, mrq->stop);
-			lpc313x_mci_request_end(host, host->mrq);
+			lpc31xx_mci_command_complete(host, mrq->stop);
+			lpc31xx_mci_request_end(host, host->mrq);
 			goto unlock;
 		case STATE_DATA_ERROR:
-			if (!lpc313x_mci_test_and_clear_pending(host,
+			if (!lpc31xx_mci_test_and_clear_pending(host,
 						EVENT_XFER_COMPLETE))
 				break;
 
@@ -1008,7 +1008,7 @@ unlock:
 
 
 
-inline static void lpc313x_mci_push_data(struct lpc313x_mci *host, void *buf, int cnt)
+inline static void lpc31xx_mci_push_data(struct lpc31xx_mci *host, void *buf, int cnt)
 {
     u32* pData = (u32*)buf;
 
@@ -1022,7 +1022,7 @@ inline static void lpc313x_mci_push_data(struct lpc313x_mci *host, void *buf, in
     }
 }
 
-inline static void lpc313x_mci_pull_data(struct lpc313x_mci *host, void *buf,int cnt)
+inline static void lpc31xx_mci_pull_data(struct lpc31xx_mci *host, void *buf,int cnt)
 {
     u32* pData = (u32*)buf;
 
@@ -1035,7 +1035,7 @@ inline static void lpc313x_mci_pull_data(struct lpc313x_mci *host, void *buf,int
     }
 }
 
-static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
+static void lpc31xx_mci_read_data_pio(struct lpc31xx_mci *host)
 {
 	struct scatterlist	*sg = host->sg;
 	void			*buf = sg_virt(sg);
@@ -1049,7 +1049,7 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
 		if(count == 0)
 			old_len = len;
 		if (likely(offset + len <= sg->length)) {
-			lpc313x_mci_pull_data(host, (void *)(buf + offset),len);
+			lpc31xx_mci_pull_data(host, (void *)(buf + offset),len);
 
 			offset += len;
 			nbytes += len;
@@ -1064,7 +1064,7 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
 			}
 		} else {
 			unsigned int remaining = sg->length - offset;
-			lpc313x_mci_pull_data(host, (void *)(buf + offset),remaining);
+			lpc31xx_mci_pull_data(host, (void *)(buf + offset),remaining);
 			nbytes += remaining;
 
 			flush_dcache_page(sg_page(sg));
@@ -1073,17 +1073,17 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
 				goto done;
 			offset = len - remaining;
 			buf = sg_virt(sg);
-			lpc313x_mci_pull_data(host, buf,offset);
+			lpc31xx_mci_pull_data(host, buf,offset);
 			nbytes += offset;
 		}
 
 		status = mci_readl(host, SDMMC_MINTSTS);
 		mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_RXDR); // clear RXDR interrupt
-		if (status & LPC313x_MCI_DATA_ERROR_FLAGS) {
+		if (status & LPC31xx_MCI_DATA_ERROR_FLAGS) {
 			host->data_status = status;
 			data->bytes_xfered += nbytes;
 			smp_wmb();
-			lpc313x_mci_set_pending(host, EVENT_DATA_ERROR);
+			lpc31xx_mci_set_pending(host, EVENT_DATA_ERROR);
 			tasklet_schedule(&host->tasklet);
 			return;
 		}
@@ -1097,10 +1097,10 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
 done:
 	data->bytes_xfered += nbytes;
 	smp_wmb();
-	lpc313x_mci_set_pending(host, EVENT_XFER_COMPLETE);
+	lpc31xx_mci_set_pending(host, EVENT_XFER_COMPLETE);
 }
 
-static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
+static void lpc31xx_mci_write_data_pio(struct lpc31xx_mci *host)
 {
 	struct scatterlist	*sg = host->sg;
 	void			*buf = sg_virt(sg);
@@ -1113,7 +1113,7 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
 
 		len = SDMMC_FIFO_SZ - (SDMMC_GET_FCNT(mci_readl(host, SDMMC_STATUS)) << 2);
 		if (likely(offset + len <= sg->length)) {
-			lpc313x_mci_push_data(host, (void *)(buf + offset),len);
+			lpc31xx_mci_push_data(host, (void *)(buf + offset),len);
 
 			offset += len;
 			nbytes += len;
@@ -1128,7 +1128,7 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
 		} else {
 			unsigned int remaining = sg->length - offset;
 
-			lpc313x_mci_push_data(host, (void *)(buf + offset), remaining);
+			lpc31xx_mci_push_data(host, (void *)(buf + offset), remaining);
 			nbytes += remaining;
 
 			host->sg = sg = sg_next(sg);
@@ -1138,17 +1138,17 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
 
 			offset = len - remaining;
 			buf = sg_virt(sg);
-			lpc313x_mci_push_data(host, (void *)buf, offset);
+			lpc31xx_mci_push_data(host, (void *)buf, offset);
 			nbytes += offset;
 		}
 
 		status = mci_readl(host, SDMMC_MINTSTS);
 		mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_TXDR); // clear RXDR interrupt
-		if (status & LPC313x_MCI_DATA_ERROR_FLAGS) {
+		if (status & LPC31xx_MCI_DATA_ERROR_FLAGS) {
 			host->data_status = status;
 			data->bytes_xfered += nbytes;
 			smp_wmb();
-			lpc313x_mci_set_pending(host, EVENT_DATA_ERROR);
+			lpc31xx_mci_set_pending(host, EVENT_DATA_ERROR);
 			tasklet_schedule(&host->tasklet);
 			return;
 		}
@@ -1162,22 +1162,22 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
 done:
 	data->bytes_xfered += nbytes;
 	smp_wmb();
-	lpc313x_mci_set_pending(host, EVENT_XFER_COMPLETE);
+	lpc31xx_mci_set_pending(host, EVENT_XFER_COMPLETE);
 }
 
-static void lpc313x_mci_cmd_interrupt(struct lpc313x_mci *host, u32 status)
+static void lpc31xx_mci_cmd_interrupt(struct lpc31xx_mci *host, u32 status)
 {
 	if(!host->cmd_status)
 		host->cmd_status = status;
 
 	smp_wmb();
-	lpc313x_mci_set_pending(host, EVENT_CMD_COMPLETE);
+	lpc31xx_mci_set_pending(host, EVENT_CMD_COMPLETE);
 	tasklet_schedule(&host->tasklet);
 }
 
-static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
+static irqreturn_t lpc31xx_mci_interrupt(int irq, void *dev_id)
 {
-	struct lpc313x_mci	*host = dev_id;
+	struct lpc31xx_mci	*host = dev_id;
 	u32			status,  pending;
 	unsigned int		pass_count = 0;
 
@@ -1187,19 +1187,19 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
 		pending = mci_readl(host, SDMMC_MINTSTS);// read only mask reg
 		if (!pending)
 			break;
-		if(pending & LPC313x_MCI_CMD_ERROR_FLAGS) {
-		    mci_writel(host, SDMMC_RINTSTS,LPC313x_MCI_CMD_ERROR_FLAGS);  //  clear interrupt
+		if(pending & LPC31xx_MCI_CMD_ERROR_FLAGS) {
+		    mci_writel(host, SDMMC_RINTSTS,LPC31xx_MCI_CMD_ERROR_FLAGS);  //  clear interrupt
 		    host->cmd_status = status;
 		    smp_wmb();
-		    lpc313x_mci_set_pending(host, EVENT_CMD_COMPLETE);
+		    lpc31xx_mci_set_pending(host, EVENT_CMD_COMPLETE);
 		    tasklet_schedule(&host->tasklet);
 		}
 
-		if (pending & LPC313x_MCI_DATA_ERROR_FLAGS) { // if there is an error, let report DATA_ERROR
-			mci_writel(host, SDMMC_RINTSTS,LPC313x_MCI_DATA_ERROR_FLAGS);  // clear interrupt
+		if (pending & LPC31xx_MCI_DATA_ERROR_FLAGS) { // if there is an error, let report DATA_ERROR
+			mci_writel(host, SDMMC_RINTSTS,LPC31xx_MCI_DATA_ERROR_FLAGS);  // clear interrupt
 			host->data_status = status;
 			smp_wmb();
-			lpc313x_mci_set_pending(host, EVENT_DATA_ERROR);
+			lpc31xx_mci_set_pending(host, EVENT_DATA_ERROR);
 			tasklet_schedule(&host->tasklet);
 		}
 
@@ -1209,30 +1209,30 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
 		    if (!host->data_status)
 			host->data_status = status;
 		    smp_wmb();
-		    if(host->dir_status == LPC313x_MCI_RECV_STATUS) {
+		    if(host->dir_status == LPC31xx_MCI_RECV_STATUS) {
 			if(host->sg != NULL)
-				lpc313x_mci_read_data_pio(host);
+				lpc31xx_mci_read_data_pio(host);
 		    }
-		    lpc313x_mci_set_pending(host, EVENT_DATA_COMPLETE);
+		    lpc31xx_mci_set_pending(host, EVENT_DATA_COMPLETE);
 		    tasklet_schedule(&host->tasklet);
 		}
 
 		if (pending & SDMMC_INT_RXDR) {
 		    mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_RXDR);  //  clear interrupt
 		    if(host->sg)
-			    lpc313x_mci_read_data_pio(host);
+			    lpc31xx_mci_read_data_pio(host);
 		}
 
 		if (pending & SDMMC_INT_TXDR) {
 		    mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_TXDR);  //  clear interrupt
 		    if(host->sg) {
-			lpc313x_mci_write_data_pio(host);
+			lpc31xx_mci_write_data_pio(host);
 		    }
 		}
 
 		if (pending & SDMMC_INT_CMD_DONE) {
 		    mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_CMD_DONE);  //  clear interrupt
-		    lpc313x_mci_cmd_interrupt(host, status);
+		    lpc31xx_mci_cmd_interrupt(host, status);
 		}
 
 		if (pending & SDMMC_INT_SDIO) {
@@ -1251,28 +1251,28 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
  * MMC card detect thread, kicked off from detect interrupt, 1 timer per slot
  *
  */
-static void lpc313x_mci_detect_change(unsigned long slot_data)
+static void lpc31xx_mci_detect_change(unsigned long slot_data)
 {
-	struct lpc313x_mci_slot *slot = (struct lpc313x_mci_slot *) slot_data;
-	struct lpc313x_mci *host;
+	struct lpc31xx_mci_slot *slot = (struct lpc31xx_mci_slot *) slot_data;
+	struct lpc31xx_mci *host;
 	struct mmc_request *mrq;
 	bool present;
 	bool present_old;
 
 	host = slot->host;
 	/*
-	 * lpc313x_mci_cleanup_slot() sets the ATMCI_SHUTDOWN flag before
+	 * lpc31xx_mci_cleanup_slot() sets the ATMCI_SHUTDOWN flag before
 	 * freeing the interrupt. We must not re-enable the interrupt
 	 * if it has been freed, and if we're shutting down, it
 	 * doesn't really matter whether the card is present or not.
 	 */
 	smp_rmb();
-	if (test_bit(LPC313x_MMC_SHUTDOWN, &slot->flags))
+	if (test_bit(LPC31xx_MMC_SHUTDOWN, &slot->flags))
 		return;
 
 	enable_irq(slot->irq);
-	present = lpc313x_mci_get_cd(slot);
-	present_old = test_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+	present = lpc31xx_mci_get_cd(slot);
+	present_old = test_bit(LPC31xx_MMC_CARD_PRESENT, &slot->flags);
 	dev_dbg(&slot->mmc->class_dev, "detect change: %d (was %d)\n",
 			present, present_old);
 
@@ -1283,12 +1283,12 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 
 		spin_lock(&host->lock);
 
-		lpc313x_mci_set_power(slot, present);
+		lpc31xx_mci_set_power(slot, present);
 		if (present) {
-			set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
-			set_bit(LPC313x_MMC_CARD_NEED_INIT, &slot->flags);
+			set_bit(LPC31xx_MMC_CARD_PRESENT, &slot->flags);
+			set_bit(LPC31xx_MMC_CARD_NEED_INIT, &slot->flags);
 		} else {
-			clear_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+			clear_bit(LPC31xx_MMC_CARD_PRESENT, &slot->flags);
 		}
 
 
@@ -1314,7 +1314,7 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 					/* fall through */
 				case STATE_SENDING_DATA:
 					mrq->data->error = -ENOMEDIUM;
-					lpc313x_mci_stop_dma(host);
+					lpc31xx_mci_stop_dma(host);
 					break;
 				case STATE_DATA_BUSY:
 				case STATE_DATA_ERROR:
@@ -1328,7 +1328,7 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 					break;
 				}
 
-				lpc313x_mci_request_end(host, mrq);
+				lpc31xx_mci_request_end(host, mrq);
 			} else {
 				list_del(&slot->queue_node);
 				mrq->cmd->error = -ENOMEDIUM;
@@ -1349,13 +1349,13 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 	}
 }
 
-static irqreturn_t lpc313x_mci_detect_interrupt(int irq, void *dev_id)
+static irqreturn_t lpc31xx_mci_detect_interrupt(int irq, void *dev_id)
 {
 	int level;
-	struct lpc313x_mci_slot	*slot = dev_id;
+	struct lpc31xx_mci_slot	*slot = dev_id;
 
 	/* select the opposite level sensitivity */
-	level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_HIGH : IRQ_TYPE_LEVEL_LOW;
+	level =  lpc31xx_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_HIGH : IRQ_TYPE_LEVEL_LOW;
 	irq_set_irq_type(slot->irq, level);
 
 	/*
@@ -1370,16 +1370,16 @@ static irqreturn_t lpc313x_mci_detect_interrupt(int irq, void *dev_id)
 }
 
 static int __init
-lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
+lpc31xx_mci_init_slot(struct lpc31xx_mci *host, struct device_node *np)
 {
 	struct mmc_host			*mmc;
-	struct lpc313x_mci_slot		*slot;
+	struct lpc31xx_mci_slot		*slot;
 	const u32 *voltage_ranges;
 	const int *width;
 	int i, ret, num_ranges, level;
 	enum of_gpio_flags flags;
 
-	mmc = mmc_alloc_host(sizeof(struct lpc313x_mci_slot), &host->pdev->dev);
+	mmc = mmc_alloc_host(sizeof(struct lpc31xx_mci_slot), &host->pdev->dev);
 
 	if (!mmc)
 		return -ENOMEM;
@@ -1411,7 +1411,7 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 		gpio_direction_input(slot->gpio_select);
 	}
 
-	mmc->ops = &lpc313x_mci_ops;
+	mmc->ops = &lpc31xx_mci_ops;
 	mmc->f_min = DIV_ROUND_UP(host->bus_hz, 510);
 	mmc->f_max = host->bus_hz/2; //max f is clock to mmc_clk/2
 
@@ -1450,32 +1450,32 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 	mmc->max_seg_size = mmc->max_req_size;
 
 	/* Create card detect handler thread for the slot */
-	setup_timer(&slot->detect_timer, lpc313x_mci_detect_change,
+	setup_timer(&slot->detect_timer, lpc31xx_mci_detect_change,
 			(unsigned long)slot);
 
 	slot->irq = irq_of_parse_and_map(np, 0);
 	/* select the opposite level sensitivity */
-	level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_HIGH : IRQ_TYPE_LEVEL_LOW;
+	level =  lpc31xx_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_HIGH : IRQ_TYPE_LEVEL_LOW;
 
-	if(lpc313x_mci_get_cd(slot)) {
-		lpc313x_mci_set_power(slot, 1);
-		set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
-		set_bit(LPC313x_MMC_CARD_NEED_INIT, &slot->flags);
+	if(lpc31xx_mci_get_cd(slot)) {
+		lpc31xx_mci_set_power(slot, 1);
+		set_bit(LPC31xx_MMC_CARD_PRESENT, &slot->flags);
+		set_bit(LPC31xx_MMC_CARD_NEED_INIT, &slot->flags);
 	} else {
-		lpc313x_mci_set_power(slot, 0);
-		clear_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+		lpc31xx_mci_set_power(slot, 0);
+		clear_bit(LPC31xx_MMC_CARD_PRESENT, &slot->flags);
 	}
 
 	host->slot[host->slot_count++] = slot;
 	mmc_add_host(mmc);
 
 #if defined (CONFIG_DEBUG_FS)
-	lpc313x_mci_init_debugfs(slot);
+	lpc31xx_mci_init_debugfs(slot);
 #endif
 	/* set card detect irq info */
 	irq_set_irq_type(slot->irq, level);
 	ret = request_irq(slot->irq,
-			lpc313x_mci_detect_interrupt,
+			lpc31xx_mci_detect_interrupt,
 			level,
 			"mmc-cd",
 			slot);
@@ -1487,7 +1487,7 @@ err_ocr:
 	return ret;
 }
 
-static void lpc313x_mci_cleanup_slot(struct lpc313x_mci_slot *slot,
+static void lpc31xx_mci_cleanup_slot(struct lpc31xx_mci_slot *slot,
 		unsigned int id)
 {
 	/* Shutdown detect IRQ and kill detect thread */
@@ -1496,24 +1496,24 @@ static void lpc313x_mci_cleanup_slot(struct lpc313x_mci_slot *slot,
 	del_timer_sync(&slot->detect_timer);
 
 	/* Debugfs stuff is cleaned up by mmc core */
-	set_bit(LPC313x_MMC_SHUTDOWN, &slot->flags);
+	set_bit(LPC31xx_MMC_SHUTDOWN, &slot->flags);
 	smp_wmb();
 	mmc_remove_host(slot->mmc);
 	slot->host->slot[id] = NULL;
 	mmc_free_host(slot->mmc);
 }
 
-static const struct of_device_id lpc313x_mci_of_match[] = {
+static const struct of_device_id lpc31xx_mci_of_match[] = {
 	{ .compatible = "nxp,lpc31xx-sdmmc" },
 	{},
 };
-MODULE_DEVICE_TABLE(of, lpc313x_mci_of_match);
+MODULE_DEVICE_TABLE(of, lpc31xx_mci_of_match);
 
-static int lpc313x_mci_probe(struct platform_device *pdev)
+static int lpc31xx_mci_probe(struct platform_device *pdev)
 {
 	struct device_node *node;
 	struct device_node *np = pdev->dev.of_node;
-	struct lpc313x_mci *host;
+	struct lpc31xx_mci *host;
 	struct resource *regs;
 	struct clk *clk;
 	int irq;
@@ -1527,7 +1527,7 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 	if (irq < 0)
 		return irq;
 
-	host = kzalloc(sizeof(struct lpc313x_mci), GFP_KERNEL);
+	host = kzalloc(sizeof(struct lpc31xx_mci), GFP_KERNEL);
 	if (!host)
 		return -ENOMEM;
 	host->pdev = pdev;
@@ -1558,7 +1558,7 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 	CGU_CFG->resetn_soft[SD_MMC_PNRES_SOFT] = CGU_CONFIG_SOFT_RESET;
 
 #ifdef USE_DMA
-	host->dma_chn = dma_request_sg_channel("MCI",  lpc313x_mci_dma_complete, host,
+	host->dma_chn = dma_request_sg_channel("MCI",  lpc31xx_mci_dma_complete, host,
 			0, 0, 1);
 	if(host->dma_chn < 0) {
 		dev_err(&pdev->dev, "Failed to allocate DMA SG channel\n");
@@ -1616,8 +1616,8 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 	mci_writel(host, SDMMC_CLKENA,0);
 	mci_writel(host, SDMMC_CLKSRC,0);
 
-	tasklet_init(&host->tasklet, lpc313x_mci_tasklet_func, (unsigned long)host);
-	ret = request_irq(irq, lpc313x_mci_interrupt, 0, dev_name(&pdev->dev), host);
+	tasklet_init(&host->tasklet, lpc31xx_mci_tasklet_func, (unsigned long)host);
+	ret = request_irq(irq, lpc31xx_mci_interrupt, 0, dev_name(&pdev->dev), host);
 	if (ret)
 	    goto err_dmaunmap;
 
@@ -1625,18 +1625,18 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 
 	// enable interrupt for command done, data over, data empty, receive ready and error such as transmit, receive timeout, crc error
 	mci_writel(host, SDMMC_RINTSTS, 0xFFFFFFFF);
-	mci_writel(host, SDMMC_INTMASK,SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER | SDMMC_INT_TXDR | SDMMC_INT_RXDR | LPC313x_MCI_ERROR_FLAGS);
+	mci_writel(host, SDMMC_INTMASK,SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER | SDMMC_INT_TXDR | SDMMC_INT_RXDR | LPC31xx_MCI_ERROR_FLAGS);
 	mci_writel(host, SDMMC_CTRL,SDMMC_CTRL_INT_ENABLE); // enable mci interrupt
 
 	for_each_child_of_node(np, node) {
-		ret = lpc313x_mci_init_slot(host, node);
+		ret = lpc31xx_mci_init_slot(host, node);
 		if (ret) {
 			ret = -ENODEV;
 			goto err_init_slot;
 		}
 	}
 
-	dev_info(&pdev->dev, "LPC313x MMC controller at irq %d\n", irq);
+	dev_info(&pdev->dev, "LPC31xx MMC controller at irq %d\n", irq);
 
 	return 0;
 
@@ -1644,7 +1644,7 @@ err_init_slot:
 	/* De-init any initialized slots */
 	while (host->slot_count > 0) {
 		if (host->slot[host->slot_count])
-			lpc313x_mci_cleanup_slot(host->slot[host->slot_count], host->slot_count);
+			lpc31xx_mci_cleanup_slot(host->slot[host->slot_count], host->slot_count);
 		host->slot_count--;
 	}
 	free_irq(irq, host);
@@ -1662,9 +1662,9 @@ err_freehost:
 
 
 
-static int __exit lpc313x_mci_remove(struct platform_device *pdev)
+static int __exit lpc31xx_mci_remove(struct platform_device *pdev)
 {
-	struct lpc313x_mci *host = platform_get_drvdata(pdev);
+	struct lpc31xx_mci *host = platform_get_drvdata(pdev);
 	struct clk *clk;
 	int i;
 
@@ -1676,7 +1676,7 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
 	for (i = 0; i < host->slot_count; i++) {
 		dev_dbg(&pdev->dev, "remove slot %d\n", i);
 		if (host->slot[i])
-			lpc313x_mci_cleanup_slot(host->slot[i], i);
+			lpc31xx_mci_cleanup_slot(host->slot[i], i);
 	}
 
 	/* disable clock to CIU */
@@ -1702,10 +1702,10 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static int lpc313x_mci_suspend(struct platform_device *pdev, pm_message_t state)
+static int lpc31xx_mci_suspend(struct platform_device *pdev, pm_message_t state)
 {
 #ifdef CONFIG_PM
-	struct lpc313x_mci *host = platform_get_drvdata(pdev);
+	struct lpc31xx_mci *host = platform_get_drvdata(pdev);
 	struct clk *clk;
 
 	/* Disable Card clock */
@@ -1722,10 +1722,10 @@ static int lpc313x_mci_suspend(struct platform_device *pdev, pm_message_t state)
 	return 0;
 }
 
-static int lpc313x_mci_resume(struct platform_device *pdev)
+static int lpc31xx_mci_resume(struct platform_device *pdev)
 {
 #ifdef CONFIG_PM
-	struct lpc313x_mci *host = platform_get_drvdata(pdev);
+	struct lpc31xx_mci *host = platform_get_drvdata(pdev);
 	struct clk *clk;
 	int ret;
 
@@ -1743,32 +1743,32 @@ static int lpc313x_mci_resume(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver lpc313x_mci_driver = {
-	.suspend    = lpc313x_mci_suspend,
-	.resume     = lpc313x_mci_resume,
-	.remove		= __exit_p(lpc313x_mci_remove),
+static struct platform_driver lpc31xx_mci_driver = {
+	.suspend    = lpc31xx_mci_suspend,
+	.resume     = lpc31xx_mci_resume,
+	.remove		= __exit_p(lpc31xx_mci_remove),
 	.driver		= {
-		.name	= "lpc313x_mmc",
+		.name	= "lpc31xx_mmc",
 		.owner	= THIS_MODULE,
 #ifdef CONFIG_OF
-		.of_match_table = lpc313x_mci_of_match,
+		.of_match_table = lpc31xx_mci_of_match,
 #endif
 	},
 };
 
-static int __init lpc313x_mci_init(void)
+static int __init lpc31xx_mci_init(void)
 {
-	return platform_driver_probe(&lpc313x_mci_driver, lpc313x_mci_probe);
+	return platform_driver_probe(&lpc31xx_mci_driver, lpc31xx_mci_probe);
 }
 
-static void __exit lpc313x_mci_exit(void)
+static void __exit lpc31xx_mci_exit(void)
 {
-	platform_driver_unregister(&lpc313x_mci_driver);
+	platform_driver_unregister(&lpc31xx_mci_driver);
 }
 
-module_init(lpc313x_mci_init);
-module_exit(lpc313x_mci_exit);
+module_init(lpc31xx_mci_init);
+module_exit(lpc31xx_mci_exit);
 
-MODULE_DESCRIPTION("LPC313x Multimedia Card Interface driver");
+MODULE_DESCRIPTION("LPC31xx Multimedia Card Interface driver");
 MODULE_AUTHOR("NXP Semiconductor VietNam");
 MODULE_LICENSE("GPL v2");

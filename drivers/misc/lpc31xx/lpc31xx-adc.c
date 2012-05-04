@@ -1,5 +1,5 @@
 /* 
- * lpc313x_adc.c
+ * lpc31xx_adc.c
  * 
  * * LAST CHANGE: 3. jan. 2012 Nils Stec
  * 
@@ -7,7 +7,7 @@
  *              Michael Schwarz, (c) 2011                                  - the adc code itself
  *              some module parts are by LKMPG                             - taken from version "2007-05-18 ver 2.6.4"
  *
- * ADC driver for LPC313x (gnublin)
+ * ADC driver for LPC31xx (gnublin)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,20 +65,20 @@ static int device_open(struct inode *inode, struct file *file) {
 	Device_Open++;
 	
 	if((adc_powersave == 0)||(adc_powersave == ADC_POWERSAVE_AUTO)) {
-		if(adc_powersave == ADC_POWERSAVE_AUTO) lpc313x_init_adc();
+		if(adc_powersave == ADC_POWERSAVE_AUTO) lpc31xx_init_adc();
 		
 		if(adc_averaging == 1) {
 			for(i = 0; i < adc_averagingloops; i++) {
-				addval += lpc313x_adc_read(adc_channel, adc_resolution);
+				addval += lpc31xx_adc_read(adc_channel, adc_resolution);
 			}
 			adcval = addval / adc_averagingloops;
 			sprintf(msg, "0x%03x\n", adcval);
 		} else {
-			adcval = lpc313x_adc_read(adc_channel, adc_resolution);
+			adcval = lpc31xx_adc_read(adc_channel, adc_resolution);
 			sprintf(msg, "0x%03x\n", adcval);
 		}
 		
-		if(adc_powersave == ADC_POWERSAVE_AUTO) lpc313x_deinit_adc();
+		if(adc_powersave == ADC_POWERSAVE_AUTO) lpc31xx_deinit_adc();
 	} else {
 		sprintf(msg, "adc is in powersave mode!\n");
 	}
@@ -102,16 +102,16 @@ static ssize_t device_write(struct file *filp, const char *buff, size_t len, lof
 	config_word = (u16)(ltemp&0xffff);
 	
 	if(config_word & 0x0080) adc_debug = 1; else adc_debug = 0;
-	if(adc_debug) printk(KERN_INFO "[lpc313x adc] got config word 0x%04x, setting up adc:\n", config_word);
+	if(adc_debug) printk(KERN_INFO "[lpc31xx adc] got config word 0x%04x, setting up adc:\n", config_word);
 	
 	// first of all, check if user want's to see status, if, print it and exit
 	if(((config_word >> 12) & 0x000f)>0) {
-		printk(KERN_INFO "[lpc313x adc] channel:'%d', resolution:'%d'\n", adc_channel, adc_resolution);
-		printk(KERN_INFO "[lpc313x adc] averaging:'%d'loops, on:'%d'\n", adc_averagingloops, adc_averaging);
+		printk(KERN_INFO "[lpc31xx adc] channel:'%d', resolution:'%d'\n", adc_channel, adc_resolution);
+		printk(KERN_INFO "[lpc31xx adc] averaging:'%d'loops, on:'%d'\n", adc_averagingloops, adc_averaging);
 		switch(adc_powersave) {
-			case ADC_POWERSAVE_OFF:  printk(KERN_INFO "[lpc313x adc] powersave off, adc always on\n"); break;
-			case ADC_POWERSAVE_ON:   printk(KERN_INFO "[lpc313x adc] powersave on, adc always off\n"); break;
-			case ADC_POWERSAVE_AUTO: printk(KERN_INFO "[lpc313x adc] powersave auto (default)\n");     break;
+			case ADC_POWERSAVE_OFF:  printk(KERN_INFO "[lpc31xx adc] powersave off, adc always on\n"); break;
+			case ADC_POWERSAVE_ON:   printk(KERN_INFO "[lpc31xx adc] powersave on, adc always off\n"); break;
+			case ADC_POWERSAVE_AUTO: printk(KERN_INFO "[lpc31xx adc] powersave auto (default)\n");     break;
 		}
 		return len;
 	}	
@@ -164,29 +164,29 @@ static ssize_t device_write(struct file *filp, const char *buff, size_t len, lof
 	switch(((config_word >> 8) & 0x0003)) {	// get adc powersave mode config
 		case 0:
 			adc_powersave = ADC_POWERSAVE_OFF;	// adc powersave off, adc always on
-			lpc313x_init_adc();			// turn on adc
+			lpc31xx_init_adc();			// turn on adc
 			break;
 		case 1:
 			adc_powersave = ADC_POWERSAVE_AUTO;	// adc powersave auto, on/off when needed, takes more time, saves power (default)
-			lpc313x_deinit_adc();			// turn off adc
+			lpc31xx_deinit_adc();			// turn off adc
 			break;
 		case 2:
 			adc_powersave = ADC_POWERSAVE_ON;	// adc always off
-			lpc313x_deinit_adc();			// turn off adc
+			lpc31xx_deinit_adc();			// turn off adc
 			break;
 		default:
 			adc_powersave = ADC_POWERSAVE_AUTO;	// default behaviour, AUTO
-			lpc313x_deinit_adc();			// turn off adc
+			lpc31xx_deinit_adc();			// turn off adc
 			break;
 	}	
 
 	if(adc_debug) {
-		printk(KERN_INFO "[lpc313x adc] channel:'%d', resolution:'%d'\n", adc_channel, adc_resolution);
-		printk(KERN_INFO "[lpc313x adc] averaging:'%d'loops, on:'%d'\n", adc_averagingloops, adc_averaging);
+		printk(KERN_INFO "[lpc31xx adc] channel:'%d', resolution:'%d'\n", adc_channel, adc_resolution);
+		printk(KERN_INFO "[lpc31xx adc] averaging:'%d'loops, on:'%d'\n", adc_averagingloops, adc_averaging);
 			switch(adc_powersave) {
-				case ADC_POWERSAVE_OFF:  printk(KERN_INFO "[lpc313x adc] powersave off, adc always on\n"); break;
-				case ADC_POWERSAVE_ON:   printk(KERN_INFO "[lpc313x adc] powersave on, adc always off\n"); break;
-				case ADC_POWERSAVE_AUTO: printk(KERN_INFO "[lpc313x adc] powersave auto (default)\n");     break;
+				case ADC_POWERSAVE_OFF:  printk(KERN_INFO "[lpc31xx adc] powersave off, adc always on\n"); break;
+				case ADC_POWERSAVE_ON:   printk(KERN_INFO "[lpc31xx adc] powersave on, adc always off\n"); break;
+				case ADC_POWERSAVE_AUTO: printk(KERN_INFO "[lpc31xx adc] powersave auto (default)\n");     break;
 		}
 	}
 	return len;
@@ -204,31 +204,31 @@ int init_module(void) {
 	
 	Major = register_chrdev(0, DEVICE_NAME, &fops);
 	if (Major < 0) {
-		printk(KERN_ALERT "[lpc313x adc] registering char device failed with %d\n", Major);
+		printk(KERN_ALERT "[lpc31xx adc] registering char device failed with %d\n", Major);
 		return Major;
 	}
 
 	switch(adc_powersave) {
 		case ADC_POWERSAVE_AUTO:
 		case ADC_POWERSAVE_ON:
-			lpc313x_deinit_adc();
+			lpc31xx_deinit_adc();
 			break;
 		case ADC_POWERSAVE_OFF:
-			lpc313x_init_adc();
+			lpc31xx_init_adc();
 			break;
 	}	
 	
-	printk(KERN_INFO "[lpc313x adc] driver loaded with major %d\n", Major);
-	printk(KERN_INFO "[lpc313x adc] >> $ mknod /dev/%s c %d 0\n", DEVICE_NAME, Major);
+	printk(KERN_INFO "[lpc31xx adc] driver loaded with major %d\n", Major);
+	printk(KERN_INFO "[lpc31xx adc] >> $ mknod /dev/%s c %d 0\n", DEVICE_NAME, Major);
 	
 	return SUCCESS;
 }
 
 /** called when module unloaded */
 void cleanup_module(void) {
-	lpc313x_deinit_adc();
+	lpc31xx_deinit_adc();
 	unregister_chrdev(Major, DEVICE_NAME);
-	printk(KERN_INFO "[lpc313x adc] DRIVER UNLOADED\n");
+	printk(KERN_INFO "[lpc31xx adc] DRIVER UNLOADED\n");
 }
 
 /* Called when a process closes the device file. */
@@ -254,7 +254,7 @@ static ssize_t device_read(struct file *filp, char *buffer, size_t length, loff_
 	return bytes_read;
 }
 
-u16 lpc313x_adc_read(int channel, int resolution) {
+u16 lpc31xx_adc_read(int channel, int resolution) {
 	u16 result = 0xffff;
 	int timeout = 0xffffff;
  
@@ -300,7 +300,7 @@ u16 lpc313x_adc_read(int channel, int resolution) {
 	return result;
 }
 
-int lpc313x_init_adc(void) {
+int lpc31xx_init_adc(void) {
 	int dummy;
 	u32 timeout;
 	
@@ -333,7 +333,7 @@ int lpc313x_init_adc(void) {
 	return 0;
 }
 
-int lpc313x_deinit_adc(void) {
+int lpc31xx_deinit_adc(void) {
 	/* wait while there is a conversion */
 	while (ADC_INT_STATUS_REG & 0x10);
 
@@ -350,12 +350,12 @@ int lpc313x_deinit_adc(void) {
 	return 0;
 }
 /*
-int lpc313x_adc_powersave_on(void) {
+int lpc31xx_adc_powersave_on(void) {
 	ADC_CON_REG = ADC_CON_DEFAULT;
 	return 0;
 }
 
-int lpc313x_adc_powersave_off(void) {
+int lpc31xx_adc_powersave_off(void) {
 	ADC_CON_REG |= ADC_ENABLE;
 	return 0;
 }
@@ -367,4 +367,4 @@ module_exit(cleanup_module);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);
-MODULE_SUPPORTED_DEVICE("lpc313x adc on gnublin");
+MODULE_SUPPORTED_DEVICE("lpc31xx adc on gnublin");

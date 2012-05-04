@@ -1,8 +1,8 @@
-menu "LPC313x Implementations"
+menu "LPC31xx Implementations"
 	depends on ARCH_LPC31XX
 
 choice
-	prompt "LPC313x Platform type"
+	prompt "LPC31xx Platform type"
 	default MACH_EA313X
 
 config MACH_EA313X

@@ -1,9 +1,9 @@
-/*  arch/arm/mach-lpc313x/generic.c
+/*  arch/arm/mach-lpc31xx/generic.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- *  Common code for machines with LPC313x and LPC315x SoCs.
+ *  Common code for machines with LPC31xx SoCs.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@
 
 /* local functions */
 
-static void lpc313x_uart_pm(struct uart_port * port, unsigned int state,
+static void lpc31xx_uart_pm(struct uart_port * port, unsigned int state,
 			      unsigned int oldstate)
 {
 	switch (state) {
@@ -59,7 +59,7 @@ static void lpc313x_uart_pm(struct uart_port * port, unsigned int state,
 		break;
 	case 1:
 		/* we can wake the system in this state. So leave clocks on */
-		printk(KERN_INFO "lpc313x_uart_pm: UART can wake\n");
+		printk(KERN_INFO "lpc31xx_uart_pm: UART can wake\n");
 		break;
 	case 3:
 		/*
@@ -81,7 +81,7 @@ static void lpc313x_uart_pm(struct uart_port * port, unsigned int state,
 		gpio_direction_output(GPIO_UART_TXD, 0);
 		break;
 	default:
-		printk(KERN_ERR "lpc313x_uart_pm: unknown pm %d\n", state);
+		printk(KERN_ERR "lpc31xx_uart_pm: unknown pm %d\n", state);
 	}
 
 }
@@ -96,7 +96,7 @@ static struct plat_serial8250_port platform_serial_ports[] = {
 		.iotype = UPIO_MEM,
 		.type	= PORT_NXP16750,
 		.flags = UPF_BOOT_AUTOCONF | UPF_BUGGY_UART | UPF_SKIP_TEST,
-		.pm = lpc313x_uart_pm,
+		.pm = lpc31xx_uart_pm,
 	},
 	{
 		.flags		= 0
@@ -121,7 +121,7 @@ static struct platform_device *devices[] __initdata = {
 	&lpc31xx_pcm_device,
 };
 
-static struct map_desc lpc313x_io_desc[] __initdata = {
+static struct map_desc lpc31xx_io_desc[] __initdata = {
 	{
 		.virtual	= io_p2v(IO_APB1_PHYS),
 		.pfn		= __phys_to_pfn(IO_APB1_PHYS),
@@ -178,13 +178,13 @@ static struct map_desc lpc313x_io_desc[] __initdata = {
 	},
 };
 
-void __init lpc313x_map_io(void)
+void __init lpc31xx_map_io(void)
 {
-	iotable_init(lpc313x_io_desc, ARRAY_SIZE(lpc313x_io_desc));
+	iotable_init(lpc31xx_io_desc, ARRAY_SIZE(lpc31xx_io_desc));
 }
 extern int __init cgu_init(char *str);
 
-void __init lpc313x_uart_init(void)
+void __init lpc31xx_uart_init(void)
 {
 	int mul, div;
 
@@ -196,7 +196,7 @@ void __init lpc313x_uart_init(void)
 	}
 }
 
-void __init lpc313x_init(void)
+void __init lpc31xx_init(void)
 {
 	/* cgu init */
 	clk_init();
@@ -240,14 +240,14 @@ void __init lpc313x_init(void)
 	/* AUDIO CODEC CLOCK (256FS) */
 	GPIO_DRV_IP(IOCONF_I2STX_1, 0x8);
 #endif
-	lpc313x_uart_init();
+	lpc31xx_uart_init();
 
 	return platform_add_devices(devices, ARRAY_SIZE(devices));
 }
 
 
 #if defined(CONFIG_SERIAL_8250_CONSOLE)
-static int __init lpc313x_init_console(void)
+static int __init lpc31xx_init_console(void)
 {
 	static __initdata char serr[] =
 		KERN_ERR "Serial port #%u setup failed\n";
@@ -285,7 +285,7 @@ static int __init lpc313x_init_console(void)
 
 	return 0;
 }
-console_initcall(lpc313x_init_console);
+console_initcall(lpc31xx_init_console);
 
 #endif /*CONFIG_SERIAL_8250_CONSOLE*/
 

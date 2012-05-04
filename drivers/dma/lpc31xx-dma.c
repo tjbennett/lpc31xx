@@ -1,9 +1,9 @@
-/*  arch/arm/mach-lpc313x/dma.c
+/*  arch/arm/mach-lpc31xx/dma.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- *  DMA driver for machines with LPC313x and LPC315x SoCs.
+ *  DMA driver for machines with LPC31xx SoCs.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1149,11 +1149,11 @@ static int __exit lpc31xx_dma_remove(struct platform_device *pdev)
 }
 
 #if defined(CONFIG_OF)
-static const struct of_device_id lpc313x_dma_of_match[] = {
+static const struct of_device_id lpc31xx_dma_of_match[] = {
 	{ .compatible = "nxp,lpc31xx-dma" },
 	{},
 };
-MODULE_DEVICE_TABLE(of, lpc313x_dma_of_match);
+MODULE_DEVICE_TABLE(of, lpc31xx_dma_of_match);
 #endif
 
 static struct platform_driver lpc31xx_dma_driver = {
@@ -1161,7 +1161,7 @@ static struct platform_driver lpc31xx_dma_driver = {
 			.name	= "lpc31xx-dma",
 			.owner = THIS_MODULE,
 #ifdef CONFIG_OF
-			.of_match_table = lpc313x_dma_of_match,
+			.of_match_table = lpc31xx_dma_of_match,
 #endif
 	},
 	.remove		= __exit_p(lpc31xx_dma_remove),
