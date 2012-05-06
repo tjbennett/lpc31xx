@@ -13,7 +13,7 @@
 
 #include <linux/serial_8250.h>
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 struct LPC31XX_DMA {
 	dma_addr_t		dma_buff_p;
 	void			*dma_buff_v;
@@ -50,7 +50,7 @@ struct uart_8250_port {
 #define MSR_SAVE_FLAGS UART_MSR_ANY_DELTA
 	unsigned char		msr_saved_flags;
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	struct LPC31XX_DMA dma_rx;
 	struct LPC31XX_DMA dma_tx;
 	int buff_half_offs;
