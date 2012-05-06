@@ -47,6 +47,7 @@
 #include <mach/gpio.h>
 #include <mach/i2c.h>
 #include <mach/board.h>
+#include <mach/system.h>
 
 static struct lpc313x_mci_irq_data irq_data = {
 	.irq = IRQ_SDMMC_CD,
@@ -735,6 +736,7 @@ MACHINE_START(EA313X, "NXP EA313X")
 	.init_irq	= lpc313x_init_irq,
 	.timer		= &lpc313x_timer,
 	.init_machine	= ea313x_init,
+	.restart	= arch_reset,
 MACHINE_END
 #endif
 
