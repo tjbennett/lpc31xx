@@ -13,6 +13,18 @@
 
 #include <linux/serial_8250.h>
 
+#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+struct LPC31XX_DMA {
+	dma_addr_t		dma_buff_p;
+	void			*dma_buff_v;
+	int			dmach;
+	struct tasklet_struct	tasklet;
+	int			count;
+	struct timer_list	timer;		/* "no irq" timer */
+	int			active;
+};
+#endif
+
 struct uart_8250_port {
 	struct uart_port	port;
 	struct timer_list	timer;		/* "no irq" timer */
@@ -37,6 +49,12 @@ struct uart_8250_port {
 	unsigned char		lsr_saved_flags;
 #define MSR_SAVE_FLAGS UART_MSR_ANY_DELTA
 	unsigned char		msr_saved_flags;
+
+#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+	struct LPC31XX_DMA dma_rx;
+	struct LPC31XX_DMA dma_tx;
+	int buff_half_offs;
+#endif
 };
 
 struct old_serial_port {
