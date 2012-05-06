@@ -875,6 +875,7 @@ static void dm9000_send_packet(struct net_device *dev,
 
 	/* Issue TX polling command */
 	iow(dm, DM9000_TCR, TCR_TXREQ);	/* Cleared after TX complete */
+	dev->trans_start = jiffies; /* save the time stamp */
 }
 
 /*
