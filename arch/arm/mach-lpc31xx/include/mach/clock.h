@@ -653,4 +653,7 @@ struct clk {
 	CGU_CLOCK_ID_T id;
 };
 
+
+int clk_init(void);
+
 #endif
