@@ -243,7 +243,7 @@ static int lpc_ehci_suspend(struct device *dev, pm_message_t state)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-	u32 cmd;
+	uint32_t cmd;
 
 	dev_dbg(dev, "%s pdev=0x%p  ehci=0x%p  hcd=0x%p\n",
 		 __FUNCTION__, pdev, ehci, hcd);
@@ -277,7 +277,7 @@ static int lpc_ehci_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct usb_hcd *hcd = platform_get_drvdata(pdev);
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
-	u32 tmp;
+	uint32_t tmp;
 
 	dbg("%s pdev=0x%p  pdata=0x%p  ehci=0x%p  hcd=0x%p\n",
 	    __FUNCTION__, pdev, pdata, ehci, hcd);
@@ -337,8 +337,8 @@ static int lpc31xx_ehci_suspend(struct platform_device *pdev, pm_message_t state
 static int lpc31xx_ehci_resume(struct platform_device * pdev)
 {
 #ifdef CONFIG_PM
-	u32 bank = EVT_GET_BANK(EVT_usb_atx_pll_lock);
-	u32 bit_pos = EVT_usb_atx_pll_lock & 0x1F;
+	uint32_t bank = EVT_GET_BANK(EVT_usb_atx_pll_lock);
+	uint32_t bit_pos = EVT_usb_atx_pll_lock & 0x1F;
 	int tout = 100;
 
 	/* Turn on IP Clock */

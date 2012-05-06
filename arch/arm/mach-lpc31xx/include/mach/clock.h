@@ -77,21 +77,21 @@
 typedef volatile struct
 {
   /* Switches controls */
-  volatile u32 base_scr[12]; /* Switch control */
-  volatile u32 base_fs1[12]; /* Frequency select side 1 */
-  volatile u32 base_fs2[12]; /* Frequency select side 2 */
-  volatile u32 base_ssr[12]; /* Switch status */
+  volatile uint32_t base_scr[12]; /* Switch control */
+  volatile uint32_t base_fs1[12]; /* Frequency select side 1 */
+  volatile uint32_t base_fs2[12]; /* Frequency select side 2 */
+  volatile uint32_t base_ssr[12]; /* Switch status */
   /* Clock enable controls (positive and inverted clock pairs share control register)*/
-  volatile u32 clk_pcr[92]; /* power control */
-  volatile u32 clk_psr[92]; /* power status */
+  volatile uint32_t clk_pcr[92]; /* power control */
+  volatile uint32_t clk_psr[92]; /* power status */
   /* enable select from fractional dividers (positive and inverted clock pairs share esr)*/
-  volatile u32 clk_esr[89]; /* enable select */
+  volatile uint32_t clk_esr[89]; /* enable select */
   /* Base controls, currently only fd_run (base wide fractional divider enable) bit.*/
-  volatile u32 base_bcr[5]; /* Base control */
+  volatile uint32_t base_bcr[5]; /* Base control */
   /* Fractional divider controls & configuration*/
-  volatile u32 base_fdc[24]; /* Fractional divider config & ctrl */
-  volatile u32 base_dyn_fdc[7]; /* Fractional divider config & ctrl for dynamic fracdivs */
-  volatile u32 base_dyn_sel[7]; /* Fractional divider register for selecting an external signal to trigger high-speed operation*/
+  volatile uint32_t base_fdc[24]; /* Fractional divider config & ctrl */
+  volatile uint32_t base_dyn_fdc[7]; /* Fractional divider config & ctrl for dynamic fracdivs */
+  volatile uint32_t base_dyn_sel[7]; /* Fractional divider register for selecting an external signal to trigger high-speed operation*/
 } CGU_SB_REGS_T;
 
 /* ----------------
@@ -100,29 +100,29 @@ typedef volatile struct
 */
 typedef volatile struct
 {
-  volatile u32 fin_select;
-  volatile u32 mdec;
-  volatile u32 ndec;
-  volatile u32 pdec;
-  volatile u32 mode;
-  volatile u32 status;
-  volatile u32 ack;
-  volatile u32 req;
-  volatile u32 inselr;
-  volatile u32 inseli;
-  volatile u32 inselp;
-  volatile u32 selr;
-  volatile u32 seli;
-  volatile u32 selp;
+  volatile uint32_t fin_select;
+  volatile uint32_t mdec;
+  volatile uint32_t ndec;
+  volatile uint32_t pdec;
+  volatile uint32_t mode;
+  volatile uint32_t status;
+  volatile uint32_t ack;
+  volatile uint32_t req;
+  volatile uint32_t inselr;
+  volatile uint32_t inseli;
+  volatile uint32_t inselp;
+  volatile uint32_t selr;
+  volatile uint32_t seli;
+  volatile uint32_t selp;
 } CGU_HP_CFG_REGS;
 
 typedef volatile struct
 {
-  volatile u32 powermode;
-  volatile u32 wd_bark;
-  volatile u32 ffast_on;
-  volatile u32 ffast_bypass;
-  volatile u32 resetn_soft[56];
+  volatile uint32_t powermode;
+  volatile uint32_t wd_bark;
+  volatile uint32_t ffast_on;
+  volatile uint32_t ffast_bypass;
+  volatile uint32_t resetn_soft[56];
   CGU_HP_CFG_REGS hp[2];
 } CGU_CONFIG_REGS;
 
@@ -551,15 +551,15 @@ typedef enum
 /* CGU HPLL config settings structure type */
 typedef struct
 {
-  u32 fin_select;
-  u32 ndec;
-  u32 mdec;
-  u32 pdec;
-  u32 selr;
-  u32 seli;
-  u32 selp;
-  u32 mode;
-  u32 freq; /* in MHz for driver internal data */
+  uint32_t fin_select;
+  uint32_t ndec;
+  uint32_t mdec;
+  uint32_t pdec;
+  uint32_t selr;
+  uint32_t seli;
+  uint32_t selp;
+  uint32_t mode;
+  uint32_t freq; /* in MHz for driver internal data */
 } CGU_HPLL_SETUP_T;
 
 /* CGU fractional divider settings structure type */
@@ -574,13 +574,13 @@ typedef struct
 * CGU driver functions
 **********************************************************************/
 /* Return the current base frequecy of the requested domain*/
-u32 cgu_get_base_freq(CGU_DOMAIN_ID_T baseid);
+uint32_t cgu_get_base_freq(CGU_DOMAIN_ID_T baseid);
 
 /* Change the base frequency for the requested domain */
-void cgu_set_base_freq(CGU_DOMAIN_ID_T baseid, u32 fin_sel);
+void cgu_set_base_freq(CGU_DOMAIN_ID_T baseid, uint32_t fin_sel);
 
 /* Return the current frequecy of the requested clock*/
-u32 cgu_get_clk_freq(CGU_CLOCK_ID_T clkid);
+uint32_t cgu_get_clk_freq(CGU_CLOCK_ID_T clkid);
 
 /* Change the sub-domain frequency for the requested clock */
 void cgu_set_subdomain_freq(CGU_CLOCK_ID_T clkid, CGU_FDIV_SETUP_T fdiv_cfg);
@@ -589,16 +589,16 @@ void cgu_set_subdomain_freq(CGU_CLOCK_ID_T clkid, CGU_FDIV_SETUP_T fdiv_cfg);
 void cgu_hpll_config(CGU_HPLL_ID_T id, CGU_HPLL_SETUP_T* pllsetup);
 
 /* enable / disable external enabling of the requested clock in CGU */
-void cgu_clk_set_exten(CGU_CLOCK_ID_T clkid, u32 enable);
+void cgu_clk_set_exten(CGU_CLOCK_ID_T clkid, uint32_t enable);
 
 /* frac divider config function */
-u32 cgu_fdiv_config(u32 fdId, CGU_FDIV_SETUP_T fdivCfg, u32 enable);
+uint32_t cgu_fdiv_config(uint32_t fdId, CGU_FDIV_SETUP_T fdivCfg, uint32_t enable);
 
 /***********************************************************************
 * CGU driver inline (ANSI C99 based) functions
 **********************************************************************/
 /* enable / disable the requested clock in CGU */
-static inline void cgu_clk_en_dis(CGU_CLOCK_ID_T clkid, u32 enable)
+static inline void cgu_clk_en_dis(CGU_CLOCK_ID_T clkid, uint32_t enable)
 {
   if (enable)
   {
@@ -613,7 +613,7 @@ static inline void cgu_clk_en_dis(CGU_CLOCK_ID_T clkid, u32 enable)
 /* Issue a software reset to the requested module */
 static inline void cgu_soft_reset_module(CGU_MOD_ID_T modId)
 {
-  volatile u32 i;
+  volatile uint32_t i;
 
   /* clear and set the register */
   CGU_CFG->resetn_soft[modId] = 0;
@@ -640,8 +640,8 @@ static inline void cgu_endis_base_freq(CGU_DOMAIN_ID_T baseid, int en)
 struct clk {
 	struct list_head node;
 	struct clk *parent;
-	u32 rate;
-	u32 usecount;
+	uint32_t rate;
+	uint32_t usecount;
 
 	int (*set_rate) (struct clk *, unsigned long);
 	unsigned long (*round_rate) (struct clk *, unsigned long);
@@ -650,7 +650,7 @@ struct clk {
 
 	/* Register address and bit mask for simple clocks */
 	void __iomem *enable_reg;
-	u32 enable_mask;
+	uint32_t enable_mask;
 
 	CGU_CLOCK_ID_T id;
 };

@@ -53,8 +53,8 @@
 
 
 struct i2s_clk_setup {
-	u32 target_codec_rate;
-	u32 real_fs_codec_rate;
+	uint32_t target_codec_rate;
+	uint32_t real_fs_codec_rate;
 };
 static struct i2s_clk_setup i2s_clk_state;
 
@@ -187,14 +187,14 @@ static CGU_HPLL_SETUP_T *ppll_list[] = {
 
 #if defined(CONFIG_SND_LPC315X_SOC)
 /* For LPC315X Analog CODEC 128FS clock has to be used */
-static const u32 fsdiv =
+static const uint32_t fsdiv =
 #if defined (CONFIG_SND_CODEC_FS128)
 	128;
 #endif
 #endif
 
 #if defined(CONFIG_SND_LPC31XX_SOC)
-static const u32 fsdiv =
+static const uint32_t fsdiv =
 #if defined (CONFIG_SND_CODEC_FS256)
 	256;
 #elif defined (CONFIG_SND_CODEC_FS384)
@@ -208,10 +208,10 @@ static const u32 fsdiv =
 #endif
 #endif
 
-static u32 lpc31xx_set_best_rate(u32 freq)
+static uint32_t lpc31xx_set_best_rate(uint32_t freq)
 {
 	CGU_FDIV_SETUP_T clk_div;
-	u32 diff;
+	uint32_t diff;
 	int i = 0;
 
 	clk_div.stretch = 1;
@@ -252,7 +252,7 @@ static u32 lpc31xx_set_best_rate(u32 freq)
  * Sets up the audio PLL to generate a frequency as close as possible to
  * the target clkrate frequency
  */
-static u32 lpc31xx_set_codec_freq(u32 freq)
+static uint32_t lpc31xx_set_codec_freq(uint32_t freq)
 {
 	if (freq == 0)
 	{
@@ -301,7 +301,7 @@ static void lpc31xx_ch_clk_disen(enum i2s_supp_clks chclk, int en)
  * Sets up the channel bit clock to generate a rate as close as possible
  * to the target clkrate frequency
  */
-static u32 lpc31xx_set_ch_freq(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq)
+static uint32_t lpc31xx_set_ch_freq(enum i2s_supp_clks chclk, uint32_t ws_freq, uint32_t bit_freq)
 {
 	CGU_FDIV_SETUP_T ch_div;
 
@@ -345,9 +345,9 @@ static u32 lpc31xx_set_ch_freq(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_fr
  * the actual programmed clock rate. The programmed rate is generated on
  * the FS256 pin has a rate of (256 * clkrate).
  */
-u32 lpc31xx_main_clk_rate(u32 freq)
+uint32_t lpc31xx_main_clk_rate(uint32_t freq)
 {
-	u32 ret = 0;
+	uint32_t ret = 0;
 	/* Compute and set proper divider */
 	ret = lpc31xx_set_codec_freq(freq);
 #if defined (CONFIG_SND_DEBUG_VERBOSE)
@@ -363,7 +363,7 @@ u32 lpc31xx_main_clk_rate(u32 freq)
  * to the channel's WS and BCLK signals. Returns the actual programmed
  * WS clock rate.
  */
-u32 lpc31xx_chan_clk_enable(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq)
+uint32_t lpc31xx_chan_clk_enable(enum i2s_supp_clks chclk, uint32_t ws_freq, uint32_t bit_freq)
 {
 	/* Compute and set proper divider */
 	return lpc31xx_set_ch_freq(chclk, ws_freq, bit_freq);
