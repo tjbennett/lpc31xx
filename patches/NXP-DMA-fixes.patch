@@ -1,7 +1,7 @@
-Bottom: 6c8a1cf6efa3698acfd058e45954452e097365c3
-Top:    4155f349f798e72bc4d0331d9333065df3140230
+Bottom: 14540c042e8597c1e3ef232faccae74380fe88ee
+Top:    66c046498bedb455d80423e0a27f75bffe6db6b4
 Author: Bangaragiri G <bangaragiri.g@nxp.com>
-Date:   2012-05-03 21:29:03 -0400
+Date:   2012-05-06 19:11:58 -0400
 
 arm:lpc313x:NAND Flash & SD/MMC DMA fixes
 

@@ -1,7 +1,7 @@
-Bottom: ad25c4440c8a9706a6df647f684d7a1ce635ca8d
-Top:    3c09815b76e3c9d25dd86b63536c97f20208fb05
+Bottom: 7988e12bc0885aaa11add857d5f2d70162c4af26
+Top:    54ee004a0febd7546019b5a1e7bba91bd83b7082
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-05-03 21:29:06 -0400
+Date:   2012-05-06 19:12:02 -0400
 
 r2
 
@@ -9,7 +9,7 @@ r2
 ---
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 23e7791..6b2296e 100644
+index 7e0381e..b6f7342 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
 @@ -1018,7 +1018,7 @@ config ARCH_LPC31XX

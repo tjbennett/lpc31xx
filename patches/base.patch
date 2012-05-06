@@ -1,7 +1,7 @@
-Bottom: 33c02a3b46b4aa553e08450b7bc90f5200c4c98f
-Top:    0935bb925dd8ad589aef7f12ac0839174eef95be
+Bottom: 7836cc869f55fe47600cf424135b9618d160f89a
+Top:    069831ab17c81a1e9637bd896152afd039a07396
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-05-03 21:29:00 -0400
+Date:   2012-05-06 19:11:55 -0400
 
 base patches minus 8250
 
@@ -9,7 +9,7 @@ base patches minus 8250
 ---
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index cf006d4..23e7791 100644
+index 36586dba..7e0381e 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
 @@ -1009,6 +1009,20 @@ config ARCH_ZYNQ
@@ -42,7 +42,7 @@ index cf006d4..23e7791 100644
  # Definitions to make life easier
  config ARCH_ACORN
  	bool
-@@ -1767,7 +1783,7 @@ config LEDS
+@@ -1776,7 +1792,7 @@ config LEDS
  		   ARCH_LUBBOCK || MACH_MAINSTONE || ARCH_NETWINDER || \
  		   ARCH_OMAP || ARCH_P720T || ARCH_PXA_IDP || \
  		   ARCH_SA1100 || ARCH_SHARK || ARCH_VERSATILE || \
@@ -51,7 +51,7 @@ index cf006d4..23e7791 100644
  		   ARCH_KS8695 || MACH_RD88F5182 || ARCH_REALVIEW
  	help
  	  If you say Y here, the LEDs on your machine will be used
-@@ -1783,7 +1799,7 @@ config LEDS
+@@ -1792,7 +1808,7 @@ config LEDS
  config LEDS_TIMER
  	bool "Timer LED" if (!ARCH_CDB89712 && !ARCH_OMAP) || \
  			    OMAP_OSK_MISTRAL || MACH_OMAP_H2 \
@@ -60,7 +60,7 @@ index cf006d4..23e7791 100644
  	depends on LEDS
  	depends on !GENERIC_CLOCKEVENTS
  	default y if ARCH_EBSA110
-@@ -1802,7 +1818,7 @@ config LEDS_CPU
+@@ -1811,7 +1827,7 @@ config LEDS_CPU
  	bool "CPU usage LED" if (!ARCH_CDB89712 && !ARCH_EBSA110 && \
  			!ARCH_OMAP) \
  			|| OMAP_OSK_MISTRAL || MACH_OMAP_H2 \

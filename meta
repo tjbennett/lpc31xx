@@ -1,45 +1,45 @@
 Version: 1
-Previous: 75cef3bf65c6645f0ff336446b807c88e6b399a3
-Head: 40a42de10af35addfdae4dd28147f3172bad0b63
+Previous: 3df8304c1023e16dc115af0a667e9a939940b526
+Head: 43c93eed2ba91737122a024e4fb49963180cfdf3
 Applied:
-  roland-dt-1.patch: 7ddaff3fac70435651437984f871f925f3184796
-  base.patch: e79c2327157c3f3ee0e1feac172dcfc6727b0c67
-  defconfigs.patch: 7f341f9a277f17d8170b423ab5abd1856635d4d5
-  nand.patch: 714322813f913a1bfb704fb0ecb2a55c595abbcd
-  spi.patch: afea43117f2af7b3a85aa3ae31f679885f2d3e5c
-  mmc.patch: febc307ff3861f6531aa82df098bd03b744de80c
-  watchdog.patch: 42e40104890cf9294dfd5c7b521e9abf099245b4
-  sound.patch: 33b87118cd64cf1e4a67535e0b51f7f83a6e10bc
-  usb.patch: b6f3e5456b4c318e1d33bb4a266cc28e2fe1b061
-  gadget.patch: a3541260957026a7064e785a13003492bb922d25
-  old8250.patch: 4471140257717d1a7e1a99845d5bf31cb03f9847
-  video.patch: a06b7af4291dbf98ab279883e6d68139ce2e3996
-  phys.patch: 91f2d70af2cd24fe86a6e663c032cf0c5a7d46cc
-  mmc-stop-fix.patch: f28ccb60ea53f24ccbc242bdc969b12289a5f0dd
-  remove-config-noise.patch: fe3e6f916fe6ce9e936fcb4f216a0e616d86d7c0
-  NXP-DMA-fixes.patch: 839f52b652b8f13a5db876283699d881fca228de
-  NXP-uart-dma.patch: 06fc336fdbbd36d7286a30eaecb91f929e2e3476
-  nxp-nand-dma.patch: 0cf204e41a24dd0a5abaadd4afe9271264ba0b89
-  nxp-audio-analog.patch: 14d0b07a26dcae5f347f263ddace06b8057a58ea
-  reset.patch: d08d60ab2d1582c6e4168a34a853f1bf5ae4a945
-  adc-registers.patch: 1b60131a56bf0a72198ac6d685fcd3dd298f2cec
-  adc-pwm.patch: 5f8ba8cdcc4731e80b069c833e2d87c59327530a
-  device-trees.patch: 4edbe2e72844b6ce8fda53dba5b64a66370aef75
-  dma.patch: 3dbe23179a73cd5b76dbead18ebc80107ee7d4ad
-  irq.patch: e20153ec2b2fb60ae4db97c29975998b53cf9194
-  mmc-dma.patch: c026dbf67df458749eb374e03d003bb055c058b9
-  nand-dma.patch: 8b2b33ae7eee3844b16ffc7109d12cf228e19f39
-  i2s-dma.patch: 56a41555310c2f148c61b5bd8406b21f004e6604
-  v34-fixes.patch: d9ce74134b3b934275c2bfc6dd3d5cbd6851b4b5
-  rename.patch: 0ed0d6bd8c3ccf75238520e2a3e230911662653a
-  symbol-rename.patch: dd13b6e6dd7439938e6bf5459de3653e8807312f
-  dt-split.patch: 1ffe1c3a510908b2e3aee49e6d9c7c36b0c8d955
-  evtr.patch: 13e006485bef41e7de4aff04669ba831e7c93ec1
-  intc.patch: e05ce7edccf23b717b8fa6dab9f1b42f82e3333a
-  wdt.patch: 1f19b987bd87583b087718d95df28ae1502afb29
-  clean-val315x: f7b6aca9040b94ab49d54044b7a99453b620063e
-  uart.patch: 8d49d2c941410c6cf5f2c44f5024af83e491328b
-  spi-temp: 3f0fb9982d9b49fdf0540ab785db690fdf6e5be7
-  spi-rewrite: 40a42de10af35addfdae4dd28147f3172bad0b63
+  roland-dt-1.patch: 4e99a3bd6eb142bf92b82fa379a1bd3eef014e8d
+  base.patch: cb9cb50f4d9f6011e65e2b13c6ae60a8ee65f9e3
+  defconfigs.patch: f1b9fe09a71de5c25d0c97c075f133c079537793
+  nand.patch: 32c486675e435f8363c6157fafbdb6b29c02cfd0
+  spi.patch: 865dcd20c774974275885a79f9a5a953fc14ecc8
+  mmc.patch: e87f3b5385e2565a8ef258e5aef2fcddfeb05d68
+  watchdog.patch: dd296ed6c019b9ec53b8bb677113a8ccdeb8e797
+  sound.patch: b5d1c53899386532349e49dbaebfa2e1a935a5bc
+  usb.patch: b77cf47238fe08c88da9c41fd4ca7e34acc882b7
+  gadget.patch: f1a951e22cef1f873c232478ce3c13deefed56b8
+  old8250.patch: b7cee7381c1dd2e02ee1f26541a36491708fa8cd
+  video.patch: be72d073baae0bcafc8145359bd09f3930bb1d28
+  phys.patch: 256bcee5954363215a868f24f2e72533adb886ce
+  mmc-stop-fix.patch: 61a08cb7a34060c9f0c45b184302bcb4e28f0e58
+  remove-config-noise.patch: cd9d37fc9d3964ead6993cb35794811f0a382a04
+  NXP-DMA-fixes.patch: 53d3366d88ae0803c94b8adb70a721312aa2356a
+  NXP-uart-dma.patch: 4ddccfb56007c2e82d73578e0c088235c54afcb9
+  nxp-nand-dma.patch: f5b347db7e1ce3342548053cd4afbcba43e2ad65
+  nxp-audio-analog.patch: 11c37343497e2a40f68d8dc96dfb59a610a3a8ef
+  reset.patch: 5c5adcac0998fee876ff7185c3f75e0896a41bb0
+  adc-registers.patch: d80d11aa9fa28ead2f74647ed4f9c2f63661c177
+  adc-pwm.patch: 9571f881a6b8798950a897bbb1e4586b98ec4744
+  device-trees.patch: 8aeb527281655cdd58cb9181eecb6c5e8dac60fb
+  dma.patch: 51603d7b9af26aed632b40f216584abccdcd85e5
+  irq.patch: 3a0e89197304b31049b964bda7c69c219288de4e
+  mmc-dma.patch: 35bc78ca552df6a2d0747623f213cff871101393
+  nand-dma.patch: 7341a92971c4bfdb892b1056e585f0b994791903
+  i2s-dma.patch: 3ad1f6c3456cfeb5894a6c4bd78c2e41ce1b6a24
+  v34-fixes.patch: 8b6e8cb24542db84914df8f0e60e2a8c8fbae0dd
+  rename.patch: 269e54aea1562b52703b75dce37751deb2152186
+  symbol-rename.patch: 57c28120a5c99aaf40ab12216724fa7b83854f9a
+  dt-split.patch: 415ead325f0843228e5cc2ab56497a833a8b37ee
+  evtr.patch: ff43c040007d6b4153d59da2f4c920e37f33ed51
+  intc.patch: 4012a71b4252623e28cc6e2c2a6d03f3025173a2
+  wdt.patch: 5aa936702faab8cc5b0989c54189aa0fdb478060
+  clean-val315x: 7c23b6cd9d3b69255578d6c5d70f1c0df475f95f
+  uart.patch: aa2473f0ba7e79e0ff03f4a7d060661070206cc6
+  spi-temp: fef2497839af3c693bb66f13929df10e3d8f03f1
+  spi-rewrite: 43c93eed2ba91737122a024e4fb49963180cfdf3
 Unapplied:
 Hidden:

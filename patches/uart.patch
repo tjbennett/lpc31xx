@@ -1,7 +1,7 @@
-Bottom: ff61b94a73a504cbbce861d0a10e50ee1e86d4e0
-Top:    0add0166097b440427d800510cdd052c6e128a83
+Bottom: 4545690bc1a6d72d13a50f4ae831f317cd60e534
+Top:    7c99b2c80b578f1fa89edf041216ff2469ef39a3
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-05-03 21:29:08 -0400
+Date:   2012-05-06 19:12:04 -0400
 
 uart 
 
@@ -9,7 +9,7 @@ uart
 ---
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 6b2296e..daf666d 100644
+index b6f7342..f1279bf 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
 @@ -587,6 +587,20 @@ config ARCH_KIRKWOOD

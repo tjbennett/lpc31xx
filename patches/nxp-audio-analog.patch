@@ -1,7 +1,7 @@
-Bottom: 240ef2f32c7ef22ded58a832ba1e6ca33af7c2bc
-Top:    8968d16cc05ae1d35da0292899c08d242a1a8c0d
+Bottom: b9513b0c69c3ce894277c291b8deecba4e807177
+Top:    4f70a32a9718b33d797bba3ed344dee288451020
 Author: Bangaragiri G <bangaragiri.g@nxp.com>
-Date:   2012-05-03 21:29:04 -0400
+Date:   2012-05-06 19:11:59 -0400
 
 sound:lpc313x:lpc315x audio analog die CODEC fixes
 
