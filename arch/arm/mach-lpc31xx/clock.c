@@ -1,9 +1,9 @@
-/*  arch/arm/mach-lpc313x/clock.c
+/*  arch/arm/mach-lpc31xx/clock.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- *  CGU driver for LPC313x & LPC315x.
+ *  CGU driver for LPC31xx
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -692,7 +692,7 @@ u32 cgu_get_pll_freq(CGU_HPLL_ID_T pll_id, u32 infreq)
  * The debugfs stuff below is mostly optimized away when
  * CONFIG_DEBUG_FS is not set.
  */
-static int lpc313x_cgu_clocks_show(struct seq_file *s, void *v)
+static int lpc31xx_cgu_clocks_show(struct seq_file *s, void *v)
 {
 	u32 clk_id = CGU_SYS_FIRST;
 	u32 end_id = (CGU_SYSCLK_O_LAST + 1);
@@ -709,32 +709,32 @@ static int lpc313x_cgu_clocks_show(struct seq_file *s, void *v)
 	return 0;
 }
 
-static int lpc313x_cgu_clocks_open(struct inode *inode, struct file *file)
+static int lpc31xx_cgu_clocks_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, lpc313x_cgu_clocks_show, inode->i_private);
+	return single_open(file, lpc31xx_cgu_clocks_show, inode->i_private);
 }
 
-static const struct file_operations lpc313x_cgu_clocks_fops = {
+static const struct file_operations lpc31xx_cgu_clocks_fops = {
 	.owner		= THIS_MODULE,
-	.open		= lpc313x_cgu_clocks_open,
+	.open		= lpc31xx_cgu_clocks_open,
 	.read		= seq_read,
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
 
-static void lpc313x_cgu_init_debugfs(void)
+static void lpc31xx_cgu_init_debugfs(void)
 {
 	struct dentry		*node;
 
 	node = debugfs_create_file("cgu_clks", S_IRUSR, NULL, NULL,
-			&lpc313x_cgu_clocks_fops);
+			&lpc31xx_cgu_clocks_fops);
 	if (IS_ERR(node))
 		printk("cgu_init: failed to initialize debugfs for CGU\n");
 
 	return;
 }
 #else
-static void lpc313x_cgu_init_debugfs(void) {}
+static void lpc31xx_cgu_init_debugfs(void) {}
 #endif
 /***********************************************************************
 * Initialize CGU data structure with PLL frequency passed by the boot 
@@ -776,7 +776,7 @@ int __init cgu_init(char *str)
 	g_clkin_freq[6] = cgu_get_pll_freq(CGU_HPLL1_ID, FFAST_CLOCK);
  	printk(/*KERN_INFO*/ "cgu_init pll set at %d\n", g_clkin_freq[6]);
 	
-	lpc313x_cgu_init_debugfs();
+	lpc31xx_cgu_init_debugfs();
 
 	return 0;
 }

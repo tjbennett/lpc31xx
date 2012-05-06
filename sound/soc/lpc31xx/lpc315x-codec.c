@@ -1,5 +1,5 @@
 /*
- * sound/soc/lpc313x/lpc315x-codec.c
+ * sound/soc/lpc31xx/lpc315x-codec.c
  *
  * Author: Kevin Wells <kevin.wells@nxp.com>
  *
@@ -34,9 +34,9 @@
 #include <sound/soc-dapm.h>
 
 #include "../codecs/lpc315x_codec.h"
-#include "lpc313x-pcm.h"
-#include "lpc313x-i2s.h"
-#include "lpc313x-i2s-clocking.h"
+#include "lpc31xx-pcm.h"
+#include "lpc31xx-i2s.h"
+#include "lpc31xx-i2s-clocking.h"
 
 #include <linux/io.h>
 #include <mach/cgu.h>
@@ -135,7 +135,7 @@ static struct snd_soc_dai_link ea315x_lpc315x_codec_dai[] = {
 	{
 		.name = "LPC315X_CODEC",
 		.stream_name = "LPC315X_CODEC",
-		.cpu_dai = &lpc313x_i2s_dai,
+		.cpu_dai = &lpc31xx_i2s_dai,
 		.codec_dai = &lpc315x_codec_dais[0],
 		.init = ea315x_lpc315x_codec_init,
 		.ops = &ea315x_lpc315x_codec_ops,
@@ -144,7 +144,7 @@ static struct snd_soc_dai_link ea315x_lpc315x_codec_dai[] = {
 
 static struct snd_soc_card snd_soc_machine_ea315x = {
 	.name = "LPC315X_CODEC",
-	.platform = &lpc313x_soc_platform,
+	.platform = &lpc31xx_soc_platform,
 	.dai_link = &ea315x_lpc315x_codec_dai[0],
 	.num_links = ARRAY_SIZE(ea315x_lpc315x_codec_dai),
 };
@@ -164,7 +164,7 @@ static int __init ea315x_asoc_init(void)
 	int ret = 0;
 
 	/* Enable CODEC clock first or I2C will fail to the CODEC */
-	lpc313x_main_clk_rate(48000);
+	lpc31xx_main_clk_rate(48000);
 
 	/* Analog Die is added as I2C device in EA3131 Board file.
 	 * So no need to add the I2C device again
@@ -194,7 +194,7 @@ static int __init ea315x_asoc_init(void)
 err_device_add:
 	if (ea315x_snd_device != NULL) {
 		platform_device_put(ea315x_snd_device);
-		lpc313x_main_clk_rate(0);
+		lpc31xx_main_clk_rate(0);
 		ea315x_snd_device = NULL;
 	}
 
@@ -204,7 +204,7 @@ err_device_add:
 static void __exit ea315x_asoc_exit(void)
 {
 	platform_device_unregister(ea315x_snd_device);
-	lpc313x_main_clk_rate(0);
+	lpc31xx_main_clk_rate(0);
 	ea315x_snd_device = NULL;
 }
 

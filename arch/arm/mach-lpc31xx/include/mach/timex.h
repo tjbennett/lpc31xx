@@ -1,4 +1,4 @@
-/*  linux/arch/arm/mach-lpc313x/include/mach/timex.h
+/*  linux/arch/arm/mach-lpc31xx/include/mach/timex.h
  *  
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors

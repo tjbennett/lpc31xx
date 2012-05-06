@@ -1,9 +1,9 @@
-/* linux/arch/arm/mach-lpc313x/include/mach/i2c.h
+/* linux/arch/arm/mach-lpc31xx/include/mach/i2c.h
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- * LPC313x-specific tweaks for NXP I2C block
+ * LPC31xx-specific tweaks for NXP I2C block
  *
  * Based on mach-pnx4008/include/mach/i2c.h by Vitaly Wool <vwool@ru.mvista.com>
  *
@@ -71,6 +71,6 @@ enum {
 #define I2C_REG_TXS(a)	((a)->ioaddr + 0x28)	/* Tx slave FIFO (RO) */
 #define I2C_REG_STFL(a)	((a)->ioaddr + 0x2c)	/* Tx slave FIFO level (RO) */
 
-#define I2C_CHIP_NAME		"LPC313x-I2C"
+#define I2C_CHIP_NAME		"LPC31xx-I2C"
 
 #endif				/* __ASM_ARCH_I2C_H___ */

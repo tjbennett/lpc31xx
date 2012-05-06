@@ -1,9 +1,9 @@
-/*  arch/arm/mach-lpc313x/generic.h
+/*  arch/arm/mach-lpc31xx/generic.h
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- *  Defines prototypes for generic init functions LPC313x and LPC315x SoCs.
+ *  Defines prototypes for generic init functions LPC31xx SoCs.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,16 +30,16 @@
 #include <linux/mmc/host.h>
 
 
-extern void __init lpc313x_map_io(void);
+extern void __init lpc31xx_map_io(void);
 extern void __init lpc31xx_init_irq(void);
-extern void __init lpc313x_init(void);
-extern int __init lpc313x_register_i2c_devices(void);
-extern void lpc313x_vbus_power(int enable);
-extern int lpc313x_entering_suspend_mem(void);
+extern void __init lpc31xx_init(void);
+extern int __init lpc31xx_register_i2c_devices(void);
+extern void lpc31xx_vbus_power(int enable);
+extern int lpc31xx_entering_suspend_mem(void);
 
 
 struct sys_timer;
-extern struct sys_timer lpc313x_timer;
+extern struct sys_timer lpc31xx_timer;
 
 /*
  * Timing information structure for the NAND interface. Although there are
@@ -52,7 +52,7 @@ extern struct sys_timer lpc313x_timer;
  * information on what these timings are and set the value for each timing
  * with the matching value from the NAND device data sheet.
  */
-struct lpc313x_nand_timing
+struct lpc31xx_nand_timing
 {
 	u32 ns_trsd;
 	u32 ns_tals;
@@ -74,7 +74,7 @@ struct lpc313x_nand_timing
  * and partitioning scheme. One of these structures is required for each
  * device attached to a chip select of the NAND controller.
  */
-struct lpc313x_nand_dev_info
+struct lpc31xx_nand_dev_info
 {
 	char *name; /* Informational name only */
 	int nr_partitions; /* Number of partitions on this device */
@@ -84,10 +84,10 @@ struct lpc313x_nand_dev_info
 /*
  * High level NAND configuration structure
  */
-struct lpc313x_nand_cfg {
+struct lpc31xx_nand_cfg {
 	int nr_devices;
-	struct lpc313x_nand_dev_info *devices;
-	struct lpc313x_nand_timing *timing;
+	struct lpc31xx_nand_dev_info *devices;
+	struct lpc31xx_nand_timing *timing;
 	int support_16bit;
 };
 
@@ -95,7 +95,7 @@ struct lpc313x_nand_cfg {
  * Specifies behaviour of each supported chip select
  */
 typedef void (*spi_cs_sel)(int, int);
-struct lpc313x_spics_cfg {
+struct lpc31xx_spics_cfg {
 	/* spi_spo is the serial clock polarity between transfers, 1 = high level,
 	   0 = low */
 	u8 spi_spo;
@@ -108,10 +108,10 @@ struct lpc313x_spics_cfg {
 /*
  * Defines the number of chip selects and the cs data
  */
-struct lpc313x_spi_cfg {
+struct lpc31xx_spi_cfg {
 	u32 num_cs; /* Number of CS supported on this board */
 	/* Array of cs setup data (num_cs entries) */
-	struct lpc313x_spics_cfg *spics_cfg;
+	struct lpc31xx_spics_cfg *spics_cfg;
 };
 
 #if defined (CONFIG_MACH_VAL3153) 

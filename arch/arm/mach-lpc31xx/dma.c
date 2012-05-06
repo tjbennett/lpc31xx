@@ -1,9 +1,9 @@
-/*  arch/arm/mach-lpc313x/dma.c
+/*  arch/arm/mach-lpc31xx/dma.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- *  DMA driver for machines with LPC313x and LPC315x SoCs.
+ *  DMA driver for machines with LPC31xx SoCs.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,12 +38,12 @@
 #ifdef LPDMA
 static spinlock_t driver_lock; /* to guard state variables */
 
-static inline void lpc313x_dma_lock(void)
+static inline void lpc31xx_dma_lock(void)
 {
 	spin_lock(&driver_lock);
 }
 
-static inline void lpc313x_dma_unlock(void)
+static inline void lpc31xx_dma_unlock(void)
 {
 	spin_unlock(&driver_lock);
 }
@@ -113,7 +113,7 @@ int dma_request_channel_x (char *name, dma_cb_t cb, void *data)
 	if (!name)
 		return -EINVAL;
 
-	lpc313x_dma_lock();
+	lpc31xx_dma_lock();
 
 	memset(&dma_setup, 0, sizeof(dma_setup));
 
@@ -132,12 +132,12 @@ int dma_request_channel_x (char *name, dma_cb_t cb, void *data)
 		        dma_irq_mask &= ~mask;  /* enable the IRQ: dafault behavior */
 			DMACH_IRQ_MASK = dma_irq_mask;
 			local_irq_restore(flags);
-			lpc313x_dma_unlock();
+			lpc31xx_dma_unlock();
 			return chn;
 		}
 		mask = mask << 2;
 	}
-	lpc313x_dma_unlock();
+	lpc31xx_dma_unlock();
 	return -EBUSY;
 }
 
@@ -153,7 +153,7 @@ int dma_request_specific_channel (int chn, char *name, void (*cb)(int, dma_irq_t
 	if (dma_channels[chn].name)
 		return -EBUSY;
 
-	lpc313x_dma_lock();
+	lpc31xx_dma_lock();
 
 	memset(&dma_setup, 0, sizeof(dma_setup));
 
@@ -168,7 +168,7 @@ int dma_request_specific_channel (int chn, char *name, void (*cb)(int, dma_irq_t
 	dma_irq_mask &= ~(1 << (2 * chn));  /* enable the IRQ: dafault behavior */
 	DMACH_IRQ_MASK = dma_irq_mask;
 	local_irq_restore(flags);
-	lpc313x_dma_unlock();
+	lpc31xx_dma_unlock();
 	return chn;
 }
 
@@ -181,7 +181,7 @@ int dma_set_irq_mask(unsigned int chn, int half_int, int fin_int)
 		return -EINVAL;
 	}
 
-	lpc313x_dma_lock();
+	lpc31xx_dma_lock();
 	local_irq_save(flags);
 
 	if (fin_int)
@@ -197,7 +197,7 @@ int dma_set_irq_mask(unsigned int chn, int half_int, int fin_int)
 	DMACH_IRQ_MASK = dma_irq_mask;
 
 	local_irq_restore(flags);
-	lpc313x_dma_unlock();
+	lpc31xx_dma_unlock();
 
 	return 0;
 }
@@ -242,7 +242,7 @@ int dma_release_channel_x (unsigned int chn)
 		return -EINVAL;
 	}
 
-	lpc313x_dma_lock();
+	lpc31xx_dma_lock();
 
 	local_irq_save(flags);
 
@@ -258,7 +258,7 @@ int dma_release_channel_x (unsigned int chn)
 	dma_channels[chn].callback_handler = NULL;
 	dma_channels[chn].data = NULL;
 
-	lpc313x_dma_unlock();
+	lpc31xx_dma_unlock();
 	dma_decrement_usage();
 
 	return 0;
@@ -368,7 +368,7 @@ int dma_request_sg_channel (char *name, dma_cb_t cb, void *data,
 	if (softirqen & usesoftirq)
 		return -EBUSY;
 
-	lpc313x_dma_lock();
+	lpc31xx_dma_lock();
 
 	for (chn = 0; chn < DMA_MAX_CHANNELS - 1; chn++)
 		if (!dma_channels[chn].name && !dma_channels[chn + 1].name) {
@@ -377,7 +377,7 @@ int dma_request_sg_channel (char *name, dma_cb_t cb, void *data,
 		}
 
 	if (!sg_higher_channel[chn]) {
-		lpc313x_dma_unlock();
+		lpc31xx_dma_unlock();
 		return -EBUSY;
 	}
 
@@ -406,7 +406,7 @@ int dma_request_sg_channel (char *name, dma_cb_t cb, void *data,
 		local_irq_restore(flags);
 	}
 
-	lpc313x_dma_unlock();
+	lpc31xx_dma_unlock();
 
 	return sg_higher_channel[chn];
 }
@@ -426,7 +426,7 @@ int dma_request_specific_sg_channel (int chn, char *name, dma_cb_t cb,
 	if (sg_higher_channel[chn] || dma_channels[chn].name || dma_channels[chn - 1].name)
 		return -EBUSY;
 
-	lpc313x_dma_lock();
+	lpc31xx_dma_lock();
 
 	sg_higher_channel[chn] = chn;
 
@@ -467,12 +467,12 @@ int dma_prog_sg_channel(int chn, u32 dma_sg_list)
 
 	dma_config = DMA_CFG_CMP_CH_EN | DMA_CFG_CMP_CH_NR(chn - 1);
 
-	lpc313x_dma_lock();
+	lpc31xx_dma_lock();
 	DMACH_SRC_ADDR(chn) = dma_sg_list;
 	DMACH_DST_ADDR(chn) = DMACH_ALT_PHYS(chn - 1);
 	DMACH_LEN(chn) = 0x4;
 	DMACH_CFG(chn) = dma_config;
-	lpc313x_dma_unlock();
+	lpc31xx_dma_unlock();
 
 	return 0;
 }
@@ -487,7 +487,7 @@ int dma_channel_enabled(unsigned int chn)
 }
 
 #if 0
-static int __init lpc313x_dma_init (void)
+static int __init lpc31xx_dma_init (void)
 {
 	int ret = 0;
 
@@ -512,7 +512,7 @@ int dma_release_sg_channel (unsigned int chn)
 		return -EINVAL;
 	}
 
-	lpc313x_dma_lock();
+	lpc31xx_dma_lock();
 
 	if (softirqmask[chn] != 0) {
 		local_irq_save(flags);
@@ -534,7 +534,7 @@ int dma_release_sg_channel (unsigned int chn)
 
 	sg_higher_channel[chn] = 0;
 
-	lpc313x_dma_unlock();
+	lpc31xx_dma_unlock();
 	dma_decrement_usage();
 	return 0;
 }
@@ -563,7 +563,7 @@ int dma_read_counter (unsigned int chn, unsigned int * pcnt){return 0;}
 int dma_prepare_sg_list(int n, dma_sg_ll_t * sg){return 0;}
 #endif
 
-//device_initcall(lpc313x_dma_init);
+//device_initcall(lpc31xx_dma_init);
 
 EXPORT_SYMBOL(dma_request_channel_x);
 EXPORT_SYMBOL(dma_request_specific_channel);
