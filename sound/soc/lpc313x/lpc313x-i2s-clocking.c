@@ -50,6 +50,7 @@
 #include <mach/registers.h>
 #include "lpc313x-i2s-clocking.h"
 
+
 struct i2s_clk_setup {
 	u32 target_codec_rate;
 	u32 real_fs_codec_rate;
