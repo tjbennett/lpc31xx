@@ -16,7 +16,7 @@
  * GNU General Public License for more details.
  */
 
-#define DEBUG
+//#define DEBUG
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -129,7 +129,7 @@
 #define SPI_OVR_INT               _BIT(0)
 #define SPI_ALL_INTS              (SPI_SMS_INT | SPI_TX_INT | SPI_RX_INT | SPI_TO_INT | SPI_OVR_INT)
 
-#define SPI_POLLING_TIMEOUT 1000
+#define SPI_POLLING_TIMEOUT 8000
 #define MAX_CHIP_SELECT 3
 
 /*
@@ -282,6 +282,9 @@ struct lpc31xx_spi {
 	enum spi_tx_level_trig		tx_lev_trig;
 	int				gpio[MAX_CHIP_SELECT];
 	int				alow[MAX_CHIP_SELECT];
+	uint8_t 			current_bits_wd[MAX_CHIP_SELECT];
+	int				current_speed_hz[MAX_CHIP_SELECT];
+
 	/* DMA settings */
 #ifdef CONFIG_DMA_ENGINE_X
 	struct dma_chan			*dma_rx_channel;
@@ -351,7 +354,6 @@ static inline void lpc31xx_int_en(struct lpc31xx_spi *espi, u32 ints)
  */
 static void lpc31xx_set_cs_data_bits(struct lpc31xx_spi *espi, uint8_t cs, uint8_t data_width)
 {
-#ifdef JDS
 	if (espi->current_bits_wd[cs] != data_width)
 	{
 		u32 tmp = spi_readl(SLV_SET2_REG(0));
@@ -361,7 +363,6 @@ static void lpc31xx_set_cs_data_bits(struct lpc31xx_spi *espi, uint8_t cs, uint8
 
 		espi->current_bits_wd[cs] = data_width;
 	}
-#endif
 }
 
 /*
@@ -371,13 +372,12 @@ static void lpc31xx_set_cs_clock(struct lpc31xx_spi *espi, uint8_t cs, u32 clock
 {
 	u32 reg, div, ps, div1;
 
-#ifdef JDS
 	if (clockrate != espi->current_speed_hz[cs])
 	{
 		reg = spi_readl(SLV_SET1_REG(0));
 		reg &= ~0xFFFF;
 
-		div = (espi->spi_base_clock + clockrate / 2) / clockrate;
+		div = (clk_get_rate(espi->clk) + clockrate / 2) / clockrate;
 		if (div > SPI_MAX_DIVIDER)
 			div = SPI_MAX_DIVIDER;
 		if (div < SPI_MIN_DIVIDER)
@@ -391,7 +391,6 @@ static void lpc31xx_set_cs_clock(struct lpc31xx_spi *espi, uint8_t cs, u32 clock
 
 		espi->current_speed_hz[cs] = clockrate;
 	}
-#endif
 }
 
 /*
@@ -608,11 +607,9 @@ static void readwriter(struct lpc31xx_spi *espi)
 		switch (espi->read) {
 		case READING_NULL:
 			spi_readl(FIFO_DATA_REG);
-			printk("Read1 Null\n");
 			break;
 		case READING_U8:
 			*(uint8_t *)(espi->rx) = spi_readl(FIFO_DATA_REG) & 0xFFU;
-			printk("Read1 %02x\n", *(uint8_t *) (espi->rx));
 			break;
 		case READING_U16:
 			*(uint16_t *)(espi->rx) = (uint16_t)spi_readl(FIFO_DATA_REG);;
@@ -626,11 +623,9 @@ static void readwriter(struct lpc31xx_spi *espi)
 	while ((espi->exp_fifo_level < SPI_FIFO_DEPTH) && (espi->tx < espi->tx_end)) {
 		switch (espi->write) {
 		case WRITING_NULL:
-			printk("Write Null\n");
 			spi_writel(FIFO_DATA_REG, -1);
 			break;
 		case WRITING_U8:
-			printk("Write %02x\n", *(uint8_t *) (espi->tx));
 			spi_writel(FIFO_DATA_REG, *(uint8_t *) (espi->tx));
 			break;
 		case WRITING_U16:
@@ -644,11 +639,9 @@ static void readwriter(struct lpc31xx_spi *espi)
 			switch (espi->read) {
 			case READING_NULL:
 				spi_readl(FIFO_DATA_REG);
-				printk("Read2 Null\n");
 				break;
 			case READING_U8:
 				*(uint8_t *)(espi->rx) = spi_readl(FIFO_DATA_REG) & 0xFFU;
-				printk("Read2 %02x\n", *(uint8_t *) (espi->rx));
 				break;
 			case READING_U16:
 				*(uint16_t *)(espi->rx) = (uint16_t)spi_readl(FIFO_DATA_REG);;
