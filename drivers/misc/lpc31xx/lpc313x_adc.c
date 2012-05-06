@@ -31,6 +31,8 @@
 #include <linux/delay.h>
 #include <linux/fs.h>
 #include <asm/io.h>
+
+#include <mach/hardware.h>
 #include <mach/registers.h>
 
 #include "lpc313x_adc.h"
