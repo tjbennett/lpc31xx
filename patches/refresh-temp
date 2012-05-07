@@ -1,0 +1,95 @@
+Bottom: 4a5cf0a15d79cad0310b7113d0bf8ac866255c80
+Top:    4470a282087d1f9592225b54772cb3f069dae8e4
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-05-07 12:37:11 -0400
+
+Refresh of spi-rewrite
+
+---
+
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+index 31346cf..e324961 100644
+--- a/arch/arm/boot/dts/ea3131.dts
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -51,7 +51,7 @@
+ 			compatible = "code,s25sl032a";
+ 			reg = <0>;
+ 			spi-max-frequency = <1000000>;
+-		};
++		}; /*
+ 		ads7846@1 {
+ 			compatible = "ti,ads7846";
+ 			reg = <1>;
+@@ -62,7 +62,7 @@
+ 			interrupt-parent = <&evtr>;
+ 			interrupts = <7 4>;
+ 			gpio-pendown = <&gpio_gpio 4 0>;
+-		};
++		}; */
+ 	};
+ 	sound {
+ 		compatible = "ea,ea3131-uda1380";
+diff --git a/drivers/spi/spi-lpc31xx.c b/drivers/spi/spi-lpc31xx.c
+index 90cecc4..e0ce846 100644
+--- a/drivers/spi/spi-lpc31xx.c
++++ b/drivers/spi/spi-lpc31xx.c
+@@ -603,6 +603,7 @@ static void readwriter(struct lpc31xx_spi *espi)
+ 	spi_writel(DMA_SET_REG, 0);
+ 
+ 	/* read as long as RX FIFO has frames in it */
++	if (espi->read != READING_NULL) printk("Read ");
+ 	while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
+ 		switch (espi->read) {
+ 		case READING_NULL:
+@@ -610,6 +611,7 @@ static void readwriter(struct lpc31xx_spi *espi)
+ 			break;
+ 		case READING_U8:
+ 			*(uint8_t *)(espi->rx) = spi_readl(FIFO_DATA_REG) & 0xFFU;
++			printk("%02x ", *(uint8_t *)(espi->rx));
+ 			break;
+ 		case READING_U16:
+ 			*(uint16_t *)(espi->rx) = (uint16_t)spi_readl(FIFO_DATA_REG);;
+@@ -618,14 +620,17 @@ static void readwriter(struct lpc31xx_spi *espi)
+ 		espi->rx += (espi->cur_chip->n_bytes);
+ 		espi->exp_fifo_level--;
+ 	}
++	if (espi->read != READING_NULL) printk("\n");
+ 
+ 	/* write as long as TX FIFO has room */
++	if (espi->write != WRITING_NULL) printk("Write ");
+ 	while ((espi->exp_fifo_level < SPI_FIFO_DEPTH) && (espi->tx < espi->tx_end)) {
+ 		switch (espi->write) {
+ 		case WRITING_NULL:
+ 			spi_writel(FIFO_DATA_REG, -1);
+ 			break;
+ 		case WRITING_U8:
++			printk("%02x ", *(uint8_t *)(espi->tx));
+ 			spi_writel(FIFO_DATA_REG, *(uint8_t *) (espi->tx));
+ 			break;
+ 		case WRITING_U16:
+@@ -635,6 +640,7 @@ static void readwriter(struct lpc31xx_spi *espi)
+ 		espi->tx += (espi->cur_chip->n_bytes);
+ 		espi->exp_fifo_level++;
+ 		/* read as long as RX FIFO has frames in it */
++		if (espi->read != READING_NULL) printk("Read ");
+ 		while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
+ 			switch (espi->read) {
+ 			case READING_NULL:
+@@ -642,6 +648,7 @@ static void readwriter(struct lpc31xx_spi *espi)
+ 				break;
+ 			case READING_U8:
+ 				*(uint8_t *)(espi->rx) = spi_readl(FIFO_DATA_REG) & 0xFFU;
++				printk("%02x ", *(uint8_t *)(espi->rx));
+ 				break;
+ 			case READING_U16:
+ 				*(uint16_t *)(espi->rx) = (uint16_t)spi_readl(FIFO_DATA_REG);;
+@@ -650,7 +657,9 @@ static void readwriter(struct lpc31xx_spi *espi)
+ 			espi->rx += (espi->cur_chip->n_bytes);
+ 			espi->exp_fifo_level--;
+ 		}
++		if (espi->read != READING_NULL) printk("\n");
+ 	}
++	if (espi->write != WRITING_NULL) printk("\n");
+ 
+ 	/*
+ 	 * When we exit here the TX FIFO should be full and the RX FIFO
