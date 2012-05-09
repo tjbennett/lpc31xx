@@ -490,7 +490,7 @@ static int __init lpc313x_spidev_register(void)
 {
 	struct spi_board_info info[] = {
 	{
-		.modalias = "spidev",
+		.modalias = "m25p80",
 		.max_speed_hz = 1000000,
 		.bus_num = 0,
 		.chip_select = 0,
@@ -502,7 +502,9 @@ static int __init lpc313x_spidev_register(void)
 		.platform_data	= &ea313x_ads7846_info,
 		.controller_data= &ea313x_ads7846_chip,
 		.irq		= IRQ_PENDOWN,
-	}};
+	},
+	{},
+	};
 	gpio_request(GPIO_MUART_CTS_N, "touchscreen CS");
 	gpio_direction_output(GPIO_MUART_CTS_N, 1);
 
