@@ -1,7 +1,7 @@
-Bottom: 88568d9b9e8918c4cb30c256c7d616f6d06425fa
-Top:    7836cc869f55fe47600cf424135b9618d160f89a
+Bottom: d6df9e4072b1dee6911b26c4989336a6e0f696e2
+Top:    e0aa437e6da1e77e20aba9c119ec84552be9b24e
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-05-06 19:11:54 -0400
+Date:   2012-05-13 12:50:05 -0400
 
 This patch adds device tree support to the pnx-i2c driver by using platform
 resources for memory region and irq and removing dependency on mach includes.

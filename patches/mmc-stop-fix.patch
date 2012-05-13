@@ -1,7 +1,7 @@
-Bottom: 11505a870261369b91e27f596ddd089257fa7ba3
-Top:    440998df46aeccbf1a99e052778ec47ac565fd54
+Bottom: 7f65f004e1281580ebaf9d9a0a529155955b0b36
+Top:    c5628c152d1dca3456fcbf6658324b289a3a0947
 Author: Jon Smirl <jonsmirl@terra>
-Date:   2012-05-06 19:11:58 -0400
+Date:   2012-05-13 12:50:08 -0400
 
 Make sure mmc stop command is fully initialized before issuing the parent command
 

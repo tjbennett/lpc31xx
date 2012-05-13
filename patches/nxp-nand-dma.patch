@@ -1,7 +1,7 @@
-Bottom: 40e1afc79e4d9ee14c91727058bd8a05effb6ccd
-Top:    b9513b0c69c3ce894277c291b8deecba4e807177
+Bottom: 770b2b3de6152e768d1ea97c3f5096b9c57d29e4
+Top:    57225056412c48e9432fd0fbc8cc1fdb2b7b01bd
 Author: Bangaragiri G <bangaragiri.g@nxp.com>
-Date:   2012-05-06 19:11:59 -0400
+Date:   2012-05-13 12:50:09 -0400
 
 arm:lpc313x: NAND Flash driver DMA buffer mapping fixes
 
