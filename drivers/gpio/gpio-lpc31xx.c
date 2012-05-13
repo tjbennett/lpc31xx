@@ -23,6 +23,14 @@
 #include <asm/irq.h>
 #include <mach/gpio.h>
 
+#define GPIO_STATE	0x00
+#define GPIO_STATE_M0	0x10
+#define GPIO_M0_SET	0x14
+#define GPIO_M0_RESET	0x18
+#define GPIO_STATE_M1	0x20
+#define GPIO_M1_SET	0x24
+#define GPIO_M1_RESET	0x28
+
 
 /**
  * struct lpc313x_gpio_chip - wrapper for specific implementation of gpio
@@ -40,175 +48,73 @@ struct lpc313x_gpio_chip {
 	struct lpc313x_gpio_pm	*pm;
 	int			base;
 #ifdef CONFIG_PM
-	u32			pm_save[4];
+	uint32_t		pm_save[4];
 #endif
 };
 
-static inline struct lpc313x_gpio_chip *to_lpc313x_gpio(struct gpio_chip *gpc)
+static int inline *gpc(void __iomem *base, int reg)
 {
-	return container_of(gpc, struct lpc313x_gpio_chip, chip);
+	return (int *)(base + reg);
 }
 
-struct lpc313x_gpio_chip lpc313x_gpios[] = {
-	[0] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_EBI_MCI,
-			.owner			= THIS_MODULE,
-			.label			= "EBI_MCI",
-			.ngpio			= 32,
-		},
-	},
-	[1] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_EBI_I2STX_0,
-			.owner			= THIS_MODULE,
-			.label			= "EBI_I2STX_0",
-			.ngpio			= 10,
-		},
-	},
-	[2] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_CGU,
-			.owner			= THIS_MODULE,
-			.label			= "CGU",
-			.ngpio			= 1,
-		},
-	},
-	[3] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_I2SRX_0,
-			.owner			= THIS_MODULE,
-			.label			= "I2SRX_0",
-			.ngpio			= 3,
-		},
-	},
-	[4] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_I2SRX_1,
-			.owner			= THIS_MODULE,
-			.label			= "I2SRX_0",
-			.ngpio			= 3,
-		},
-	},
-	[5] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_I2STX_1,
-			.owner			= THIS_MODULE,
-			.label			= "I2STX_1",
-			.ngpio			= 4,
-		},
-	},
-	[6] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_EBI,
-			.owner			= THIS_MODULE,
-			.label			= "EBI",
-			.ngpio			= 16,
-		},
-	},
-	[7] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_GPIO,
-			.owner			= THIS_MODULE,
-			.label			= "GPIO",
-			.ngpio			= 15,
-		},
-	},
-	[8] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_I2C1,
-			.owner			= THIS_MODULE,
-			.label			= "I2C1",
-			.ngpio			= 2,
-		},
-	},
-	[9] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_SPI,
-			.owner			= THIS_MODULE,
-			.label			= "SPI",
-			.ngpio			= 5,
-		},
-	},
-	[10] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_NAND_CTRL,
-			.owner			= THIS_MODULE,
-			.label			= "NAND_CTRL",
-			.ngpio			= 4,
-		},
-	},
-	[11] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_PWM,
-			.owner			= THIS_MODULE,
-			.label			= "PWM",
-			.ngpio			= 1,
-		},
-	},
-	[12] = {
-		.base	= GPIO_PHYS,
-		.chip	= {
-			.base			= IOCONF_UART,
-			.owner			= THIS_MODULE,
-			.label			= "UART",
-			.ngpio			= 2,
-		},
-	},
-};
-
-int lpc313x_gpio_direction_output(unsigned gpio, int value)
+static int lpc3131_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
 {
+	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
+	void __iomem *base = mm_gc->regs;
+	int pin = 1 << gpio;
 	unsigned long flags;
-	int port = (gpio & GPIO_PORT_MASK);
-	int pin = 1 << (gpio & GPIO_PIN_MASK);
 
 	raw_local_irq_save(flags);
-
-	GPIO_M1_SET(port) = pin;
-
-	if(value) {
-		GPIO_M0_SET(port) = pin;
-	} else {
-		GPIO_M0_RESET(port) = pin;
-	}
-
+	*gpc(base, GPIO_M1_RESET) = pin;
+	*gpc(base, GPIO_M0_RESET) = pin;
 	raw_local_irq_restore(flags);
 	return 0;
 }
 
-EXPORT_SYMBOL(lpc313x_gpio_direction_output);
-
-static inline int lpc3131_gpio_direction_input(struct gpio_chip *chip, unsigned offset)
+static int lpc3131_gpio_direction_output(struct gpio_chip *chip, unsigned gpio, int value)
 {
-	return lpc313x_gpio_direction_input(chip->base + offset);
+	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
+	int __iomem *base = mm_gc->regs;
+	int pin = 1 << gpio;
+	unsigned long flags;
+
+	raw_local_irq_save(flags);
+	*gpc(base, GPIO_M1_SET) = pin;
+	if (value)
+		*gpc(base, GPIO_M0_SET) = pin;
+	else
+		*gpc(base, GPIO_M0_RESET) = pin;
+	raw_local_irq_restore(flags);
+	return 0;
 }
 
-static inline int lpc3131_gpio_direction_output(struct gpio_chip *chip, unsigned offset, int value)
+static int lpc3131_gpio_get_value(struct gpio_chip *chip, unsigned gpio)
 {
-	return lpc313x_gpio_direction_output(chip->base + offset, value);
+	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
+	int __iomem *base = mm_gc->regs;
+	int pin = 1 << gpio;
+	int value;
+
+	value = ((*base & pin) != 0);
+	return value;
 }
 
-static inline int lpc3131_gpio_get_value(struct gpio_chip *chip, unsigned offset)
+static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int value)
 {
-	return lpc313x_gpio_get_value(chip->base + offset);
+	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
+	int __iomem *base = mm_gc->regs;
+	int pin = 1 << gpio;
+
+	if (value)
+		*gpc(base, GPIO_M0_SET) = pin;
+	else
+		*gpc(base, GPIO_M0_RESET) = pin;
 }
 
-static inline void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned offset, int value)
+static int lpc3131_gpio_to_irq(struct gpio_chip *chip, int irq)
 {
-	lpc313x_gpio_set_value(chip->base + offset, value);
+	printk("------------- implement lpc3131_gpio_to_irq -------------\n");
+	return -ENOENT;
 }
 
 static int lpc313x_gpiochip_remove(struct platform_device *ofdev)
@@ -233,6 +139,7 @@ static int __devinit lpc313x_simple_gpiochip_probe(struct platform_device *ofdev
 	gc->direction_output = lpc3131_gpio_direction_output;
 	gc->get              = lpc3131_gpio_get_value;
 	gc->set              = lpc3131_gpio_set_value;
+	gc->to_irq	     = lpc3131_gpio_to_irq;
 
 	ret = of_mm_gpiochip_add(ofdev->dev.of_node, chip);
 	if (ret)
