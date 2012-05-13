@@ -17,17 +17,16 @@ config SND_LPC315X_SOC
 config SND_LPC313X_SOC_I2S
         bool
 
-config SND_LPC313X_SOC_I2S_UDA1380
-        bool "SoC Audio for the UDA1380 CODEC using I2S/I2C"
+config SND_EA3131_SOC_I2S_UDA1380
+        bool "EA3131 SoC Audio for the UDA1380 CODEC using I2S/I2C"
         depends on SND_LPC313X_SOC
+        depends on MACH_EA313X
         select I2C_PNX
         select SND_LPC313X_SOC_I2S
         select SND_SOC_UDA1380
         help
           Say Y here if you want to add support for SoC audio on the
-	  LPC313x with the UDA1380 CODEC. This requires an I2S channel
-	  and I2C channel connected to the I2C interface of the
-	  UDA1380 codec.
+	  EA3131 with the UDA1380 CODEC. 
 
 config SND_LPC315X_SOC_I2S_LPC315X_CODEC
 	bool "SoC Audio for the Analog Die CODEC using I2S/I2C in 315X SoC"
@@ -44,7 +43,7 @@ config SND_LPC315X_SOC_I2S_LPC315X_CODEC
 config SND_USE_EA3131
         bool "Enable audio configuration for the EA3131 board"
         depends on SND_LPC313X_SOC
-	select SND_LPC313X_SOC_I2S_UDA1380
+	select SND_EA3131_SOC_I2S_UDA1380
 	select SND_I2C1_CHANNEL_UDA1380
 	select SND_I2S_RX1_MASTER
 	select SND_I2S_TX1_MASTER
@@ -69,7 +68,7 @@ config SND_USE_EA3152
 
 config SND_I2C1_CHANNEL_UDA1380
 	bool "I2C1 channel connected to the UDA1380"
-	depends on SND_LPC313X_SOC_I2S_UDA1380
+	depends on SND_EA3131_SOC_I2S_UDA1380
 	help
 	  Say Y here to use the I2C1 channel to communicate with the
 	  UDA1380 CODEC. Not selecting this option will use I2C0.
