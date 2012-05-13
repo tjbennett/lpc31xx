@@ -15,6 +15,7 @@
 #include <linux/fsl_devices.h>
 #include <linux/usb/otg.h>
 #include <mach/board.h>
+#include <mach/hardware.h>
 
 static struct platform_driver ehci_lpc_driver;
 
