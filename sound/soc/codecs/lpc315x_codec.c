@@ -52,7 +52,7 @@ static struct snd_soc_codec *lpc315x_codec;
  * */
 struct lpc315x_codec_priv {
 	struct snd_soc_codec	codec;
-	u32			lpc315x_reg_cache[LPC315X_CODEC_NUM_REGS];
+	uint32_t			lpc315x_reg_cache[LPC315X_CODEC_NUM_REGS];
 	struct work_struct	work;
 };
 static struct lpc315x_codec_priv *lpc315x_codec_prv;
@@ -60,7 +60,7 @@ static struct lpc315x_codec_priv *lpc315x_codec_prv;
 /*
  * LPC315X CODEC register cache
  */
-static const u32 lpc315x_codec_regs[LPC315X_CODEC_NUM_REGS] = {
+static const uint32_t lpc315x_codec_regs[LPC315X_CODEC_NUM_REGS] = {
 	0x00000000, /* PGA */
 	0x0002FFFC, /* AIN_1 */
 	0x8000F5FB, /* AOUT */
@@ -77,10 +77,10 @@ static unsigned long lpc315x_codec_cache_dirty;
 /*
  * Read LPC315X CODEC register cache
  */
-static inline u32 lpc315x_codec_read_reg_cache(struct snd_soc_codec *codec,
+static inline uint32_t lpc315x_codec_read_reg_cache(struct snd_soc_codec *codec,
 		unsigned int reg)
 {
-	u32 *cache = codec->reg_cache;
+	uint32_t *cache = codec->reg_cache;
 
 	/* Check if register offset is valid */
 	if (reg > LPC315X_CODEC_DEC_STA) {
@@ -95,9 +95,9 @@ static inline u32 lpc315x_codec_read_reg_cache(struct snd_soc_codec *codec,
  * Write LPC315X CODEC register cache
  */
 static inline void lpc315x_codec_write_reg_cache(struct snd_soc_codec
-		*codec, unsigned int reg, u32 value)
+		*codec, unsigned int reg, uint32_t value)
 {
-	u32 *cache = codec->reg_cache;
+	uint32_t *cache = codec->reg_cache;
 
 	/* Check if register offset is valid */
 	if (reg > LPC315X_CODEC_DEC_STA)
@@ -118,11 +118,11 @@ static inline void lpc315x_codec_write_reg_cache(struct snd_soc_codec
  * Write to LPC315X CODEC registers using I2C functions
  */
 static int lpc315x_codec_register_rw(struct snd_soc_codec *codec,
-		unsigned int reg, u32 *value, int read)
+		unsigned int reg, uint32_t *value, int read)
 {
 	int ret = 0;
 	u8 off[2], data[6];
-	u32 val = 0;
+	uint32_t val = 0;
 
 	if(read) {
 		/*
@@ -215,7 +215,7 @@ static int lpc315x_codec_write(struct snd_soc_codec *codec,
 static void lpc315x_codec_work(struct work_struct *work)
 {
 	u16 bit, reg;
-	u32 data;
+	uint32_t data;
 
 	for_each_bit(bit, &lpc315x_codec_cache_dirty,
 			(LPC315X_CODEC_DEC_STA - LPC315X_CODEC_CODEC_START)) {
@@ -350,7 +350,7 @@ static int snd_soc_lpc315x_coa_put_volsw(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	u32 i, val, reg, avc_gain;
+	uint32_t i, val, reg, avc_gain;
 
 	val = (ucontrol->value.integer.value[0] & 0xF);
 	/* conversion to AVC Coarse volume bit pattern
@@ -397,7 +397,7 @@ static int snd_soc_lpc315x_coa_get_volsw(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	u32 reg, cnt;
+	uint32_t reg, cnt;
 
 	/* Get value from register */
 	reg = lpc315x_codec_read_reg_cache(codec, LPC315X_CODEC_AOUT);
@@ -443,7 +443,7 @@ static int snd_soc_lpc315x_fin_put_volsw(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	u32 val, reg, avc_gain;
+	uint32_t val, reg, avc_gain;
 
 	val = (ucontrol->value.integer.value[0] & 0x7);
 	/* conversion to AVC Fine volume bit pattern
@@ -473,7 +473,7 @@ static int snd_soc_lpc315x_fin_get_volsw(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
-	u32 reg, cnt;
+	uint32_t reg, cnt;
 
 	/* Get value from register */
 	reg = lpc315x_codec_read_reg_cache(codec, LPC315X_CODEC_AOUT);
@@ -705,7 +705,7 @@ static int lpc315x_codec_set_dai_fmt_both(struct snd_soc_dai *codec_dai,
 		unsigned int fmt)
 {
 	struct snd_soc_codec *codec = codec_dai->codec;
-	u32 i2s_mux_reg;
+	uint32_t i2s_mux_reg;
 
 	/* Set up DAI based upon fmt */
 	i2s_mux_reg = lpc315x_codec_read_reg_cache(codec,
@@ -741,7 +741,7 @@ static int lpc315x_codec_set_dai_fmt_playback(struct snd_soc_dai *codec_dai,
 		unsigned int fmt)
 {
 	struct snd_soc_codec *codec = codec_dai->codec;
-	u32 i2s_mux_reg;
+	uint32_t i2s_mux_reg;
 
 	/* Set up DAI based upon fmt */
 	i2s_mux_reg = lpc315x_codec_read_reg_cache(codec,
@@ -773,7 +773,7 @@ static int lpc315x_codec_set_dai_fmt_capture(struct snd_soc_dai *codec_dai,
 		unsigned int fmt)
 {
 	struct snd_soc_codec *codec = codec_dai->codec;
-	u32 i2s_mux_reg;
+	uint32_t i2s_mux_reg;
 
 	/* set up DAI based upon fmt */
 	i2s_mux_reg = lpc315x_codec_read_reg_cache(codec,
@@ -808,7 +808,7 @@ static int lpc315x_codec_trigger(struct snd_pcm_substream *substream,
 	struct snd_soc_device *socdev = rtd->socdev;
 	struct snd_soc_codec *codec = socdev->card->codec;
 	struct lpc315x_codec_priv *prv = codec->private_data;
-	u32 int0_reg = lpc315x_codec_read_reg_cache(codec,
+	uint32_t int0_reg = lpc315x_codec_read_reg_cache(codec,
 			LPC315X_CODEC_INT0);
 
 	switch (cmd) {
@@ -839,7 +839,7 @@ static int lpc315x_codec_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_device *socdev = rtd->socdev;
 	struct snd_soc_codec *codec = socdev->card->codec;
 	unsigned int cgu_reg = 0;
-	u32 aout_reg, ain_reg, int0_reg, dec_reg, i2srx1_reg, int1_reg;
+	uint32_t aout_reg, ain_reg, int0_reg, dec_reg, i2srx1_reg, int1_reg;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		/* Playback power up sequence */
@@ -1000,7 +1000,7 @@ static void lpc315x_codec_pcm_shutdown(struct snd_pcm_substream *substream,
 	struct snd_soc_device *socdev = rtd->socdev;
 	struct snd_soc_codec *codec = socdev->card->codec;
 	unsigned int cgu_reg = 0;
-	u32 aout_reg, dec_reg, int0_reg, ain_reg, int1_reg, i2srx1_reg;
+	uint32_t aout_reg, dec_reg, int0_reg, ain_reg, int1_reg, i2srx1_reg;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		/* Playback power down sequence */
@@ -1141,7 +1141,7 @@ static int lpc315x_codec_mute(struct snd_soc_dai *codec_dai,
 		int mute)
 {
 	struct snd_soc_codec *codec = codec_dai->codec;
-	u32 int1_reg = lpc315x_codec_read_reg_cache(codec, LPC315X_CODEC_INT1)
+	uint32_t int1_reg = lpc315x_codec_read_reg_cache(codec, LPC315X_CODEC_INT1)
 		& ~LPC315X_CODEC_INT1_MAS_MUTE;
 
 	/* Mute */
@@ -1162,7 +1162,7 @@ static int lpc315x_codec_mute(struct snd_soc_dai *codec_dai,
 static int lpc315x_codec_set_bias_level(struct snd_soc_codec *codec,
 	enum snd_soc_bias_level level)
 {
-	u32 ain1_reg = lpc315x_codec_read_reg_cache(codec,
+	uint32_t ain1_reg = lpc315x_codec_read_reg_cache(codec,
 			LPC315X_CODEC_AIN1);
 
 	switch (level) {
@@ -1292,7 +1292,7 @@ static int lpc315x_codec_resume(struct platform_device *pdev)
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
 	struct snd_soc_codec *codec = socdev->card->codec;
 	u8 data[6];
-	u32 i, *cache = codec->reg_cache;
+	uint32_t i, *cache = codec->reg_cache;
 
 	/* Sync reg_cache with the hardware */
 	for (i = 0; i < ARRAY_SIZE(lpc315x_codec_regs); i++) {
@@ -1320,7 +1320,7 @@ static int lpc315x_codec_probe(struct platform_device *pdev)
 	struct snd_soc_device *socdev = platform_get_drvdata(pdev);
 	struct snd_soc_codec *codec;
 	int ret = 0;
-	u32 cgu_reg = 0;
+	uint32_t cgu_reg = 0;
 
 	/* Check if LPC315X CODECX registered */
 	if (lpc315x_codec == NULL) {
