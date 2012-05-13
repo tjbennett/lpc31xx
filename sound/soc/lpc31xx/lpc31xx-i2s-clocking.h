@@ -1,5 +1,5 @@
 /*
- * sound/soc/lpc313x/lpc313x-i2s-clocking.h
+ * sound/soc/lpc31xx/lpc31xx-i2s-clocking.h
  *
  * Author: Kevin Wells <kevin.wells@nxp.com>
  *
@@ -23,7 +23,7 @@
 
 /*
  * This file provides the necessary clocking and control functions for the
- * sound drivers on the LPC313X. These functions include clock enable and
+ * sound drivers on the LPC31XX. These functions include clock enable and
  * disable, and clock frequency setup on the WS, BCLK, and SYSCLK pins.
  *
  * Pin mapping is as follows:
@@ -39,8 +39,8 @@
  *     I2STX_BCK1               I2S TX channel 1 serial data bit clock
  */
 
-#ifndef __LPC313X_I2S_CLOCKING_H
-#define __LPC313X_I2S_CLOCKING_H
+#ifndef __LPC31XX_I2S_CLOCKING_H
+#define __LPC31XX_I2S_CLOCKING_H
 
 #include <linux/types.h>
 
@@ -54,13 +54,13 @@ enum i2s_supp_clks {CLK_RX_0, CLK_TX_0, CLK_RX_1, CLK_TX_1};
  * the actual programmed clock rate. The programmed rate is generated on
  * the FS256 pin has a rate of (256 * clkrate).
  */
-u32 lpc313x_main_clk_rate(u32 clkrate);
+u32 lpc31xx_main_clk_rate(u32 clkrate);
 
 /*
  * Set a specific channel's bit clock and word select rates. his applies
  * to the channel's WS and BCLK signals. Returns the actual programmed
  * WS clock rate.
  */
-u32 lpc313x_chan_clk_enable(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq);
+u32 lpc31xx_chan_clk_enable(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq);
 
-#endif /* __LPC313X_I2S_CLOCKING */
+#endif /* __LPC31XX_I2S_CLOCKING */

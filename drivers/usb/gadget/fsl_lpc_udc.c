@@ -3,7 +3,7 @@
  *  Copyright (C) 2009 NXP semiconductors
  *
  * Description:
- * Helper routines for LPC313x/4x/5x SoCs from NXP, needed by the fsl_udc_core.c
+ * Helper routines for LPC31xx SoCs from NXP, needed by the fsl_udc_core.c
  * driver to function correctly on these systems.
  *
  * This program is free software; you can redistribute it and/or modify

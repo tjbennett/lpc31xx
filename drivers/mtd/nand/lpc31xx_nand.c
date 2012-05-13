@@ -1,7 +1,7 @@
 /*
- * LPC313x NAND Controller Interface driver
+ * LPC31xx NAND Controller Interface driver
  *
- * drivers/mtd/nand/lpc313x_nand.c
+ * drivers/mtd/nand/lpc31xx_nand.c
  *
  * Copyright (C) 2009 NXP Semiconductors
  *
@@ -223,17 +223,17 @@
 //#define HUGE_BLOCK_SUPPORT
 
 /* Device specific MTD structure, 1 per chip select */
-struct lpc313x_nand_mtd {
+struct lpc31xx_nand_mtd {
 	struct mtd_info mtd;
 	struct nand_chip chip;
-	struct lpc313x_nand_info *host;
+	struct lpc31xx_nand_info *host;
 };
 
 /* Local driver data structure */
-struct lpc313x_nand_info {
+struct lpc31xx_nand_info {
 	struct nand_hw_control controller;
-	struct lpc313x_nand_cfg *platform;
-	struct lpc313x_nand_mtd *mtds;
+	struct lpc31xx_nand_cfg *platform;
+	struct lpc31xx_nand_mtd *mtds;
 	void __iomem		*regs;
 	struct device *dev;
 	uint32_t nandconfig;
@@ -277,12 +277,12 @@ static const uint32_t nand_buff_phys_addr[2] = {
 #endif
 
 /* Register access macros */
-static inline uint32_t nand_readl(struct lpc313x_nand_info *host, uint32_t reg)
+static inline uint32_t nand_readl(struct lpc31xx_nand_info *host, uint32_t reg)
 {
 	return __raw_readl(host->regs + reg);
 }
 
-static inline void nand_writel(struct lpc313x_nand_info *host, uint32_t reg, uint32_t value)
+static inline void nand_writel(struct lpc31xx_nand_info *host, uint32_t reg, uint32_t value)
 {
 	__raw_writel(value, host->regs + reg);
 }
@@ -365,7 +365,7 @@ static struct nand_ecclayout nand_hw_eccoob_128 = {
 static uint8_t bbt_pattern[] = { 'B', 'b', 't', '0' };
 static uint8_t mirror_pattern[] = { '1', 't', 'b', 'B' };
 
-static struct nand_bbt_descr lpc313x_bbt_main_descr = {
+static struct nand_bbt_descr lpc31xx_bbt_main_descr = {
 	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
 		| NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
 	.offs = 32,
@@ -375,7 +375,7 @@ static struct nand_bbt_descr lpc313x_bbt_main_descr = {
 	.pattern = bbt_pattern
 };
 
-static struct nand_bbt_descr lpc313x_bbt_mirror_descr = {
+static struct nand_bbt_descr lpc31xx_bbt_mirror_descr = {
 	.options = NAND_BBT_LASTBLOCK | NAND_BBT_CREATE | NAND_BBT_WRITE
 		| NAND_BBT_2BIT | NAND_BBT_VERSION | NAND_BBT_PERCHIP,
 	.offs = 32,
@@ -388,7 +388,7 @@ static struct nand_bbt_descr lpc313x_bbt_mirror_descr = {
 // Dummies bytes for bad block ( just for HARDWARE ECC: inaccurate )
 static uint8_t scan_ff_pattern[] = { 0xff, 0xff };
 
-static struct nand_bbt_descr lpc313x_largepage_flashbased = {
+static struct nand_bbt_descr lpc31xx_largepage_flashbased = {
 	.options = NAND_BBT_SCAN2NDPAGE,
 	.offs = 50,
 	.len = 2,
@@ -402,10 +402,10 @@ static struct nand_bbt_descr lpc313x_largepage_flashbased = {
  * @ type: Interrupt type
  * @ arg: Function argument
  */
-static void lpc313x_nand_dma_irq(int chn, dma_irq_type_t type,
+static void lpc31xx_nand_dma_irq(int chn, dma_irq_type_t type,
 		void *arg)
 {
-	struct lpc313x_nand_info *host = (struct lpc313x_nand_info *)arg;
+	struct lpc31xx_nand_info *host = (struct lpc31xx_nand_info *)arg;
 
 	/* SG Table ended */
 	if (type == DMA_IRQ_FINISHED)
@@ -432,11 +432,11 @@ static void lpc313x_nand_dma_irq(int chn, dma_irq_type_t type,
  * oob_data : OOB data buffer physical address
  * rd : read flag (1: read operation 0: write operation)
  */
-static void lpc313x_nand_dma_sg_tfr(struct mtd_info *mtd,
+static void lpc31xx_nand_dma_sg_tfr(struct mtd_info *mtd,
 		struct nand_chip *chip, int bufrdy,	uint32_t pay_load, uint32_t oob_data, int rd)
 {
-	struct lpc313x_nand_mtd *nmtd;
-	struct lpc313x_nand_info *host;
+	struct lpc31xx_nand_mtd *nmtd;
+	struct lpc31xx_nand_info *host;
 	int eccsize = chip->ecc.size;
 	int oob_size = rd ? chip->ecc.bytes : OOB_FREE_OFFSET;
 
@@ -497,7 +497,7 @@ static void lpc313x_nand_dma_sg_tfr(struct mtd_info *mtd,
  */
 
 /* Enable or disable NAND controller clocks */
-static void lpc313x_nand_clocks_enable(void) {
+static void lpc31xx_nand_clocks_enable(void) {
 	struct clk *clk;
 	int ret;
 
@@ -522,7 +522,7 @@ static void lpc313x_nand_clocks_enable(void) {
 }
 
 /* Enable or disable NAND controller clocks */
-static void lpc313x_nand_clocks_disable(void) {
+static void lpc31xx_nand_clocks_disable(void) {
 	struct clk *clk;
 
 	/* Enable or disable clocks for NAND Controller */
@@ -548,7 +548,7 @@ static void lpc313x_nand_clocks_disable(void) {
 /*
  * Setup NAND interface timing
  */
-static void lpc313x_nand_setrate(struct lpc313x_nand_info *host, struct lpc313x_nand_timing *timing) {
+static void lpc31xx_nand_setrate(struct lpc31xx_nand_info *host, struct lpc31xx_nand_timing *timing) {
 	uint32_t tmp, timing1, timing2, srcclk;
 	struct clk *clk;
 
@@ -620,7 +620,7 @@ static void lpc313x_nand_setrate(struct lpc313x_nand_info *host, struct lpc313x_
 /*
  * Initialize the NAND interface
  */
-static int lpc313x_nand_inithw(struct lpc313x_nand_info *host) {
+static int lpc31xx_nand_inithw(struct lpc31xx_nand_info *host) {
 	unsigned long reg;
 
 	/* Disable all NAND interrupts */
@@ -628,7 +628,7 @@ static int lpc313x_nand_inithw(struct lpc313x_nand_info *host) {
 	nand_writel(host, NAND_IRQMASK2, ~0);
 
 	/* Setup device and controller timing */
-	lpc313x_nand_setrate(host, host->platform->timing);
+	lpc31xx_nand_setrate(host, host->platform->timing);
 
 	/* enable the controller and de-assert nFCE */
 	reg = nand_readl(host, NAND_CONFIG) | host->nandconfig;
@@ -640,7 +640,7 @@ static int lpc313x_nand_inithw(struct lpc313x_nand_info *host) {
 /*
  * Enable NAND interrupts
  */
-static inline void lpc313x_nand_int_en(struct lpc313x_nand_info *host, uint32_t mask) {
+static inline void lpc31xx_nand_int_en(struct lpc31xx_nand_info *host, uint32_t mask) {
 #if !defined(STATUS_POLLING)
 	uint32_t tmp = nand_readl(host, NAND_IRQMASK1) & ~mask;
 
@@ -651,7 +651,7 @@ static inline void lpc313x_nand_int_en(struct lpc313x_nand_info *host, uint32_t 
 /*
  * Disable NAND interrupts
  */
-static inline void lpc313x_nand_int_dis(struct lpc313x_nand_info *host, uint32_t mask) {
+static inline void lpc31xx_nand_int_dis(struct lpc31xx_nand_info *host, uint32_t mask) {
 #if !defined(STATUS_POLLING)
 	uint32_t tmp = nand_readl(host, NAND_IRQMASK1) | mask;
 
@@ -662,42 +662,42 @@ static inline void lpc313x_nand_int_dis(struct lpc313x_nand_info *host, uint32_t
 /*
  * Clear NAND interrupts
  */
-static inline void lpc313x_nand_int_clear(struct lpc313x_nand_info *host, uint32_t mask) {
+static inline void lpc31xx_nand_int_clear(struct lpc31xx_nand_info *host, uint32_t mask) {
 	nand_writel(host, NAND_IRQSTATUSRAW1, mask);
 }
 
 /*
  * Return pending NAND interrupts status
  */
-static inline uint32_t lpc313x_nand_int_get(struct lpc313x_nand_info *host) {
+static inline uint32_t lpc31xx_nand_int_get(struct lpc31xx_nand_info *host) {
 	return nand_readl(host, NAND_IRQSTATUS1);
 }
 
 /*
  * Return raw NAND interrupts status
  */
-static inline uint32_t lpc313x_nand_raw_get(struct lpc313x_nand_info *host) {
+static inline uint32_t lpc31xx_nand_raw_get(struct lpc31xx_nand_info *host) {
 	return nand_readl(host, NAND_IRQSTATUSRAW1);
 }
 
 /*
  * Wait for NAND event
  */
-static inline void lpc313x_wait_irq(struct lpc313x_nand_info *host) {
+static inline void lpc31xx_wait_irq(struct lpc31xx_nand_info *host) {
 	wait_event(host->irq_waitq, host->intspending);
 }
 
 /*
  * Handle the NAND interrupt
  */
-static irqreturn_t lpc313x_nandc_irq(int irq, void *dev_id)
+static irqreturn_t lpc31xx_nandc_irq(int irq, void *dev_id)
 {
 	/* IRQs not working yet */
-	struct lpc313x_nand_info *host = (struct lpc313x_nand_info *) dev_id;
+	struct lpc31xx_nand_info *host = (struct lpc31xx_nand_info *) dev_id;
 
 	/* Disable interrupts for now, but don't clear status yet */
-	host->intspending = lpc313x_nand_int_get(host);
-	lpc313x_nand_int_dis(host, ~0);
+	host->intspending = lpc31xx_nand_int_get(host);
+	lpc31xx_nand_int_dis(host, ~0);
 
 	/* Wakeup pending request */
 	wake_up(&host->irq_waitq);
@@ -708,7 +708,7 @@ static irqreturn_t lpc313x_nandc_irq(int irq, void *dev_id)
 /*
  * Start a RAM read operation on RAM0 or RAM1
  */
-static inline void lpc313x_ram_read(struct lpc313x_nand_info *host, int bufnum) {
+static inline void lpc31xx_ram_read(struct lpc31xx_nand_info *host, int bufnum) {
 	if (bufnum == 0) {
 		/* Use RAM buffer 0 */
 		nand_writel(host, NAND_CONTROLFLOW, NAND_CTRL_RD_RAM0);
@@ -718,13 +718,13 @@ static inline void lpc313x_ram_read(struct lpc313x_nand_info *host, int bufnum) 
 		nand_writel(host, NAND_CONTROLFLOW, NAND_CTRL_RD_RAM1);
 	}
 
-	lpc313x_nand_int_en(host, nand_buff_dec_mask[bufnum]);
+	lpc31xx_nand_int_en(host, nand_buff_dec_mask[bufnum]);
 }
 
 /*
  * Start a RAM write operation on RAM0 or RAM1
  */
-static inline void lpc313x_ram_write(struct lpc313x_nand_info *host, int bufnum) {
+static inline void lpc31xx_ram_write(struct lpc31xx_nand_info *host, int bufnum) {
 	if (bufnum == 0) {
 		/* Use RAM buffer 0 */
 		nand_writel(host, NAND_CONTROLFLOW, NAND_CTRL_WR_RAM0);
@@ -734,7 +734,7 @@ static inline void lpc313x_ram_write(struct lpc313x_nand_info *host, int bufnum)
 		nand_writel(host, NAND_CONTROLFLOW, NAND_CTRL_WR_RAM1);
 	}
 
-	lpc313x_nand_int_en(host, nand_buff_wr_mask[bufnum]);
+	lpc31xx_nand_int_en(host, nand_buff_wr_mask[bufnum]);
 }
 
 /*
@@ -746,10 +746,10 @@ static inline void lpc313x_ram_write(struct lpc313x_nand_info *host, int bufnum)
 /*
  * Asserts and deasserts chip selects (callback)
  */
-static void lpc313x_nand_select_chip(struct mtd_info *mtd, int chip_sel) {
+static void lpc31xx_nand_select_chip(struct mtd_info *mtd, int chip_sel) {
 	struct nand_chip *chip = mtd->priv;
-	struct lpc313x_nand_mtd *nmtd;
-	struct lpc313x_nand_info *host;
+	struct lpc31xx_nand_mtd *nmtd;
+	struct lpc31xx_nand_info *host;
 	int i = 0, cssel = -1;
 
 	nmtd = chip->priv;
@@ -783,10 +783,10 @@ static void lpc313x_nand_select_chip(struct mtd_info *mtd, int chip_sel) {
 /*
  * Issue command and address cycles to the chip (callback)
  */
-static void lpc313x_nand_hwcontrol(struct mtd_info *mtd, int cmd, unsigned int ctrl) {
+static void lpc31xx_nand_hwcontrol(struct mtd_info *mtd, int cmd, unsigned int ctrl) {
 	struct nand_chip *chip = mtd->priv;
-	struct lpc313x_nand_mtd *nmtd;
-	struct lpc313x_nand_info *host;
+	struct lpc31xx_nand_mtd *nmtd;
+	struct lpc31xx_nand_info *host;
 
 	nmtd = chip->priv;
 	host = nmtd->host;
@@ -807,10 +807,10 @@ static void lpc313x_nand_hwcontrol(struct mtd_info *mtd, int cmd, unsigned int c
  * Returns NAND busy(0)/ready(!0) status callback
  */
 
-static int lpc313x_nand_devready(struct mtd_info *mtd) {
+static int lpc31xx_nand_devready(struct mtd_info *mtd) {
 	struct nand_chip *chip = mtd->priv;
-	struct lpc313x_nand_mtd *nmtd;
-	struct lpc313x_nand_info *host;
+	struct lpc31xx_nand_mtd *nmtd;
+	struct lpc31xx_nand_info *host;
 
 	nmtd = chip->priv;
 	host = nmtd->host;
@@ -821,7 +821,7 @@ static int lpc313x_nand_devready(struct mtd_info *mtd) {
 /*
  * MTD hardware ECC enable callback
  */
-static void lpc313x_nand_enable_hwecc(struct mtd_info *mtd, int mode) {
+static void lpc31xx_nand_enable_hwecc(struct mtd_info *mtd, int mode) {
 	(void) mtd;
 	(void) mode;
 
@@ -831,12 +831,12 @@ static void lpc313x_nand_enable_hwecc(struct mtd_info *mtd, int mode) {
 /*
  * MTD ECC data correction callback
  */
-static int lpc313x_nand_correct_data(struct mtd_info *mtd, u_char *dat,
+static int lpc31xx_nand_correct_data(struct mtd_info *mtd, u_char *dat,
 				     u_char *read_ecc, u_char *calc_ecc)
 {
 	struct nand_chip *chip = mtd->priv;
-	struct lpc313x_nand_mtd *nmtd;
-	struct lpc313x_nand_info *host;
+	struct lpc31xx_nand_mtd *nmtd;
+	struct lpc31xx_nand_info *host;
 	uint32_t tmp;
 	int errs_corrected = 0;
 
@@ -853,7 +853,7 @@ static int lpc313x_nand_correct_data(struct mtd_info *mtd, u_char *dat,
 	}
 
 	/* Generate correction statistics */
-	tmp = lpc313x_nand_raw_get(host);
+	tmp = lpc31xx_nand_raw_get(host);
 	if (!(tmp & (NAND_NANDIRQSTATUS1_NOERR_RAM0 | NAND_NANDIRQSTATUS1_NOERR_RAM1))) {
 		if (tmp & (NAND_NANDIRQSTATUS1_ERR1_RAM0 | NAND_NANDIRQSTATUS1_ERR1_RAM1)) {
 			errs_corrected = 1;
@@ -883,7 +883,7 @@ static int lpc313x_nand_correct_data(struct mtd_info *mtd, u_char *dat,
 /*
  * MTD calculate ECC callback
  */
-static int lpc313x_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat, u_char *ecc_code)
+static int lpc31xx_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat, u_char *ecc_code)
 {
 	(void) mtd;
 	(void) dat;
@@ -896,11 +896,11 @@ static int lpc313x_nand_calculate_ecc(struct mtd_info *mtd, const u_char *dat, u
 /*
  * Verify a buffer written to hardware against the passed buffer (callback)
  */
-static int lpc313x_nand_verify_hwecc(struct mtd_info *mtd, const uint8_t *buf, int len)
+static int lpc31xx_nand_verify_hwecc(struct mtd_info *mtd, const uint8_t *buf, int len)
 {
 	struct nand_chip *chip = mtd->priv;
-	struct lpc313x_nand_mtd *nmtd;
-	struct lpc313x_nand_info *host;
+	struct lpc31xx_nand_mtd *nmtd;
+	struct lpc31xx_nand_info *host;
 	int i, status = 0, curbuf = 0, bufrdy = -1;
 
 	nmtd = chip->priv;
@@ -909,13 +909,13 @@ static int lpc313x_nand_verify_hwecc(struct mtd_info *mtd, const uint8_t *buf, i
 	/* Read back the data stored in the hardware and check it against the buffer */
 	for (i = 0; i < len; i += chip->ecc.size) {
 		/* Clear all current statuses */
-		lpc313x_nand_int_clear(host, ~0);
+		lpc31xx_nand_int_clear(host, ~0);
 
 		/* Start read into RAM0 or RAM1 */
 #if !defined(STATUS_POLLING)
 		host->intspending = 0;
 #endif
-		lpc313x_ram_read(host, curbuf);
+		lpc31xx_ram_read(host, curbuf);
 
 		/* Compare current buffer while next buffer is loading */
 		if (bufrdy >= 0) {
@@ -932,7 +932,7 @@ static int lpc313x_nand_verify_hwecc(struct mtd_info *mtd, const uint8_t *buf, i
 
 #else
 		/* Interrupt based wait operation */
-		lpc313x_wait_irq(host);
+		lpc31xx_wait_irq(host);
 #endif
 
 		bufrdy = curbuf;
@@ -945,7 +945,7 @@ static int lpc313x_nand_verify_hwecc(struct mtd_info *mtd, const uint8_t *buf, i
 	}
 
 	/* Disable all interrupts */
-	lpc313x_nand_int_dis(host, ~0);
+	lpc31xx_nand_int_dis(host, ~0);
 
 	return status;
 }
@@ -953,7 +953,7 @@ static int lpc313x_nand_verify_hwecc(struct mtd_info *mtd, const uint8_t *buf, i
 /*
  * 8-bit direct NAND interface read callback
  */
-static void lpc313x_nand_read_buf8(struct mtd_info *mtd, u_char *buf, int len) {
+static void lpc31xx_nand_read_buf8(struct mtd_info *mtd, u_char *buf, int len) {
 	struct nand_chip *chip = mtd->priv;
 
 	__raw_readsb(chip->IO_ADDR_R, buf, len);
@@ -962,7 +962,7 @@ static void lpc313x_nand_read_buf8(struct mtd_info *mtd, u_char *buf, int len) {
 /*
  * 16-bit direct NAND interface read callback
  */
-static void lpc313x_nand_read_buf16(struct mtd_info *mtd, u_char *buf, int len) {
+static void lpc31xx_nand_read_buf16(struct mtd_info *mtd, u_char *buf, int len) {
 	struct nand_chip *chip = mtd->priv;
 
 	len >>= 1;
@@ -972,7 +972,7 @@ static void lpc313x_nand_read_buf16(struct mtd_info *mtd, u_char *buf, int len) 
 /*
  * 8-bit direct NAND interface write callback
  */
-static void lpc313x_nand_write_buf8(struct mtd_info *mtd, const u_char *buf,
+static void lpc31xx_nand_write_buf8(struct mtd_info *mtd, const u_char *buf,
 		int len) {
 	struct nand_chip *chip = mtd->priv;
 
@@ -982,7 +982,7 @@ static void lpc313x_nand_write_buf8(struct mtd_info *mtd, const u_char *buf,
 /*
  * 16-bit direct NAND interface write callback
  */
-static void lpc313x_nand_write_buf16(struct mtd_info *mtd, const u_char *buf,
+static void lpc31xx_nand_write_buf16(struct mtd_info *mtd, const u_char *buf,
 		int len) {
 	struct nand_chip *chip = mtd->priv;
 
@@ -993,7 +993,7 @@ static void lpc313x_nand_write_buf16(struct mtd_info *mtd, const u_char *buf,
 /*
  * Read the payload and OOB data from the device in the hardware storage format
  */
-static int lpc313x_nand_read_page_syndrome(struct mtd_info *mtd, struct nand_chip *chip,
+static int lpc31xx_nand_read_page_syndrome(struct mtd_info *mtd, struct nand_chip *chip,
 				   uint8_t *buf, int page)
 {
 	int i, curbuf = 0, bufrdy = -1, eccsize = chip->ecc.size;
@@ -1008,8 +1008,8 @@ static int lpc313x_nand_read_page_syndrome(struct mtd_info *mtd, struct nand_chi
 #endif
 
 #if !defined(STATUS_POLLING)
-	struct lpc313x_nand_mtd *nmtd;
-	struct lpc313x_nand_info *host;
+	struct lpc31xx_nand_mtd *nmtd;
+	struct lpc31xx_nand_info *host;
 
 	nmtd = chip->priv;
 	host = nmtd->host;
@@ -1038,13 +1038,13 @@ static int lpc313x_nand_read_page_syndrome(struct mtd_info *mtd, struct nand_chi
 
 	for (i = eccsteps; i > 0; i--) {
 		/* Clear all current statuses */
-		lpc313x_nand_int_clear(host, ~0);
+		lpc31xx_nand_int_clear(host, ~0);
 
 		/* Start read into RAM0 or RAM1 */
 #if !defined(STATUS_POLLING)
 		host->intspending = 0;
 #endif
-		lpc313x_ram_read(host, curbuf);
+		lpc31xx_ram_read(host, curbuf);
 
 		/* Read current buffer while next buffer is loading */
 		if (bufrdy >= 0) {
@@ -1055,7 +1055,7 @@ static int lpc313x_nand_read_page_syndrome(struct mtd_info *mtd, struct nand_chi
 			 * */
 			if(use_dma) {
 				/* Read payload & oob using DMA */
-				lpc313x_nand_dma_sg_tfr(mtd, chip, bufrdy, p1, oob1, 1);
+				lpc31xx_nand_dma_sg_tfr(mtd, chip, bufrdy, p1, oob1, 1);
 
 				/* Update buffers offsets */
 				p1 += eccsize;
@@ -1080,7 +1080,7 @@ static int lpc313x_nand_read_page_syndrome(struct mtd_info *mtd, struct nand_chi
 
 #else
 		/* Interrupt based wait operation */
-		lpc313x_wait_irq(host);
+		lpc31xx_wait_irq(host);
 #endif
 
 		bufrdy = curbuf;
@@ -1092,7 +1092,7 @@ static int lpc313x_nand_read_page_syndrome(struct mtd_info *mtd, struct nand_chi
 #ifdef USE_DMA
 	if(use_dma) {
 		/* Transfer payload & oob using DMA */
-		lpc313x_nand_dma_sg_tfr(mtd, chip, bufrdy, p1, oob1, 1);
+		lpc31xx_nand_dma_sg_tfr(mtd, chip, bufrdy, p1, oob1, 1);
 
 		/* Unmap DMA mappings */
 		dma_unmap_single(host->dev, pmapped, (eccsize * eccsteps),
@@ -1111,7 +1111,7 @@ static int lpc313x_nand_read_page_syndrome(struct mtd_info *mtd, struct nand_chi
 	}
 
 	/* Disable all interrupts */
-	lpc313x_nand_int_dis(host, ~0);
+	lpc31xx_nand_int_dis(host, ~0);
 
 	return 0;
 }
@@ -1119,7 +1119,7 @@ static int lpc313x_nand_read_page_syndrome(struct mtd_info *mtd, struct nand_chi
 /*
  * Read the OOB data from the device in the hardware storage format
  */
-static int lpc313x_nand_read_oob_syndrome(struct mtd_info *mtd, struct nand_chip *chip,
+static int lpc31xx_nand_read_oob_syndrome(struct mtd_info *mtd, struct nand_chip *chip,
 				  int page, int sndcmd)
 {
 	uint8_t *buf = chip->oob_poi;
@@ -1156,7 +1156,7 @@ static int lpc313x_nand_read_oob_syndrome(struct mtd_info *mtd, struct nand_chip
 /*
  * Write the payload and OOB data to the device in the hardware storage format
  */
-static void lpc313x_nand_write_page_syndrome(struct mtd_info *mtd,
+static void lpc31xx_nand_write_page_syndrome(struct mtd_info *mtd,
 				    struct nand_chip *chip, const uint8_t *buf)
 {
 	int i, curbuf = 0, bufrdy = 0, eccsize = chip->ecc.size;
@@ -1171,8 +1171,8 @@ static void lpc313x_nand_write_page_syndrome(struct mtd_info *mtd,
 #endif
 
 #if !defined(STATUS_POLLING)
-	struct lpc313x_nand_mtd *nmtd;
-	struct lpc313x_nand_info *host;
+	struct lpc31xx_nand_mtd *nmtd;
+	struct lpc31xx_nand_info *host;
 
 	nmtd = chip->priv;
 	host = nmtd->host;
@@ -1200,14 +1200,14 @@ static void lpc313x_nand_write_page_syndrome(struct mtd_info *mtd,
 #endif
 
 	/* Clear all current statuses */
-	lpc313x_nand_int_clear(host, ~0);
+	lpc31xx_nand_int_clear(host, ~0);
 #ifdef USE_DMA
 	/* If DMA mapping successful, use DMA for transfer.
 	 * Else use memcpy for transfer
 	 * */
 	if(use_dma) {
 		/* Transfer pay load & OOB using DMA */
-		lpc313x_nand_dma_sg_tfr(mtd, chip, bufrdy, p1, oob1, 0);
+		lpc31xx_nand_dma_sg_tfr(mtd, chip, bufrdy, p1, oob1, 0);
 
 		/* Update buffer offsets */
 		p1 += eccsize;
@@ -1231,11 +1231,11 @@ static void lpc313x_nand_write_page_syndrome(struct mtd_info *mtd,
 		bufrdy = 1 - bufrdy;
 
 		/* Start the transfer to the device */
-		lpc313x_nand_int_clear(host, ~0);
+		lpc31xx_nand_int_clear(host, ~0);
 #if !defined(STATUS_POLLING)
 		host->intspending = 0;
 #endif
-		lpc313x_ram_write(host, curbuf);
+		lpc31xx_ram_write(host, curbuf);
 
 		/* Copy next payload and OOB data to the buffer while current
 		   buffer is transferring */
@@ -1247,7 +1247,7 @@ static void lpc313x_nand_write_page_syndrome(struct mtd_info *mtd,
 			 * */
 			if(use_dma) {
 				/* Transfer pay load & OOB using DMA */
-				lpc313x_nand_dma_sg_tfr(mtd, chip, bufrdy, p1, oob1, 0);
+				lpc31xx_nand_dma_sg_tfr(mtd, chip, bufrdy, p1, oob1, 0);
 
 				/* Update buffer offsets */
 				p1 += eccsize;
@@ -1270,7 +1270,7 @@ static void lpc313x_nand_write_page_syndrome(struct mtd_info *mtd,
 
 #else
 		/* Interrupt based wait operation */
-		lpc313x_wait_irq(host);
+		lpc31xx_wait_irq(host);
 #endif
 	}
 
@@ -1290,13 +1290,13 @@ static void lpc313x_nand_write_page_syndrome(struct mtd_info *mtd,
 #endif
 
 	/* Disable all interrupts */
-	lpc313x_nand_int_dis(host, ~0);
+	lpc31xx_nand_int_dis(host, ~0);
 }
 
 /*
  * Write the OOB data to the device in the hardware storage format
  */
-static int lpc313x_nand_write_oob_syndrome(struct mtd_info *mtd,
+static int lpc31xx_nand_write_oob_syndrome(struct mtd_info *mtd,
 				   struct nand_chip *chip, int page)
 {
 	int chunk = chip->ecc.bytes + chip->ecc.prepad + chip->ecc.postpad;
@@ -1344,8 +1344,8 @@ static int lpc313x_nand_write_oob_syndrome(struct mtd_info *mtd,
 /*
  * Add MTD partitions and a single MTD device
  */
-static int lpc313x_nand_add_partition(struct lpc313x_nand_info *host,
-		struct lpc313x_nand_mtd *bmtd, struct lpc313x_nand_dev_info *device)
+static int lpc31xx_nand_add_partition(struct lpc31xx_nand_info *host,
+		struct lpc31xx_nand_mtd *bmtd, struct lpc31xx_nand_dev_info *device)
 {
 	struct mtd_info *mtd = &bmtd->mtd;
 
@@ -1358,7 +1358,7 @@ static int lpc313x_nand_add_partition(struct lpc313x_nand_info *host,
 
 	/* Check for partitions from the CMDLINE first, these will override the
 	   board specific partitions */
-	mtd->name = "lpc313x_nand";
+	mtd->name = "lpc31xx_nand";
 	num_partitions = parse_mtd_partitions(mtd, part_probes,
 					      &partitions, 0);
 #endif
@@ -1385,26 +1385,26 @@ static int lpc313x_nand_add_partition(struct lpc313x_nand_info *host,
 /*
  * Init a single instance of an chip
  */
-static void lpc313x_nand_init_chip(struct lpc313x_nand_info *host,
-				struct lpc313x_nand_mtd *nmtd) {
+static void lpc31xx_nand_init_chip(struct lpc31xx_nand_info *host,
+				struct lpc31xx_nand_mtd *nmtd) {
 	struct nand_chip *chip = &nmtd->chip;
 
 	if (host->platform->support_16bit) {
-		chip->write_buf = lpc313x_nand_write_buf16;
-		chip->read_buf = lpc313x_nand_read_buf16;
+		chip->write_buf = lpc31xx_nand_write_buf16;
+		chip->read_buf = lpc31xx_nand_read_buf16;
 	}
 	else {
-		chip->write_buf = lpc313x_nand_write_buf8;
-		chip->read_buf = lpc313x_nand_read_buf8;
+		chip->write_buf = lpc31xx_nand_write_buf8;
+		chip->read_buf = lpc31xx_nand_read_buf8;
 	}
-	chip->select_chip = lpc313x_nand_select_chip;
+	chip->select_chip = lpc31xx_nand_select_chip;
 	chip->chip_delay = 20;
 	chip->priv = nmtd;
 	chip->controller = &host->controller;
 
 	chip->IO_ADDR_W = host->regs + NAND_WRITEDATA;
-	chip->cmd_ctrl = lpc313x_nand_hwcontrol;
-	chip->dev_ready = lpc313x_nand_devready;
+	chip->cmd_ctrl = lpc31xx_nand_hwcontrol;
+	chip->dev_ready = lpc31xx_nand_devready;
 	chip->IO_ADDR_R = host->regs + NAND_READDATA;
 
 	nmtd->host = host;
@@ -1412,16 +1412,16 @@ static void lpc313x_nand_init_chip(struct lpc313x_nand_info *host,
 	nmtd->mtd.owner = THIS_MODULE;
 
 	chip->ecc.mode = NAND_ECC_HW_SYNDROME;
-	chip->ecc.read_page_raw = lpc313x_nand_read_page_syndrome;
-	chip->ecc.read_page = lpc313x_nand_read_page_syndrome;
-	chip->ecc.write_page = lpc313x_nand_write_page_syndrome;
-	chip->ecc.write_oob = lpc313x_nand_write_oob_syndrome;
-	chip->ecc.read_oob = lpc313x_nand_read_oob_syndrome;
-	chip->ecc.calculate = lpc313x_nand_calculate_ecc;
-	chip->ecc.correct   = lpc313x_nand_correct_data;
-	chip->ecc.hwctl = lpc313x_nand_enable_hwecc;
+	chip->ecc.read_page_raw = lpc31xx_nand_read_page_syndrome;
+	chip->ecc.read_page = lpc31xx_nand_read_page_syndrome;
+	chip->ecc.write_page = lpc31xx_nand_write_page_syndrome;
+	chip->ecc.write_oob = lpc31xx_nand_write_oob_syndrome;
+	chip->ecc.read_oob = lpc31xx_nand_read_oob_syndrome;
+	chip->ecc.calculate = lpc31xx_nand_calculate_ecc;
+	chip->ecc.correct   = lpc31xx_nand_correct_data;
+	chip->ecc.hwctl = lpc31xx_nand_enable_hwecc;
 
-	chip->verify_buf = lpc313x_nand_verify_hwecc;
+	chip->verify_buf = lpc31xx_nand_verify_hwecc;
 	chip->options |= NAND_BBT_USE_FLASH;
 	if (host->platform->support_16bit) {
 		chip->options |= NAND_BUSWIDTH_16;
@@ -1435,12 +1435,12 @@ static void lpc313x_nand_init_chip(struct lpc313x_nand_info *host,
  * Post-probe chip update, to change any items, such as the
  * layout for large page nand
  */
-static void lpc313x_nand_update_chip(struct lpc313x_nand_info *info,
-		struct lpc313x_nand_mtd *nmtd) {
+static void lpc31xx_nand_update_chip(struct lpc31xx_nand_info *info,
+		struct lpc31xx_nand_mtd *nmtd) {
 	struct nand_chip *chip = &nmtd->chip;
 
-	chip->bbt_td = &lpc313x_bbt_main_descr;
-	chip->bbt_md = &lpc313x_bbt_mirror_descr;
+	chip->bbt_td = &lpc31xx_bbt_main_descr;
+	chip->bbt_md = &lpc31xx_bbt_mirror_descr;
 
 	/* Select bad block algorithm and ECC layout based on whether
 	   small, large, or hig block FLASH is used */
@@ -1459,9 +1459,9 @@ static void lpc313x_nand_update_chip(struct lpc313x_nand_info *info,
 	else {
 		/* Large block FLASH */
 		chip->ecc.layout = &nand_hw_eccoob_64;
-		chip->bbt_td = &lpc313x_bbt_main_descr;
-		chip->bbt_md = &lpc313x_bbt_mirror_descr;
-		chip->badblock_pattern = &lpc313x_largepage_flashbased;
+		chip->bbt_td = &lpc31xx_bbt_main_descr;
+		chip->bbt_md = &lpc31xx_bbt_mirror_descr;
+		chip->badblock_pattern = &lpc31xx_largepage_flashbased;
 	}
 
 	/* These sizes remain the same regardless of page/block size */
@@ -1481,13 +1481,13 @@ static struct mtd_partition ea313x_nand0_partitions[] = {
 	16M:  Blocks 38  - 165  - Ramdisk image (if used)
 	???:  Blocks 166 - end  - Root file system/storage */
 	{
-		.name	= "lpc313x-rootfs",
+		.name	= "lpc31xx-rootfs",
 		.offset	= (BLK_SIZE * 166),
 		.size	= MTDPART_SIZ_FULL
 	},
 };
 
-static struct lpc313x_nand_timing ea313x_nanddev_timing = {
+static struct lpc31xx_nand_timing ea313x_nanddev_timing = {
 	.ns_trsd	= 36,
 	.ns_tals	= 36,
 	.ns_talh	= 12,
@@ -1503,7 +1503,7 @@ static struct lpc313x_nand_timing ea313x_nanddev_timing = {
 	.ns_twp		= 36
 };
 
-static struct lpc313x_nand_dev_info ea313x_ndev[] = {
+static struct lpc31xx_nand_dev_info ea313x_ndev[] = {
 	{
 		.name		= "nand0",
 		.nr_partitions	= ARRAY_SIZE(ea313x_nand0_partitions),
@@ -1511,7 +1511,7 @@ static struct lpc313x_nand_dev_info ea313x_ndev[] = {
 	}
 };
 
-static struct lpc313x_nand_cfg ea313x_plat_nand = {
+static struct lpc31xx_nand_cfg ea313x_plat_nand = {
 	.nr_devices	= ARRAY_SIZE(ea313x_ndev),
 	.devices	= ea313x_ndev,
 	.timing		= &ea313x_nanddev_timing,
@@ -1526,9 +1526,9 @@ static struct lpc313x_nand_cfg ea313x_plat_nand = {
  * it can allocate all necessary resources then calls the
  * nand layer to look for devices.
  */
-static int lpc313x_nand_probe(struct platform_device *pdev) {
-	struct lpc313x_nand_info *host = NULL;
-	struct lpc313x_nand_cfg *plat = pdev->dev.platform_data;
+static int lpc31xx_nand_probe(struct platform_device *pdev) {
+	struct lpc31xx_nand_info *host = NULL;
+	struct lpc31xx_nand_cfg *plat = pdev->dev.platform_data;
 	int irq, scan_res, mtdsize, i, err = 0;
 	struct resource *regs;
 
@@ -1539,7 +1539,7 @@ static int lpc313x_nand_probe(struct platform_device *pdev) {
 		return -ENXIO;
 	}
 
-	host = kmalloc(sizeof (struct lpc313x_nand_info), GFP_KERNEL);
+	host = kmalloc(sizeof (struct lpc31xx_nand_info), GFP_KERNEL);
 	if (host == NULL) {
 		dev_err(&pdev->dev, "No memory for flash info\n");
 		err = -ENOMEM;
@@ -1580,7 +1580,7 @@ static int lpc313x_nand_probe(struct platform_device *pdev) {
 	init_waitqueue_head(&host->controller.wq);
 
 	/* Enable clocks for NAND Controller */
-	lpc313x_nand_clocks_enable();
+	lpc31xx_nand_clocks_enable();
 
 	/* Reset NAND controller */
 	cgu_soft_reset_module(NANDFLASH_CTRL_NAND_RESET_N_SOFT);
@@ -1605,12 +1605,12 @@ static int lpc313x_nand_probe(struct platform_device *pdev) {
 	}
 
 	/* Initialize the hardware */
-	err = lpc313x_nand_inithw(host);
+	err = lpc31xx_nand_inithw(host);
 	if (err != 0)
 		goto exit_error;
 
 	/* Attach interrupt handler */
-	err = request_irq(host->irq, lpc313x_nandc_irq,
+	err = request_irq(host->irq, lpc31xx_nandc_irq,
 		IRQF_DISABLED, "nandirq", host);
 	if (err)
 	{
@@ -1621,7 +1621,7 @@ static int lpc313x_nand_probe(struct platform_device *pdev) {
 	init_waitqueue_head(&host->irq_waitq);
 
 	/* Allocate space for the MTD data */
-	mtdsize = sizeof(struct lpc313x_nand_mtd) * host->platform->nr_devices;
+	mtdsize = sizeof(struct lpc31xx_nand_mtd) * host->platform->nr_devices;
 	host->mtds = kmalloc(mtdsize, GFP_KERNEL);
 	if (host->mtds == NULL) {
 		dev_err(&pdev->dev, "Failed to allocate MTD storage\n");
@@ -1633,7 +1633,7 @@ static int lpc313x_nand_probe(struct platform_device *pdev) {
 #ifdef USE_DMA
 	/* Allocate sg channel for DMA transfers */
 	host->dma_chn = dma_request_sg_channel("NAND", 0, 0,
-			lpc313x_nand_dma_irq, host, 0);
+			lpc31xx_nand_dma_irq, host, 0);
 	if(host->dma_chn < 0) {
 		dev_err(&pdev->dev, "Failed to allocate DMA SG channel\n");
 		err = host->dma_chn;
@@ -1658,7 +1658,7 @@ static int lpc313x_nand_probe(struct platform_device *pdev) {
 			i, host->platform->devices[i].name);
 
 		/* Populate device callbacks used by MTD driver */
-		lpc313x_nand_init_chip(host, &host->mtds[i]);
+		lpc31xx_nand_init_chip(host, &host->mtds[i]);
 
 		/* Scan NAND flash device */
 		scan_res = nand_scan_ident(&host->mtds[i].mtd, 1, NULL);
@@ -1666,13 +1666,13 @@ static int lpc313x_nand_probe(struct platform_device *pdev) {
 		/* Continue if a device is found */
 		if (scan_res == 0) {
 			/* Update callbacks based on NAND sizing data */
-			lpc313x_nand_update_chip(host, &host->mtds[i]);
+			lpc31xx_nand_update_chip(host, &host->mtds[i]);
 
 			/* Post architecture MTD init */
 			nand_scan_tail(&host->mtds[i].mtd);
 
 			/* Add partitions and MTD device */
-			if (lpc313x_nand_add_partition(host, &host->mtds[i],
+			if (lpc31xx_nand_add_partition(host, &host->mtds[i],
 				(plat->devices + i)) < 0) {
 				nand_release(&host->mtds[i].mtd);
 			}
@@ -1705,7 +1705,7 @@ exit_error:
 		kfree(host);
 
 	/* Disable clocks for NAND Controller */
-	lpc313x_nand_clocks_disable();
+	lpc31xx_nand_clocks_disable();
 
 	return err;
 }
@@ -1713,8 +1713,8 @@ exit_error:
 /*
  * Device removal
  */
-static int lpc313x_nand_remove(struct platform_device *pdev) {
-	struct lpc313x_nand_info *host = platform_get_drvdata(pdev);
+static int lpc31xx_nand_remove(struct platform_device *pdev) {
+	struct lpc31xx_nand_info *host = platform_get_drvdata(pdev);
 	int i;
 
 	platform_set_drvdata(pdev, NULL);
@@ -1730,7 +1730,7 @@ static int lpc313x_nand_remove(struct platform_device *pdev) {
 	}
 
 	/* Disable clocks for NAND Controller */
-	lpc313x_nand_clocks_disable();
+	lpc31xx_nand_clocks_disable();
 
 #ifdef USE_DMA
 	/* Release memory allocated for SG table */
@@ -1751,64 +1751,64 @@ static int lpc313x_nand_remove(struct platform_device *pdev) {
 }
 
 #if defined(CONFIG_PM)
-static int lpc313x_nand_resume(struct platform_device *pdev)
+static int lpc31xx_nand_resume(struct platform_device *pdev)
 {
 	/* Enables clocks for NAND Controller */
-	lpc313x_nand_clocks_enable();
+	lpc31xx_nand_clocks_enable();
 
 	return 0;
 }
 
-static int lpc313x_nand_suspend(struct platform_device *pdev, pm_message_t pm)
+static int lpc31xx_nand_suspend(struct platform_device *pdev, pm_message_t pm)
 {
 	/* Disable clocks for NAND Controller */
-	lpc313x_nand_clocks_disable();
+	lpc31xx_nand_clocks_disable();
 
 	return 0;
 }
 
 #else
-#define lpc313x_nand_resume NULL
-#define lpc313x_nand_suspend NULL
+#define lpc31xx_nand_resume NULL
+#define lpc31xx_nand_suspend NULL
 #endif
 
 #if defined(CONFIG_OF)
-static const struct of_device_id lpc313x_nand_of_match[] = {
+static const struct of_device_id lpc31xx_nand_of_match[] = {
 	{ .compatible = "nxp,lpc31xx-nand" },
 	{},
 };
-MODULE_DEVICE_TABLE(of, lpc313x_nand_of_match);
+MODULE_DEVICE_TABLE(of, lpc31xx_nand_of_match);
 #endif
 
 
-static struct platform_driver lpc313x_nand_driver = {
-	.probe		= lpc313x_nand_probe,
-	.remove		= lpc313x_nand_remove,
-	.resume		= lpc313x_nand_resume,
-	.suspend	= lpc313x_nand_suspend,
+static struct platform_driver lpc31xx_nand_driver = {
+	.probe		= lpc31xx_nand_probe,
+	.remove		= lpc31xx_nand_remove,
+	.resume		= lpc31xx_nand_resume,
+	.suspend	= lpc31xx_nand_suspend,
 	.driver = {
-		.name = "lpc313x_nand",
+		.name = "lpc31xx_nand",
 		.owner = THIS_MODULE,
 #ifdef CONFIG_OF
-		.of_match_table = lpc313x_nand_of_match,
+		.of_match_table = lpc31xx_nand_of_match,
 #endif
 	},
 };
 
-static int __init lpc313x_nand_init(void)
+static int __init lpc31xx_nand_init(void)
 {
-	return platform_driver_register(&lpc313x_nand_driver);
+	return platform_driver_register(&lpc31xx_nand_driver);
 }
 
-static void __exit lpc313x_nand_exit(void)
+static void __exit lpc31xx_nand_exit(void)
 {
-	platform_driver_unregister(&lpc313x_nand_driver);
+	platform_driver_unregister(&lpc31xx_nand_driver);
 }
 
-module_init( lpc313x_nand_init);
-module_exit( lpc313x_nand_exit);
+module_init( lpc31xx_nand_init);
+module_exit( lpc31xx_nand_exit);
 
-MODULE_DESCRIPTION("LPC313x NAND Controller driver");
+MODULE_DESCRIPTION("LPC31xx NAND Controller driver");
 MODULE_AUTHOR("NXP Semiconductor VietNam");
 MODULE_LICENSE("GPL v2");
 
