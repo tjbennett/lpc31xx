@@ -47,8 +47,24 @@
 #include <mach/board.h>
 
 /* Register access macros */
-#define spi_readl(reg) __raw_readl(&SPI_##reg)
-#define spi_writel(reg,value) __raw_writel((value),&SPI_##reg)
+#define spi_readl(reg) _spi_readl(&SPI_##reg)
+#define spi_writel(reg,value) _spi_writel(&SPI_##reg, (value))
+
+static inline void
+_spi_writel(volatile u32 *reg, uint32_t value)
+{
+//     printk("JDS - lpc31xx_spi_write %p value %x\n", reg, value);
+       __raw_writel(value, reg);
+}
+
+static inline uint32_t
+_spi_readl(volatile u32 *reg)
+{
+       uint32_t value;
+       value = __raw_readl(reg);
+//     printk("JDS - lpc31xx_spi_read %p value %x\n", reg, value);
+       return value;
+}
 
 struct lpc313xspi
 {
