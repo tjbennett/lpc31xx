@@ -16,7 +16,7 @@
  * GNU General Public License for more details.
  */
 
-//#define DEBUG
+#define DEBUG
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -44,7 +44,7 @@
 static inline void
 _spi_writel(volatile u32 *reg, uint32_t value)
 {
-       printk("JDS - lpc31xx_spi_write %p value %x\n", reg, value);
+       //printk("JDS - lpc31xx_spi_write %p value %x\n", reg, value);
        __raw_writel(value, reg);
 }
 
@@ -53,7 +53,7 @@ _spi_readl(volatile u32 *reg)
 {
        uint32_t value;
        value = __raw_readl(reg);
-       printk("JDS - lpc31xx_spi_read %p value %x\n", reg, value);
+       //printk("JDS - lpc31xx_spi_read %p value %x\n", reg, value);
        return value;
 }
 
@@ -534,14 +534,13 @@ static void giveback(struct lpc31xx_spi *espi)
 		 * see if the next and current messages point
 		 * to the same spi device.
 		 */
-#ifdef JDS
+
 		if (next_msg && next_msg->spi != espi->cur_msg->spi)
 			next_msg = NULL;
 		if (!next_msg || espi->cur_msg->state == STATE_ERROR)
 			lpc31xx_cs_control(espi, false);
 		else
 			espi->next_msg_cs_active = true;
-#endif
 
 	}
 
@@ -621,7 +620,7 @@ static void readwriter(struct lpc31xx_spi *espi)
 	spi_writel(DMA_SET_REG, 0);
 
 	/* read as long as RX FIFO has frames in it */
-//	if (espi->read != READING_NULL) printk("Read ");
+	if (espi->read != READING_NULL) printk("Read ");
 	while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
 		switch (espi->read) {
 		case READING_NULL:
@@ -629,7 +628,7 @@ static void readwriter(struct lpc31xx_spi *espi)
 			break;
 		case READING_U8:
 			*(uint8_t *)(espi->rx) = spi_readl(FIFO_DATA_REG) & 0xFFU;
-//			printk("%02x ", *(uint8_t *)(espi->rx));
+			printk("%02x ", *(uint8_t *)(espi->rx));
 			break;
 		case READING_U16:
 			*(uint16_t *)(espi->rx) = (uint16_t)spi_readl(FIFO_DATA_REG);;
@@ -638,17 +637,17 @@ static void readwriter(struct lpc31xx_spi *espi)
 		espi->rx += (espi->cur_chip->n_bytes);
 		espi->exp_fifo_level--;
 	}
-//	if (espi->read != READING_NULL) printk("\n");
+	if (espi->read != READING_NULL) printk("\n");
 
 	/* write as long as TX FIFO has room */
-//	if (espi->write != WRITING_NULL) printk("Write ");
+	if (espi->write != WRITING_NULL) printk("Write ");
 	while ((espi->exp_fifo_level < SPI_FIFO_DEPTH) && (espi->tx < espi->tx_end)) {
 		switch (espi->write) {
 		case WRITING_NULL:
 			spi_writel(FIFO_DATA_REG, -1);
 			break;
 		case WRITING_U8:
-//			printk("%02x ", *(uint8_t *)(espi->tx));
+			printk("%02x ", *(uint8_t *)(espi->tx));
 			spi_writel(FIFO_DATA_REG, *(uint8_t *) (espi->tx));
 			break;
 		case WRITING_U16:
@@ -658,7 +657,7 @@ static void readwriter(struct lpc31xx_spi *espi)
 		espi->tx += (espi->cur_chip->n_bytes);
 		espi->exp_fifo_level++;
 		/* read as long as RX FIFO has frames in it */
-//		if (espi->read != READING_NULL) printk("Read ");
+		if (espi->read != READING_NULL) printk("Read ");
 		while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
 			switch (espi->read) {
 			case READING_NULL:
@@ -666,7 +665,7 @@ static void readwriter(struct lpc31xx_spi *espi)
 				break;
 			case READING_U8:
 				*(uint8_t *)(espi->rx) = spi_readl(FIFO_DATA_REG) & 0xFFU;
-//				printk("%02x ", *(uint8_t *)(espi->rx));
+				printk("%02x ", *(uint8_t *)(espi->rx));
 				break;
 			case READING_U16:
 				*(uint16_t *)(espi->rx) = (uint16_t)spi_readl(FIFO_DATA_REG);;
@@ -675,9 +674,9 @@ static void readwriter(struct lpc31xx_spi *espi)
 			espi->rx += (espi->cur_chip->n_bytes);
 			espi->exp_fifo_level--;
 		}
-//		if (espi->read != READING_NULL) printk("\n");
+		if (espi->read != READING_NULL) printk("\n");
 	}
-//	if (espi->write != WRITING_NULL) printk("\n");
+	if (espi->write != WRITING_NULL) printk("\n");
 
 	/*
 	 * When we exit here the TX FIFO should be full and the RX FIFO
@@ -2068,6 +2067,7 @@ lpc31xx_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "can't set output direction for gpio #%d: %d\n", i, status);
 			goto err_no_irq;
 		}
+		gpio_set_value(gpio, 1);
 	}
 
 	/* Register with the SPI framework */
