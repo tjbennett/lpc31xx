@@ -321,12 +321,6 @@ struct net_device * __init cs89x0_probe(int unit)
 	if (net_debug)
 		printk("cs89x0:cs89x0_probe(0x%x)\n", io);
 
-#ifdef CONFIG_MACH_VAL3153
-	if(unit > 0) {
-		err = -ENODEV;
-		goto out;
-	}
-#endif
 	if (io > 0x1ff)	{	/* Check a single specified location. */
 		err = cs89x0_probe1(dev, io, 0);
 	} else if (io != 0) {	/* Don't probe at all. */
@@ -375,37 +369,6 @@ writeword(unsigned long base_addr, int portno, u16 value)
 {
 	__raw_writel(value, base_addr + (portno << 1));
 }
-#elif defined(CONFIG_ARCH_PNX010X)
-static u16
-readword(unsigned long base_addr, int portno)
-{
-	return inw(base_addr + (portno << 1));
-}
-
-static void
-writeword(unsigned long base_addr, int portno, u16 value)
-{
-	outw(value, base_addr + (portno << 1));
-}
-#elif defined(CONFIG_MACH_VAL3153)
-static u16
-readword(unsigned long base_addr, int portno)
-{
-	u16 v;
-	CS8900_IOBARRIER;
-	v = inw(base_addr + portno);
-	CS8900_IOBARRIER;
-	return v;
-}
-
-static void
-writeword(unsigned long base_addr, int portno, u16 value)
-{
-	CS8900_IOBARRIER;
-	outw(value, base_addr + portno);
-	CS8900_IOBARRIER;
-}
-
 #else
 static u16
 readword(unsigned long base_addr, int portno)
@@ -578,12 +541,6 @@ cs89x0_probe1(struct net_device *dev, unsigned long ioaddr, int modular)
 		goto out1;
 	}
 
-#if defined(CONFIG_MACH_VAL3153)
-	/* truely reset the chip */
-	writeword(ioaddr, ADD_PORT, 0x0114);
-	writeword(ioaddr, DATA_PORT, 0x0040);
-#endif
-
 	/* if they give us an odd I/O address, then do ONE write to
            the address port, to get it back to address zero, where we
            expect to find the EISA signature word. An IO with a base of 0x3
@@ -649,12 +606,9 @@ cs89x0_probe1(struct net_device *dev, unsigned long ioaddr, int modular)
 	   the driver will always do *something* instead of complain that
 	   adapter_cnf is 0. */
 
-/* quick hack for VAL3153 boards to reuse the mac address set by boot loader */
-#if !defined(CONFIG_MACH_VAL3153)
+
         if ((readreg(dev, PP_SelfST) & (EEPROM_OK | EEPROM_PRESENT)) ==
-	      (EEPROM_OK|EEPROM_PRESENT)) 
-#endif
-	{
+	      (EEPROM_OK|EEPROM_PRESENT)) {
 	        /* Load the MAC. */
 		for (i=0; i < ETH_ALEN/2; i++) {
 	                unsigned int Addr;
