@@ -611,11 +611,10 @@ static void lpc313x_mci_start_request(struct lpc313x_mci *host,
 	if (data) //we may need to move this code to mci_start_command
 		lpc313x_mci_submit_data(host, data);
 
-	lpc313x_mci_start_command(host, cmd, cmdflags);
-
 	if (mrq->stop) 
 		host->stop_cmdr = lpc313x_mci_prepare_command(slot->mmc, mrq->stop);
-	
+
+	lpc313x_mci_start_command(host, cmd, cmdflags);
 }
 
 
