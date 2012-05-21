@@ -126,6 +126,7 @@
 #define UART_ICR_REG      __REG (UART_PHYS + 0x24)
 #define UART_FDR_REG      __REG (UART_PHYS + 0x28)
 
+#if 0
 /***********************************************************************
  * SPI register definitions
  **********************************************************************/
@@ -213,6 +214,7 @@
 #define SPI_TO_INT                _BIT(1)
 #define SPI_OVR_INT               _BIT(0)
 #define SPI_ALL_INTS              (SPI_SMS_INT | SPI_TX_INT | SPI_RX_INT | SPI_TO_INT | SPI_OVR_INT)
+#endif
 
 /***********************************************************************
 * Audio Subsystem (ADSS) register definitions
@@ -313,6 +315,7 @@
 /***********************************************************************
  * GPIO register definitions
  **********************************************************************/
+#if 0
 #define GPIO_STATE(port)     __REG (GPIO_PHYS + (port) + 0x00)
 #define GPIO_STATE_M0(port)  __REG (GPIO_PHYS + (port) + 0x10)
 #define GPIO_M0_SET(port)    __REG (GPIO_PHYS + (port) + 0x14)
@@ -320,6 +323,7 @@
 #define GPIO_STATE_M1(port)  __REG (GPIO_PHYS + (port) + 0x20)
 #define GPIO_M1_SET(port)    __REG (GPIO_PHYS + (port) + 0x24)
 #define GPIO_M1_RESET(port)  __REG (GPIO_PHYS + (port) + 0x28)
+#endif
 
 #define GPIO_OUT_LOW(port, pin)  do { GPIO_M1_SET(port) = pin; GPIO_M0_RESET(port) = pin;} while(0)
 #define GPIO_OUT_HIGH(port, pin) do { GPIO_M1_SET(port) = pin; GPIO_M0_SET(port) = pin;} while(0)
