@@ -662,7 +662,6 @@ dm9000_poll_work(struct work_struct *w)
 	board_info_t *db = container_of(dw, board_info_t, phy_poll);
 	struct net_device *ndev = db->ndev;
 
-printk("dm9000_poll_work\n");
 	if (db->flags & DM9000_PLATF_SIMPLE_PHY &&
 	    !(db->flags & DM9000_PLATF_EXT_PHY)) {
 		unsigned nsr = dm9000_read_locked(db, DM9000_NSR);
@@ -1071,7 +1070,6 @@ static irqreturn_t dm9000_interrupt(int irq, void *dev_id)
 	unsigned long flags;
 	u8 reg_save;
 
-	printk("dm9000_interrupt\n");
 	dm9000_dbg(db, 3, "entering %s\n", __func__);
 
 	/* A real interrupt coming */
@@ -1366,7 +1364,8 @@ static const struct net_device_ops dm9000_netdev_ops = {
 #endif
 };
 
-# define DM_IO_DELAY()	do { gpio_get_value(GPIO_MNAND_RYBN3);} while(0)
+//# define DM_IO_DELAY()	do { gpio_get_value(GPIO_MNAND_RYBN3);} while(0)
+# define DM_IO_DELAY()	do {} while(0)
 
 static void dm9000_dumpblk(void __iomem *reg, int count)
 {
