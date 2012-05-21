@@ -1,7 +1,6 @@
 /*
  * A driver for the LPC31xx SPI bus master.
  *
- *
  * Initial version inspired by:
  *	drivers/spi/spi-pl022.c
  *
@@ -16,7 +15,7 @@
  * GNU General Public License for more details.
  */
 
-#define DEBUG
+//#define DEBUG
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -36,6 +35,9 @@
 #include <linux/scatterlist.h>
 #include <linux/pm_runtime.h>
 #include <linux/of_gpio.h>
+
+//#define d_printk(args...) {printk(args);}
+#define d_printk(args...) {}
 
 /* Register access macros */
 #define spi_readl(reg) _spi_readl(&SPI_##reg)
@@ -620,7 +622,7 @@ static void readwriter(struct lpc31xx_spi *espi)
 	spi_writel(DMA_SET_REG, 0);
 
 	/* read as long as RX FIFO has frames in it */
-	if (espi->read != READING_NULL) printk("Read ");
+	if (espi->read != READING_NULL) d_printk("Read ");
 	while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
 		switch (espi->read) {
 		case READING_NULL:
@@ -628,7 +630,7 @@ static void readwriter(struct lpc31xx_spi *espi)
 			break;
 		case READING_U8:
 			*(uint8_t *)(espi->rx) = spi_readl(FIFO_DATA_REG) & 0xFFU;
-			printk("%02x ", *(uint8_t *)(espi->rx));
+			d_printk("%02x ", *(uint8_t *)(espi->rx));
 			break;
 		case READING_U16:
 			*(uint16_t *)(espi->rx) = (uint16_t)spi_readl(FIFO_DATA_REG);;
@@ -637,7 +639,7 @@ static void readwriter(struct lpc31xx_spi *espi)
 		espi->rx += (espi->cur_chip->n_bytes);
 		espi->exp_fifo_level--;
 	}
-	if (espi->read != READING_NULL) printk("\n");
+	if (espi->read != READING_NULL) d_printk("\n");
 
 	/* write as long as TX FIFO has room */
 	if (espi->write != WRITING_NULL) printk("Write ");
@@ -647,7 +649,7 @@ static void readwriter(struct lpc31xx_spi *espi)
 			spi_writel(FIFO_DATA_REG, -1);
 			break;
 		case WRITING_U8:
-			printk("%02x ", *(uint8_t *)(espi->tx));
+			d_printk("%02x ", *(uint8_t *)(espi->tx));
 			spi_writel(FIFO_DATA_REG, *(uint8_t *) (espi->tx));
 			break;
 		case WRITING_U16:
@@ -657,7 +659,7 @@ static void readwriter(struct lpc31xx_spi *espi)
 		espi->tx += (espi->cur_chip->n_bytes);
 		espi->exp_fifo_level++;
 		/* read as long as RX FIFO has frames in it */
-		if (espi->read != READING_NULL) printk("Read ");
+		if (espi->read != READING_NULL) d_printk("Read ");
 		while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
 			switch (espi->read) {
 			case READING_NULL:
@@ -665,7 +667,7 @@ static void readwriter(struct lpc31xx_spi *espi)
 				break;
 			case READING_U8:
 				*(uint8_t *)(espi->rx) = spi_readl(FIFO_DATA_REG) & 0xFFU;
-				printk("%02x ", *(uint8_t *)(espi->rx));
+				d_printk("%02x ", *(uint8_t *)(espi->rx));
 				break;
 			case READING_U16:
 				*(uint16_t *)(espi->rx) = (uint16_t)spi_readl(FIFO_DATA_REG);;
@@ -674,9 +676,9 @@ static void readwriter(struct lpc31xx_spi *espi)
 			espi->rx += (espi->cur_chip->n_bytes);
 			espi->exp_fifo_level--;
 		}
-		if (espi->read != READING_NULL) printk("\n");
+		if (espi->read != READING_NULL) d_printk("\n");
 	}
-	if (espi->write != WRITING_NULL) printk("\n");
+	if (espi->write != WRITING_NULL) d_printk("\n");
 
 	/*
 	 * When we exit here the TX FIFO should be full and the RX FIFO
@@ -1464,6 +1466,98 @@ out:
 	return;
 }
 
+static void do_interrupt_transfer(struct lpc31xx_spi *espi)
+{
+	struct spi_message *message = NULL;
+	struct spi_transfer *transfer = NULL;
+	struct spi_transfer *previous = NULL;
+	struct lpc31xx_spi_chip *chip;
+	unsigned long time, timeout;
+	uint32_t tmp;
+
+	dev_dbg(&espi->pdev->dev, "do_polling_transfer\n");
+
+	chip = espi->cur_chip;
+	message = espi->cur_msg;
+
+	while (message->state != STATE_DONE) {
+		/* Handle for abort */
+		if (message->state == STATE_ERROR)
+			break;
+		transfer = espi->cur_transfer;
+
+		/* Setup timing and levels before initial chip select */
+		tmp = spi_readl(SLV_SET2_REG(0)) & ~(SPI_SLV2_SPO | SPI_SLV2_SPH);
+		/* Clock high between transfers */
+#ifdef JDS
+		tmp |= SPI_SLV2_SPO;
+		/* Data captured on 2nd clock edge */
+		tmp |= SPI_SLV2_SPH;
+#endif
+		spi_writel(SLV_SET2_REG(0), tmp);
+
+		/* Delay if requested at end of transfer */
+		if (message->state == STATE_RUNNING) {
+			previous =
+			    list_entry(transfer->transfer_list.prev,
+				       struct spi_transfer, transfer_list);
+			if (previous->delay_usecs)
+				udelay(previous->delay_usecs);
+			if (previous->cs_change)
+				lpc31xx_cs_control(espi, true);
+		} else {
+			/* STATE_START */
+			message->state = STATE_RUNNING;
+			if (!espi->next_msg_cs_active)
+				lpc31xx_cs_control(espi, true);
+		}
+
+		/* Configuration Changing Per Transfer */
+		if (set_up_next_transfer(espi, transfer)) {
+			/* Error path */
+			message->state = STATE_ERROR;
+			break;
+		}
+		/* Flush FIFOs and enable SSI */
+		flush(espi);
+		/* Make sure FIFO is flushed, clear pending interrupts, DMA
+		   initially disabled, and then enable SPI interface */
+		spi_writel(CONFIG_REG, (spi_readl(CONFIG_REG) | SPI_CFG_ENABLE));
+
+		dev_dbg(&espi->pdev->dev, "polling transfer ongoing ...\n");
+
+		timeout = jiffies + msecs_to_jiffies(SPI_POLLING_TIMEOUT);
+		while (espi->tx < espi->tx_end || espi->rx < espi->rx_end) {
+			time = jiffies;
+			readwriter(espi);
+			if (time_after(time, timeout)) {
+				dev_warn(&espi->pdev->dev,
+				"%s: timeout!\n", __func__);
+				message->state = STATE_ERROR;
+				goto out;
+			}
+			cpu_relax();
+		}
+
+		/* Update total byte transferred */
+		message->actual_length += espi->cur_transfer->len;
+		if (espi->cur_transfer->cs_change)
+			lpc31xx_cs_control(espi, false);
+
+		/* Move to next transfer */
+		message->state = next_transfer(espi);
+	}
+out:
+	/* Handle end of message */
+	if (message->state == STATE_DONE)
+		message->status = 0;
+	else
+		message->status = -EIO;
+
+	giveback(espi);
+	return;
+}
+
 static int lpc31xx_transfer_one_message(struct spi_master *master,
 				      struct spi_message *msg)
 {
@@ -1484,11 +1578,17 @@ static int lpc31xx_transfer_one_message(struct spi_master *master,
 	restore_state(espi);
 	flush(espi);
 
-	if (espi->cur_chip->xfer_type == POLLING_TRANSFER)
+	switch (espi->cur_chip->xfer_type) {
+	case POLLING_TRANSFER:
 		do_polling_transfer(espi);
-	else
+		break;
+	case INTERRUPT_TRANSFER:
+		do_interrupt_transfer(espi);
+		break;
+	case DMA_TRANSFER:
 		do_interrupt_dma_transfer(espi);
-
+		break;
+	}
 	return 0;
 }
 
@@ -1757,7 +1857,7 @@ static int lpc31xx_setup(struct spi_device *spi)
 	/* Now set controller state based on controller data */
 	chip->xfer_type = chip_info->com_mode;
 #endif
-	chip->xfer_type = POLLING_TRANSFER;
+	chip->xfer_type = INTERRUPT_TRANSFER;
 
 	if (bits <= 3) {
 		/* LPC31xx doesn't support less than 4-bits */
