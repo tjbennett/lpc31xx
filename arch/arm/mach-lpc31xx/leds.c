@@ -1,4 +1,4 @@
-/*  linux/arch/arm/mach-lpc313x/leds.c
+/*  linux/arch/arm/mach-lpc31xx/leds.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors

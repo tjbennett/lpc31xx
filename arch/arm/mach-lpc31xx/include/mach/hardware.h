@@ -1,9 +1,9 @@
-/* linux/arch/arm/mach-lpc313x/include/mach/hardware.h
+/* linux/arch/arm/mach-lpc31xx/include/mach/hardware.h
  *  
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- * Hardware register defines for LPC313x and LPC315x SoCs.
+ * Hardware register defines for LPC31xx SoCs.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

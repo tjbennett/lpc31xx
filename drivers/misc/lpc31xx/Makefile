@@ -1,4 +1,4 @@
 
-# LPC3131x ADC
-obj-$(CONFIG_LPC313x_ADC)			+= lpc31xx-adc.o
-obj-$(CONFIG_LPC313x_PWM)			+= lpc31xx-pwm.o
+# LPC31xx ADC
+obj-$(CONFIG_LPC31xx_ADC)			+= lpc31xx-adc.o
+obj-$(CONFIG_LPC31xx_PWM)			+= lpc31xx-pwm.o
