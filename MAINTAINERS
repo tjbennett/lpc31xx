@@ -6386,6 +6386,11 @@ M:	Jan-Benedict Glaw <jbglaw@lug-owl.de>
 S:	Maintained
 F:	arch/alpha/kernel/srm_env.c
 
+SSD1289 FRAMEBUFFER DISPLAY DRIVER
+M:	Jean-Christian de Rivaz <jc@eclis.ch>
+S:	Maintained
+F:	drivers/video/ssd1289.c
+
 STABLE BRANCH
 M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
 L:	stable@vger.kernel.org
