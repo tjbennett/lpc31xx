@@ -47,7 +47,7 @@
 /*
  * This __REG() version gives the same results as the one above,  except
  * that we are fooling gcc somehow so it generates far better and smaller
- * assembly code for access to contigous registers.  
+ * assembly code for access to contiguous registers.
  */
 #include <asm/types.h>
 typedef struct { volatile u32 offset[4096]; } __regbase;
