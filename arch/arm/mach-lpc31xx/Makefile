@@ -4,7 +4,7 @@
 
 # Object file lists.
 
-obj-y += irq.o evtr.o time.o generic.o dma.o usb.o wdt.o clock.o sram.o
+obj-y += irq.o evtr.o time.o generic.o dma.o usb.o clock.o sram.o
 obj-$(CONFIG_OF) += dt.o
 
 
