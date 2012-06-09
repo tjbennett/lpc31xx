@@ -1,5 +1,5 @@
 Bottom: 5f71247fec4d0a862cfc9a7a55b61126d1b0d98e
-Top:    5f71247fec4d0a862cfc9a7a55b61126d1b0d98e
+Top:    be9396e1636e085a4130d028921087e634db3467
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-06-09 16:20:05 -0400
 
@@ -8,4 +8,1536 @@ uart
 
 ---
 
-
+diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
+index 72fff0a..5aac277 100644
+--- a/arch/arm/Kconfig
++++ b/arch/arm/Kconfig
+@@ -555,6 +555,20 @@ config ARCH_KIRKWOOD
+ 	  Support for the following Marvell Kirkwood series SoCs:
+ 	  88F6180, 88F6192 and 88F6281.
+ 
++config ARCH_LPC31XX
++	bool "NXP LPC31XX series"
++	select CPU_ARM926T
++	select GENERIC_GPIO
++	select CLKDEV_LOOKUP
++	select ARCH_REQUIRE_GPIOLIB
++	select ARCH_USES_GETTIMEOFFSET
++	select USE_OF
++	help
++	  Say Y here for systems based on one of the NXP LPC31xx
++	  System on a Chip processors.  These CPUs include an ARM926EJS
++	  core with a wide array of integrated devices for
++	  hand-held and low-power applications.
++
+ config ARCH_LPC32XX
+ 	bool "NXP LPC32XX"
+ 	select CLKSRC_MMIO
+@@ -979,19 +993,6 @@ config ARCH_ZYNQ
+ 	help
+ 	  Support for Xilinx Zynq ARM Cortex A9 Platform
+ 
+-config ARCH_LPC31XX
+-	bool "NXP LPC31XX series"
+-	select CPU_ARM926T
+-	select GENERIC_GPIO
+-	select CLKDEV_LOOKUP
+-	select ARCH_REQUIRE_GPIOLIB
+-	select ARCH_USES_GETTIMEOFFSET
+-	help
+-	  Say Y here for systems based on one of the NXP LPC31xx
+-	  System on a Chip processors.  These CPUs include an ARM926EJS
+-	  core with a wide array of integrated devices for
+-	  hand-held and low-power applications.
+-
+ endchoice
+ 
+ #
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+index b79b64a..e1f2e51 100644
+--- a/arch/arm/boot/dts/ea3131.dts
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -106,13 +106,10 @@
+ 		dm9000@20020000 {
+ 			compatible = "davicom,dm9000";
+ 			reg = <0x20020000 0x100 0x20030000 0x100>;
+-			/* interrupts = <34>; */
+ 			interrupt-parent = <&evtr>;
+ 			interrupts = <4 4>;
+-			gpios = <
+-				&gpio_ebi_i2stx_0 2 0 /* main irq, map gpio to irq */
+-				0  /* WOL irq, map gpio to irq */
+-			>;
++			interface-width = <16>;
++			no-eeprom;
+ 		};			
+ 	};
+ 	memory@30000000 {
+diff --git a/arch/arm/mach-lpc31xx/Makefile b/arch/arm/mach-lpc31xx/Makefile
+index d307a1a..48f291b 100644
+--- a/arch/arm/mach-lpc31xx/Makefile
++++ b/arch/arm/mach-lpc31xx/Makefile
+@@ -9,8 +9,6 @@ obj-$(CONFIG_OF) += dt.o
+ 
+ 
+ # Specific board support
+-obj-$(CONFIG_MACH_EA313X) += board-ea313x.o
+-obj-$(CONFIG_MACH_EA3152) += board-ea313x.o
+ obj-$(CONFIG_LPC3152_AD) += psu.o
+ 
+ # Power Management
+diff --git a/arch/arm/mach-lpc31xx/board-ea313x.c b/arch/arm/mach-lpc31xx/board-ea313x.c
+deleted file mode 100644
+index cb215ff..0000000
+--- a/arch/arm/mach-lpc31xx/board-ea313x.c
++++ /dev/null
+@@ -1,151 +0,0 @@
+-/*  arch/arm/mach-lpc31xx/ea313x.c
+- *
+- *  Author:	Durgesh Pattamatta
+- *  Copyright (C) 2009 NXP semiconductors
+- *
+- *  ea313x board init routines.
+- *
+- * This program is free software; you can redistribute it and/or modify
+- * it under the terms of the GNU General Public License as published by
+- * the Free Software Foundation; either version 2 of the License, or
+- * (at your option) any later version.
+- *
+- * This program is distributed in the hope that it will be useful,
+- * but WITHOUT ANY WARRANTY; without even the implied warranty of
+- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+- * GNU General Public License for more details.
+- *
+- * You should have received a copy of the GNU General Public License
+- * along with this program; if not, write to the Free Software
+- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+- *
+- */
+-
+-#include <linux/device.h>
+-#include <linux/init.h>
+-#include <linux/platform_device.h>
+-#include <linux/dm9000.h>
+-#include <linux/spi/ads7846.h>
+-#include <linux/i2c.h>
+-#include <linux/irq.h>
+-#include <linux/interrupt.h>
+-#include <linux/spi/spi.h>
+-#include <linux/leds-pca9532.h>
+-#include <linux/gpio.h>
+-#include <linux/of_platform.h>
+-
+-#include <asm/system.h>
+-#include <asm/irq.h>
+-#include <asm/pgtable.h>
+-#include <asm/page.h>
+-#include <asm/sizes.h>
+-#include <asm/mach/map.h>
+-#include <asm/mach-types.h>
+-#include <asm/mach/arch.h>
+-
+-#include <mach/hardware.h>
+-#include <mach/gpio.h>
+-#include <mach/i2c.h>
+-#include <mach/board.h>
+-#include <mach/system.h>
+-#include <mach/dt.h>
+-
+-
+-/*
+- * DM9000 Ethernet device
+- */
+-
+-/* ARM MPMC controller as part of low power design doesn't de-assert nCS and nOE for consecutive
+-reads but just changes address. But DM9000 requires nCS and nOE change between address. So access
+-other chip select area (nCS0) to force de-assertion of nCS1 and nOE1. Or else wait for long time
+-such as 80 usecs.
+-LPC31xx has external logic outside of MPMC IP to toggle nOE to split consecutive reads.
+-The latest Apex bootloader patch makes use of this feature.
+-For this to work SYS_MPMC_WTD_DEL0 & SYS_MPMC_WTD_DEL1 should be programmed with MPMC_STWTRD0
+-& MPMC_STWTRD1 values. The logic only deactivates the nOE for one clock cycle which is
+-11nsec but DM9000 needs 80nsec between nOEs. So lets add some dummy instructions such as
+-reading a GPIO register to compensate for extra 70nsec.
+-*/
+-# define DM_IO_DELAY()	do { gpio_get_value(GPIO_MNAND_RYBN3);} while(0)
+-
+-static void dm9000_dumpblk(void __iomem *reg, int count)
+-{
+-	int i;
+-	int tmp;
+-
+-	count = (count + 1) >> 1;
+-	for (i = 0; i < count; i++) {
+-		DM_IO_DELAY();
+-		tmp = readw(reg);
+-	}
+-}
+-
+-static void dm9000_inblk(void __iomem *reg, void *data, int count)
+-{
+-	int i;
+-	u16* pdata = (u16*)data;
+-	count = (count + 1) >> 1;
+-	for (i = 0; i < count; i++) {
+-		DM_IO_DELAY();
+-		*pdata++ = readw(reg);
+-	}
+-}
+-
+-static struct dm9000_plat_data dm9000_platdata = {
+-	.flags		= DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM | DM9000_PLATF_SIMPLE_PHY,
+-	.dumpblk = dm9000_dumpblk,
+-	.inblk = dm9000_inblk,
+-};
+-
+-#if defined(CONFIG_MACH_EA3152)
+-static struct i2c_board_info ea3152_i2c1_devices[] __initdata = {
+-	{
+-		I2C_BOARD_INFO("lpc3152-psu", 0x0C),
+-	},
+-};
+-#endif
+-
+-void lpc31xx_vbus_power(int enable)
+-{
+-	printk (KERN_INFO "enabling USB host vbus_power %d\n", enable);
+-	//gpio_set_value(VBUS_PWR_EN, enable);
+-}
+-
+-struct of_dev_auxdata ea3131_auxdata_lookup[] __initdata = {
+-	OF_DEV_AUXDATA("davicom,dm9000", EXT_SRAM1_PHYS, "dm9000", &dm9000_platdata),
+-	{}
+-};
+-
+-static void __init ea3131_dt_init(void)
+-{
+-	lpc31xx_dt_init_common(ea3131_auxdata_lookup);
+-}
+-
+-#if defined(CONFIG_USB_EHCI_HCD)
+-static int __init ea_usb_power(void)
+-{
+-	int ret = 0;
+-
+-	//ret = gpio_request(VBUS_PWR_EN, "vbus power");
+-	//ret = gpio_direction_output(VBUS_PWR_EN, 1);
+-	return ret;
+-}
+-//late_initcall(ea_usb_power);
+-#endif
+-
+-static const char *ea3131_dt_match[] __initconst = {
+-	"ea,ea3131",
+-	NULL,
+-};
+-
+-DT_MACHINE_START(EA313X, "NXP EA3131 (Device Tree Support)")
+-	.map_io		= lpc31xx_map_io,
+-	.init_early	= lpc31xx_init_early,
+-	.init_irq	= lpc31xx_init_irq,
+-	.timer		= &lpc31xx_timer,
+-	.init_machine	= ea3131_dt_init,
+-	.dt_compat	= ea3131_dt_match,
+-	.restart	= lpc31xx_arch_reset,
+-MACHINE_END
+-
+-
+diff --git a/arch/arm/mach-lpc31xx/generic.c b/arch/arm/mach-lpc31xx/generic.c
+index 1a6e3e2..d8d28d9 100644
+--- a/arch/arm/mach-lpc31xx/generic.c
++++ b/arch/arm/mach-lpc31xx/generic.c
+@@ -40,61 +40,6 @@
+ 
+ /* local functions */
+ 
+-static struct of_device_id uart_ids[] = {
+-	{ .compatible = "nxp,lpc31xx-uart" },
+-	{ /* sentinel */ }
+-};
+-
+-static void lpc31xx_uart_pm(struct uart_port * port, unsigned int state,
+-			      unsigned int oldstate)
+-{
+-	switch (state) {
+-	case 0:
+-		/* Free the pins so that UART IP will take control of it */
+-		if (oldstate != -1) {
+-			gpio_free(GPIO_UART_RXD);
+-			gpio_free(GPIO_UART_TXD);
+-		}
+-		/*
+-		 * Enable the peripheral clock for this serial port.
+-		 * This is called on uart_open() or a resume event.
+-		 */
+-		/* Enable UART base clock */
+-		cgu_endis_base_freq(CGU_SB_UARTCLK_BASE_ID, 1);
+-
+-		/* Enable UART IP clock */
+-		cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 1);
+-		cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
+-		break;
+-	case 1:
+-		/* we can wake the system in this state. So leave clocks on */
+-		printk(KERN_INFO "lpc31xx_uart_pm: UART can wake\n");
+-		break;
+-	case 3:
+-		/*
+-		 * Disable the peripheral clock for this serial port.
+-		 * This is called on uart_close() or a suspend event.
+-		 */
+-		/* Disable UART IP clock */
+-		cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 0);
+-		cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 0);
+-
+-		/* Disable UART base clock */
+-		cgu_endis_base_freq(CGU_SB_UARTCLK_BASE_ID, 0);
+-
+-		/* Free the pins and let GPIO handle it */
+-		gpio_request(GPIO_UART_RXD, "uart_rx");
+-		gpio_request(GPIO_UART_TXD, "uart_tx");
+-
+-		gpio_direction_input(GPIO_UART_RXD);
+-		gpio_direction_output(GPIO_UART_TXD, 0);
+-		break;
+-	default:
+-		printk(KERN_ERR "lpc31xx_uart_pm: unknown pm %d\n", state);
+-	}
+-
+-}
+-
+ static const struct of_device_id wdt_of_match[] __initconst = {
+ 	{ .compatible = "nxp,lpc31xx-wdt", },
+ 	{},
+@@ -136,40 +81,12 @@ void lpc31xx_arch_reset(char mode, const char *cmd)
+ 	/*NOTREACHED*/
+ }
+ 
+-
+-static struct plat_serial8250_port platform_serial_ports[] = {
+-	{
+-		.membase = (void *)io_p2v(UART_PHYS),
+-		.mapbase = (unsigned long)UART_PHYS,
+-		//.irq = IRQ_UART,
+-		.irq = 13,
+-		.uartclk = XTAL_CLOCK,
+-		.regshift = 2,
+-		.iotype = UPIO_MEM,
+-		.type	= PORT_NXP16750,
+-		.flags = UPF_BOOT_AUTOCONF | UPF_BUGGY_UART | UPF_SKIP_TEST,
+-		.pm = lpc31xx_uart_pm,
+-	},
+-	{
+-		.flags		= 0
+-	},
+-};
+-
+-static struct platform_device serial_device = {
+-	.name = "serial8250",
+-	.id = PLAT8250_DEV_PLATFORM,
+-	.dev = {
+-		.platform_data = &platform_serial_ports,
+-	},
+-};
+-
+ struct platform_device lpc31xx_pcm_device = {
+ 	.name = "lpc31xx-pcm-audio",
+ 	.id = -1,
+ };
+ 
+ static struct platform_device *devices[] __initdata = {
+-	&serial_device,
+ 	&lpc31xx_pcm_device,
+ };
+ 
+@@ -236,36 +153,6 @@ void __init lpc31xx_map_io(void)
+ }
+ extern int __init cgu_init(char *str);
+ 
+-void __init lpc31xx_uart_init(void)
+-{
+-	int mul, div;
+-
+-	struct device_node *node;
+-	int irq;
+-
+-	node = of_find_matching_node(NULL, uart_ids);
+-	if (!node)
+-		return;
+-
+-	/* Get the interrupts property */
+-	irq = irq_of_parse_and_map(node, 0);
+-	if (!irq) {
+-		pr_crit("LPC31xx: UART -  unable to get IRQ from DT\n");
+-		return;
+-	}
+-	of_node_put(node);
+-
+-	platform_serial_ports[0].irq = irq;
+-	printk("JDS - Uart IRQ %d\n", irq);
+-
+-	/* check what FDR bootloader is using */
+-	mul = (UART_FDR_REG >> 4) & 0xF;
+-	div = UART_FDR_REG & 0xF;
+-	if (div != 0)  {
+-		platform_serial_ports[0].uartclk = (XTAL_CLOCK * mul) / (mul + div);
+-	}
+-}
+-
+ void __init lpc31xx_init(void)
+ {
+ 	/* cgu init */
+@@ -310,49 +197,9 @@ void __init lpc31xx_init(void)
+ 	/* AUDIO CODEC CLOCK (256FS) */
+ 	GPIO_DRV_IP(IOCONF_I2STX_1, 0x8);
+ #endif
+-	lpc31xx_uart_init();
+ 
+ 	platform_add_devices(devices, ARRAY_SIZE(devices));
+ }
+ 
+ 
+-#if defined(CONFIG_SERIAL_8250_CONSOLE)
+-static int __init lpc31xx_init_console(void)
+-{
+-	static __initdata char serr[] =
+-		KERN_ERR "Serial port #%u setup failed\n";
+-	struct uart_port up;
+-
+-	/* Switch on the UART clocks */
+-	cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
+-	cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 1);
+-
+- 	/*
+-	 * Set up serial port #0. Do not use autodetection; the result is
+-	 * not what we want.
+- 	 */
+-	memset(&up, 0, sizeof(up));
+-
+-	lpc31xx_uart_init();
+-	up.uartclk = platform_serial_ports[0].uartclk;
+-	up.irq = platform_serial_ports[0].irq;
+-
+-	up.membase = (char *) io_p2v(UART_PHYS);
+-	up.mapbase = (unsigned long)UART_PHYS,
+-	up.regshift = 2;
+-	up.iotype = UPIO_MEM;
+-	up.type	= PORT_NXP16750;
+-	up.flags = UPF_BOOT_AUTOCONF | UPF_BUGGY_UART | UPF_SKIP_TEST;
+-	up.line	= 0;
+-	if (early_serial_setup(&up))
+-		printk(serr, up.line);
+-
+-	return 0;
+-}
+-console_initcall(lpc31xx_init_console);
+-
+-#endif /*CONFIG_SERIAL_8250_CONSOLE*/
+-
+-
+-
+ 
+diff --git a/arch/arm/mach-lpc31xx/sram.c b/arch/arm/mach-lpc31xx/sram.c
+index a272840..485741b 100644
+--- a/arch/arm/mach-lpc31xx/sram.c
++++ b/arch/arm/mach-lpc31xx/sram.c
+@@ -47,7 +47,7 @@ static int lpc31xx_sram_probe(struct platform_device *pdev)
+ 	count = len / sizeof(*prop);
+ 
+ 	ranges = of_get_property(pdev->dev.of_node, "ranges", &len);
+-	if (!prop) {
++	if (!ranges) {
+ 		dev_err(&pdev->dev, "Ranges property missing on SRAM DT");
+ 		return -EINVAL;
+ 	}
+diff --git a/drivers/net/ethernet/davicom/dm9000.c b/drivers/net/ethernet/davicom/dm9000.c
+index d2e4ad5..1476bd6 100644
+--- a/drivers/net/ethernet/davicom/dm9000.c
++++ b/drivers/net/ethernet/davicom/dm9000.c
+@@ -35,7 +35,6 @@
+ #include <linux/platform_device.h>
+ #include <linux/irq.h>
+ #include <linux/slab.h>
+-#include <linux/of_gpio.h>
+ 
+ #include <asm/delay.h>
+ #include <asm/irq.h>
+@@ -1364,30 +1363,36 @@ static const struct net_device_ops dm9000_netdev_ops = {
+ #endif
+ };
+ 
+-//# define DM_IO_DELAY()	do { gpio_get_value(GPIO_MNAND_RYBN3);} while(0)
+-# define DM_IO_DELAY()	do {} while(0)
+-
+-static void dm9000_dumpblk(void __iomem *reg, int count)
++static void  __devinit dm9000_parse_options(struct device_node *node, struct board_info *db)
+ {
+-	int i;
+-	int tmp;
+-
+-	count = (count + 1) >> 1;
+-	for (i = 0; i < count; i++) {
+-		DM_IO_DELAY();
+-		tmp = readw(reg);
+-	}
+-}
+-
+-static void dm9000_inblk(void __iomem *reg, void *data, int count)
+-{
+-	int i;
+-	u16* pdata = (u16*)data;
+-	count = (count + 1) >> 1;
+-	for (i = 0; i < count; i++) {
+-		DM_IO_DELAY();
+-		*pdata++ = readw(reg);
++#ifdef CONFIG_OF
++	const unsigned int *prop;
++	int len, bits;
++
++	prop = of_get_property(node, "interface-width", &len);
++	if (prop) {
++		bits = __be32_to_cpup(prop);
++		switch (bits) {
++		case 8:
++			db->flags |= DM9000_PLATF_8BITONLY;
++			break;
++		case 16:
++			db->flags |= DM9000_PLATF_16BITONLY;
++			break;
++		case 32:
++			db->flags |= DM9000_PLATF_32BITONLY;
++			break;
++		}
+ 	}
++	prop = of_get_property(node, "no-eeprom", &len);
++	if (prop)
++		db->flags |= DM9000_PLATF_NO_EEPROM;
++	prop = of_get_property(node, "phy", &len);
++	if (prop)
++		db->flags |= DM9000_PLATF_EXT_PHY;
++	else
++		db->flags |= DM9000_PLATF_SIMPLE_PHY;
++#endif
+ }
+ 
+ /*
+@@ -1494,8 +1499,6 @@ dm9000_probe(struct platform_device *pdev)
+ 		ret = -EINVAL;
+ 		goto out;
+ 	}
+-/* fixme */
+-pdata->flags		= DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM | DM9000_PLATF_SIMPLE_PHY;
+ 
+ 	/* fill in parameters for net-dev structure */
+ 	ndev->base_addr = (unsigned long)db->io_addr;
+@@ -1506,34 +1509,33 @@ pdata->flags		= DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM | DM9000_PLATF_S
+ 
+ 	/* check to see if anything is being over-ridden */
+ 	if (pdata != NULL) {
+-		/* check to see if the driver wants to over-ride the
+-		 * default IO width */
+-
+-		if (pdata->flags & DM9000_PLATF_8BITONLY)
+-			dm9000_set_io(db, 1);
+-
+-		if (pdata->flags & DM9000_PLATF_16BITONLY)
+-			dm9000_set_io(db, 2);
+-
+-		if (pdata->flags & DM9000_PLATF_32BITONLY)
+-			dm9000_set_io(db, 4);
+-
+ 		/* check to see if there are any IO routine
+ 		 * over-rides */
+ 
+ 		if (pdata->inblk != NULL)
+-//			db->inblk = pdata->inblk;
+-			db->inblk = dm9000_inblk;
++			db->inblk = pdata->inblk;
+ 
+ 		if (pdata->outblk != NULL)
+ 			db->outblk = pdata->outblk;
+ 
+ 		if (pdata->dumpblk != NULL)
+-//			db->dumpblk = pdata->dumpblk;
+-			db->dumpblk = dm9000_dumpblk;
++			db->dumpblk = pdata->dumpblk;
+ 
+ 		db->flags = pdata->flags;
+-	}
++	} else
++		dm9000_parse_options(pdev->dev.of_node, db);
++
++	/* check to see if the driver wants to over-ride the
++	 * default IO width */
++	if (db->flags & DM9000_PLATF_8BITONLY)
++		dm9000_set_io(db, 1);
++
++	if (db->flags & DM9000_PLATF_16BITONLY)
++		dm9000_set_io(db, 2);
++
++	if (db->flags & DM9000_PLATF_32BITONLY)
++		dm9000_set_io(db, 4);
++
+ 
+ #ifdef CONFIG_DM9000_FORCE_SIMPLE_PHY_POLL
+ 	db->flags |= DM9000_PLATF_SIMPLE_PHY;
+diff --git a/drivers/tty/serial/8250/8250.c b/drivers/tty/serial/8250/8250.c
+index 6a31317..340e142 100644
+--- a/drivers/tty/serial/8250/8250.c
++++ b/drivers/tty/serial/8250/8250.c
+@@ -193,7 +193,7 @@ static unsigned long probe_rsa[PORT_RSA_MAX];
+ static unsigned int probe_rsa_count;
+ #endif /* CONFIG_SERIAL_8250_RSA  */
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ static DEFINE_MUTEX(dma_mutex);
+ #undef UART_FCR_ENABLE_FIFO
+ #define UART_FCR_ENABLE_FIFO (0x9 | (1 << 6)) /* FIFO enable + DMA */
+@@ -1344,280 +1344,6 @@ static void autoconfig_irq(struct uart_8250_port *up)
+ 	port->irq = (irq > 0) ? irq : 0;
+ }
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+-static void lpc31xx_dma_lock(struct uart_8250_port *up)
+-{
+-	mutex_lock(&dma_mutex);
+-}
+-
+-static void lpc31xx_dma_unlock(struct uart_8250_port *up)
+-{
+-	mutex_unlock(&dma_mutex);
+-}
+-
+-static void lpc31xx_uart_tx_dma_start(struct uart_8250_port *up);
+-static void lpc31xx_dma_tx_tasklet_func(unsigned long data)
+-{
+-	struct uart_8250_port *up = (struct uart_8250_port *) data;
+-	struct circ_buf *xmit = &up->port.state->xmit;
+-
+-	if (dma_channel_enabled(up->dma_tx.dmach))
+-		return;
+-
+-	lpc31xx_dma_lock(up);
+-
+-	dma_stop_channel(up->dma_tx.dmach);
+-
+-	xmit->tail = (xmit->tail + up->dma_tx.count) & (UART_XMIT_SIZE - 1);
+-	up->port.icount.tx += up->dma_tx.count;
+-
+-	lpc31xx_uart_tx_dma_start(up);
+-
+-	lpc31xx_dma_unlock(up);
+-}
+-
+-static int lpc31xx_get_readl_rx_dma_count(struct uart_8250_port *up)
+-{
+-	int count;
+-
+-	/* The DMA hardware returns the number of bytes currently
+-	   transferred by the hardware. It will return 0 when the
+-	   channel has stopped (full DMA transfer) or when nothing
+-	   has been transferred. To tell the difference between
+-	   empty 0 and full 0, we need to examine the DMA enable
+-	   status. */
+-
+-	/* A race condition can exist where the DMA TCNT returns a
+-	   value right as the DMA is stopping. In this case, the
+-	   DMA is enabled during the check with a non-0 count
+-	   value. To get around this issue, the DMA count value
+-	   need to be verified again after disabling the DMA
+-	   channel. If it is 0, then the DMA completed and the
+-	   count is different. */
+-	dma_read_counter(up->dma_rx.dmach, &count);
+-	if ((!count) && (!dma_channel_enabled(up->dma_rx.dmach)))
+-		count = UART_XMIT_SIZE;
+-
+-	return count;
+-}
+-
+-static void serial8250_dma_rx_timer_check(unsigned long data)
+-{
+-	struct uart_8250_port *up = (struct uart_8250_port *) data;
+-
+-	/* Emulate RX timeout when DMA buffer is not full */
+-	if ((lpc31xx_get_readl_rx_dma_count(up)) && (up->dma_rx.active))
+-		tasklet_schedule(&up->dma_rx.tasklet);
+-	else
+-		mod_timer(&up->dma_rx.timer, jiffies +
+-			msecs_to_jiffies(LPC31XX_UART_RX_TIMEOUT));
+-}
+-
+-void lcp31xx_dma_rx_setup(struct uart_8250_port *up)
+-{
+-	dma_setup_t dmarx;
+-
+-	up->buff_half_offs = UART_XMIT_SIZE - up->buff_half_offs;
+-	dmarx.trans_length = UART_XMIT_SIZE - 1;
+-	dmarx.src_address = (u32) up->port.mapbase;
+-	dmarx.dest_address = (u32) up->dma_rx.dma_buff_p;
+-	dmarx.dest_address += up->buff_half_offs;
+-	dmarx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(DMA_SLV_UART_RX) |
+-		DMA_CFG_WR_SLV_NR(0);
+-
+-	dma_prog_channel(up->dma_rx.dmach, &dmarx);
+-	dma_start_channel(up->dma_rx.dmach);
+-}
+-
+-/*
+- * DMA RX tasklet
+- */
+-unsigned int serial8250_modem_status(struct uart_8250_port *up);
+-static void lpc31xx_dma_rx_tasklet_func(unsigned long data)
+-{
+-	unsigned int status, lsr;
+-	int count, count2, i, maxcount = 64, breakflush = 0;
+-	char ch, flag = TTY_NORMAL, *buf;
+-	struct uart_8250_port *up = (struct uart_8250_port *) data;
+-	int buffhalf = up->buff_half_offs;
+-	u32 pbuf;
+-
+-	spin_lock(&up->port.lock);
+-
+-	/*
+-	 * Per char stats don't work with DMA, so the status flags
+-	 * don't apply to a specific character. We'll take a best
+-	 * guess that the accumulated status only applies to the
+-	 * last character in the DMA buffer.
+-	 */
+-	status = serial_inp(up, UART_LSR);
+-	lsr = status | up->lsr_saved_flags;
+-	up->lsr_saved_flags = 0;
+-
+-	if (unlikely(lsr & UART_LSR_BRK_ERROR_BITS)) {
+-		/*
+-		 * For statistics only
+-		 */
+-		if (lsr & UART_LSR_BI) {
+-			lsr &= ~(UART_LSR_FE | UART_LSR_PE);
+-			up->port.icount.brk++;
+-			breakflush = 1;
+-			/*
+-			 * Breaks are trouble! Toss everything if
+-			 * one occurs.
+-			 */
+-			uart_handle_break(&up->port);
+-		} else if (lsr & UART_LSR_PE)
+-			up->port.icount.parity++;
+-		else if (lsr & UART_LSR_FE)
+-			up->port.icount.frame++;
+-		if (lsr & UART_LSR_OE)
+-			up->port.icount.overrun++;
+-
+-		/*
+-		 * Mask off conditions which should be ignored.
+-		 */
+-		lsr &= up->port.read_status_mask;
+-
+-		if (lsr & UART_LSR_BI) {
+-			DEBUG_INTR("handling break....");
+-			flag = TTY_BREAK;
+-		} else if (lsr & UART_LSR_PE)
+-			flag = TTY_PARITY;
+-		else if (lsr & UART_LSR_FE)
+-			flag = TTY_FRAME;
+-	}
+-
+-	/* Disable DMA and get current DMA bytes transferred */
+-	count = lpc31xx_get_readl_rx_dma_count(up);
+-	dma_stop_channel(up->dma_rx.dmach);
+-	count2 = lpc31xx_get_readl_rx_dma_count(up);
+-	if (count != count2) {
+-		if (count2 == 0)
+-			count = UART_XMIT_SIZE;
+-		else
+-			count = count2;
+-	}
+-	dma_write_counter(up->dma_rx.dmach, 0);
+-
+-	/* Setup DMA again using unused buffer half */
+-	lcp31xx_dma_rx_setup(up);
+-	pbuf = (u32) up->dma_rx.dma_buff_p;
+-	pbuf += buffhalf;
+-	buf = (char *) up->dma_rx.dma_buff_v;
+-	buf += buffhalf;
+-
+-	if (breakflush) {
+-		/* Flush RX FIFO */
+-		while ((serial_inp(up, UART_LSR) & UART_LSR_DR) &&
+-			(maxcount-- > 0))
+-			ch = serial_inp(up, UART_RX);
+-	}
+-	else {
+-		for (i = 0; i < (count - 1); i++) {
+-			up->port.icount.rx++;
+-			if (uart_handle_sysrq_char(&up->port, buf[i]))
+-				continue;
+-
+-			uart_insert_char(&up->port, lsr, UART_LSR_OE, buf[i], TTY_NORMAL);
+-		}
+-
+-		up->port.icount.rx++;
+-		if (!uart_handle_sysrq_char(&up->port, buf[i]))
+-			uart_insert_char(&up->port, lsr, UART_LSR_OE, buf[i], flag);
+-	}
+-
+-	serial8250_modem_status(up);
+-
+-	spin_unlock(&up->port.lock);
+-	tty_flip_buffer_push(up->port.state->port.tty);
+-	spin_lock(&up->port.lock);
+-
+-	mod_timer(&up->dma_rx.timer, jiffies +
+-		msecs_to_jiffies(LPC31XX_UART_RX_TIMEOUT));
+-
+-	/* Clear any pending RX error status and re-enable TX status interrupt */
+-	status = serial_inp(up, UART_LSR);
+-	serial_outp(up, UART_IER, up->ier);
+-
+-	spin_unlock(&up->port.lock);
+-}
+-
+-/*
+- * DMA UART TX completion interrupt - this interrupt is more of a spotholder
+- * as it is disabled and will never fire.
+- */
+-static void lpc31xx_dma_tx_interrupt(int ch, dma_irq_type_t dtype, void *handle)
+-{
+-	struct uart_8250_port *up = handle;
+-
+-	printk(KERN_INFO "serial DMA TX interrupt unexpected\n");
+-	tasklet_schedule(&up->dma_tx.tasklet);
+-}
+-
+-/*
+- * DMA UART RX completion interrupt - fires when the DMA RX transfer
+- * is complete.
+- */
+-static void lpc31xx_dma_rx_interrupt(int ch, dma_irq_type_t dtype, void *handle)
+-{
+-	struct uart_8250_port *up = handle;
+-
+-	tasklet_schedule(&up->dma_rx.tasklet);
+-}
+-
+-static void lpc31xx_uart_tx_dma_start(struct uart_8250_port *up)
+-{
+-	struct circ_buf *xmit = &up->port.state->xmit;
+-	dma_setup_t dmatx;
+-
+-	/* Start a DMA transfer, DMA is idle if this is called and
+-	   TX is enabled. */
+-	if (up->port.x_char) {
+-		serial_outp(up, UART_TX, up->port.x_char);
+-		up->port.icount.tx++;
+-		up->port.x_char = 0;
+-		return;
+-	}
+-
+-	if (!uart_circ_empty(xmit) && !uart_tx_stopped(&up->port)) {
+-		dma_sync_single_for_device(up->port.dev,
+-					   up->dma_tx.dma_buff_p,
+-					   UART_XMIT_SIZE,
+-					   DMA_TO_DEVICE);
+-
+-		up->dma_tx.count = CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE);
+-		if (up->dma_tx.count > 64)
+-			up->dma_tx.count = 64;
+-
+-		/* Note TX buffer is loaned to the DMA so the TX bytes can't
+-		   be released until the DMA transfer is complete. */
+-		dmatx.trans_length = up->dma_tx.count - 1;
+-		dmatx.src_address = (u32) up->dma_tx.dma_buff_p;
+-		dmatx.src_address += xmit->tail;
+-		dmatx.dest_address = (u32) up->port.mapbase;
+-		dmatx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(0) |
+-			DMA_CFG_WR_SLV_NR(DMA_SLV_UART_TX);
+-
+-		dma_prog_channel(up->dma_tx.dmach, &dmatx);
+-		up->dma_tx.active = 1;
+-		dma_start_channel(up->dma_tx.dmach);
+-
+-		/* Enable TX interrupt on TX FIFO empty */
+-		up->ier |= UART_IER_THRI;
+-	}
+-	else {
+-		up->dma_tx.active = 0;
+-		up->ier &= ~UART_IER_THRI;
+-	}
+-
+-	serial_out(up, UART_IER, up->ier);
+-
+-	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
+-		uart_write_wakeup(&up->port);
+-}
+-#endif
+-
+ static inline void __stop_tx(struct uart_8250_port *p)
+ {
+ 	if (p->ier & UART_IER_THRI) {
+@@ -1631,7 +1357,7 @@ static void serial8250_stop_tx(struct uart_port *port)
+ 	struct uart_8250_port *up =
+ 		container_of(port, struct uart_8250_port, port);
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	dma_stop_channel(up->dma_tx.dmach);
+ #endif
+ 
+@@ -1651,7 +1377,7 @@ static void serial8250_start_tx(struct uart_port *port)
+ 	struct uart_8250_port *up =
+ 		container_of(port, struct uart_8250_port, port);
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	lpc31xx_dma_lock(up);
+  
+ 	/*
+@@ -1703,7 +1429,7 @@ static void serial8250_enable_ms(struct uart_port *port)
+ 	struct uart_8250_port *up =
+ 		container_of(port, struct uart_8250_port, port);
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	dma_stop_channel(up->dma_rx.dmach);
+ 
+ #else
+@@ -1914,7 +1640,7 @@ static int serial8250_default_handle_irq(struct uart_port *port)
+  */
+ static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
+ {
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	struct irq_info *i = dev_id;
+ 	struct uart_8250_port *up;
+ 	unsigned int iir, status;
+@@ -2021,7 +1747,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
+ 	struct hlist_node *n;
+ 	struct irq_info *i;
+ 	int ret, irq_flags = up->port.flags & UPF_SHARE_IRQ ? IRQF_SHARED : 0;
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	dma_addr_t dma_handle;
+ 	struct circ_buf *xmit = &up->port.state->xmit;
+ #endif
+@@ -2059,7 +1785,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
+ 		INIT_LIST_HEAD(&up->list);
+ 		i->head = &up->list;
+ 		spin_unlock_irq(&i->lock);
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 		/* NOTE: The 31XX has only 1 UART channel, so the list head will
+ 		   always point to that channel. This logic isn't quite right,
+ 		   but its ok for a single UART */
+@@ -2147,7 +1873,7 @@ static void serial_unlink_irq_chain(struct uart_8250_port *up)
+ 			break;
+ 	}
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	/* NOTE: The 31XX has only 1 UART channel, so the list head will
+ 	   always point to that channel. This logic isn't quite right,
+ 	   but its ok for a single UART */
+@@ -2197,7 +1923,7 @@ static void serial8250_timeout(unsigned long data)
+ 	mod_timer(&up->timer, jiffies + uart_poll_timeout(&up->port));
+ }
+ 
+-#ifndef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifndef CONFIG_SERIAL_8250_LPC31xx_DMA
+ static void serial8250_backup_timeout(unsigned long data)
+ {
+ 	struct uart_8250_port *up = (struct uart_8250_port *)data;
+@@ -2534,7 +2260,7 @@ static int serial8250_startup(struct uart_port *port)
+ 	 * The above check will only give an accurate result the first time
+ 	 * the port is opened so this value needs to be preserved.
+ 	 */
+-#ifndef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifndef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	if (up->bugs & UART_BUG_THRE) {
+ 		up->timer.function = serial8250_backup_timeout;
+ 		up->timer.data = (unsigned long)up;
+@@ -2557,7 +2283,7 @@ static int serial8250_startup(struct uart_port *port)
+ 			return retval;
+ 	}
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	init_timer(&up->dma_rx.timer);
+ 	up->dma_rx.timer.function = serial8250_dma_rx_timer_check;
+ 	up->dma_rx.timer.data = (unsigned long)up;
+@@ -2635,7 +2361,7 @@ dont_test_tx_en:
+ 	 * are set via set_termios(), which will be occurring imminently
+ 	 * anyway, so we don't enable them here.
+ 	 */
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	up->ier = UART_IER_RLSI;
+ 
+ #else
+@@ -2735,7 +2461,7 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
+ 	unsigned long flags;
+ 	unsigned int baud, quot;
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	dma_stop_channel(up->dma_rx.dmach);
+ 	dma_stop_channel(up->dma_tx.dmach);
+ 	up->dma_tx.active = 0;
+@@ -2913,7 +2639,7 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
+ 	}
+ 	serial8250_set_mctrl(port, port->mctrl);
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	dma_write_counter(up->dma_rx.dmach, 0);
+ 	lcp31xx_dma_rx_setup(up);
+ #endif
+@@ -2952,7 +2678,7 @@ void serial8250_do_pm(struct uart_port *port, unsigned int state,
+ 	struct uart_8250_port *p =
+ 		container_of(port, struct uart_8250_port, port);
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	if (state == 0) {
+ 		dma_write_counter(p->dma_rx.dmach, 0);
+ 		lcp31xx_dma_rx_setup(p);
+diff --git a/drivers/tty/serial/8250/8250.h b/drivers/tty/serial/8250/8250.h
+index ebe3af9..0c79657 100644
+--- a/drivers/tty/serial/8250/8250.h
++++ b/drivers/tty/serial/8250/8250.h
+@@ -13,7 +13,7 @@
+ 
+ #include <linux/serial_8250.h>
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ struct LPC31XX_DMA {
+ 	dma_addr_t		dma_buff_p;
+ 	void			*dma_buff_v;
+@@ -54,7 +54,7 @@ struct uart_8250_port {
+ 	int			(*dl_read)(struct uart_8250_port *);
+ 	void			(*dl_write)(struct uart_8250_port *, int);
+ 
+-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
+ 	struct LPC31XX_DMA dma_rx;
+ 	struct LPC31XX_DMA dma_tx;
+ 	int buff_half_offs;
+diff --git a/drivers/tty/serial/8250/8250_lpc31xx.c b/drivers/tty/serial/8250/8250_lpc31xx.c
+new file mode 100644
+index 0000000..9497648
+--- /dev/null
++++ b/drivers/tty/serial/8250/8250_lpc31xx.c
+@@ -0,0 +1,470 @@
++/*  drivers/tty/serial/8250/8250_lpc31xx.c
++ *
++ *  Author:	Durgesh Pattamatta
++ *  Copyright (C) 2009 NXP semiconductors
++ *
++ *  Common code for machines with LPC31xx SoCs.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
++ *
++ */
++#include <linux/platform_device.h>
++#include <linux/init.h>
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/string.h>
++#include <linux/console.h>
++#include <linux/serial_8250.h>
++#include <linux/of_address.h>
++#include <linux/of_irq.h>
++
++#include <asm/errno.h>
++#include <asm/pgtable.h>
++
++#include <mach/hardware.h>
++
++#include <mach/gpio.h>
++#include <asm/mach/map.h>
++
++#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
++static void lpc31xx_dma_lock(struct uart_8250_port *up)
++{
++	mutex_lock(&dma_mutex);
++}
++
++static void lpc31xx_dma_unlock(struct uart_8250_port *up)
++{
++	mutex_unlock(&dma_mutex);
++}
++
++static void lpc31xx_uart_tx_dma_start(struct uart_8250_port *up);
++static void lpc31xx_dma_tx_tasklet_func(unsigned long data)
++{
++	struct uart_8250_port *up = (struct uart_8250_port *) data;
++	struct circ_buf *xmit = &up->port.state->xmit;
++
++	if (dma_channel_enabled(up->dma_tx.dmach))
++		return;
++
++	lpc31xx_dma_lock(up);
++
++	dma_stop_channel(up->dma_tx.dmach);
++
++	xmit->tail = (xmit->tail + up->dma_tx.count) & (UART_XMIT_SIZE - 1);
++	up->port.icount.tx += up->dma_tx.count;
++
++	lpc31xx_uart_tx_dma_start(up);
++
++	lpc31xx_dma_unlock(up);
++}
++
++static int lpc31xx_get_readl_rx_dma_count(struct uart_8250_port *up)
++{
++	int count;
++
++	/* The DMA hardware returns the number of bytes currently
++	   transferred by the hardware. It will return 0 when the
++	   channel has stopped (full DMA transfer) or when nothing
++	   has been transferred. To tell the difference between
++	   empty 0 and full 0, we need to examine the DMA enable
++	   status. */
++
++	/* A race condition can exist where the DMA TCNT returns a
++	   value right as the DMA is stopping. In this case, the
++	   DMA is enabled during the check with a non-0 count
++	   value. To get around this issue, the DMA count value
++	   need to be verified again after disabling the DMA
++	   channel. If it is 0, then the DMA completed and the
++	   count is different. */
++	dma_read_counter(up->dma_rx.dmach, &count);
++	if ((!count) && (!dma_channel_enabled(up->dma_rx.dmach)))
++		count = UART_XMIT_SIZE;
++
++	return count;
++}
++
++static void serial8250_dma_rx_timer_check(unsigned long data)
++{
++	struct uart_8250_port *up = (struct uart_8250_port *) data;
++
++	/* Emulate RX timeout when DMA buffer is not full */
++	if ((lpc31xx_get_readl_rx_dma_count(up)) && (up->dma_rx.active))
++		tasklet_schedule(&up->dma_rx.tasklet);
++	else
++		mod_timer(&up->dma_rx.timer, jiffies +
++			msecs_to_jiffies(LPC31XX_UART_RX_TIMEOUT));
++}
++
++void lcp31xx_dma_rx_setup(struct uart_8250_port *up)
++{
++	dma_setup_t dmarx;
++
++	up->buff_half_offs = UART_XMIT_SIZE - up->buff_half_offs;
++	dmarx.trans_length = UART_XMIT_SIZE - 1;
++	dmarx.src_address = (u32) up->port.mapbase;
++	dmarx.dest_address = (u32) up->dma_rx.dma_buff_p;
++	dmarx.dest_address += up->buff_half_offs;
++	dmarx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(DMA_SLV_UART_RX) |
++		DMA_CFG_WR_SLV_NR(0);
++
++	dma_prog_channel(up->dma_rx.dmach, &dmarx);
++	dma_start_channel(up->dma_rx.dmach);
++}
++
++/*
++ * DMA RX tasklet
++ */
++unsigned int serial8250_modem_status(struct uart_8250_port *up);
++static void lpc31xx_dma_rx_tasklet_func(unsigned long data)
++{
++	unsigned int status, lsr;
++	int count, count2, i, maxcount = 64, breakflush = 0;
++	char ch, flag = TTY_NORMAL, *buf;
++	struct uart_8250_port *up = (struct uart_8250_port *) data;
++	int buffhalf = up->buff_half_offs;
++	u32 pbuf;
++
++	spin_lock(&up->port.lock);
++
++	/*
++	 * Per char stats don't work with DMA, so the status flags
++	 * don't apply to a specific character. We'll take a best
++	 * guess that the accumulated status only applies to the
++	 * last character in the DMA buffer.
++	 */
++	status = serial_inp(up, UART_LSR);
++	lsr = status | up->lsr_saved_flags;
++	up->lsr_saved_flags = 0;
++
++	if (unlikely(lsr & UART_LSR_BRK_ERROR_BITS)) {
++		/*
++		 * For statistics only
++		 */
++		if (lsr & UART_LSR_BI) {
++			lsr &= ~(UART_LSR_FE | UART_LSR_PE);
++			up->port.icount.brk++;
++			breakflush = 1;
++			/*
++			 * Breaks are trouble! Toss everything if
++			 * one occurs.
++			 */
++			uart_handle_break(&up->port);
++		} else if (lsr & UART_LSR_PE)
++			up->port.icount.parity++;
++		else if (lsr & UART_LSR_FE)
++			up->port.icount.frame++;
++		if (lsr & UART_LSR_OE)
++			up->port.icount.overrun++;
++
++		/*
++		 * Mask off conditions which should be ignored.
++		 */
++		lsr &= up->port.read_status_mask;
++
++		if (lsr & UART_LSR_BI) {
++			DEBUG_INTR("handling break....");
++			flag = TTY_BREAK;
++		} else if (lsr & UART_LSR_PE)
++			flag = TTY_PARITY;
++		else if (lsr & UART_LSR_FE)
++			flag = TTY_FRAME;
++	}
++
++	/* Disable DMA and get current DMA bytes transferred */
++	count = lpc31xx_get_readl_rx_dma_count(up);
++	dma_stop_channel(up->dma_rx.dmach);
++	count2 = lpc31xx_get_readl_rx_dma_count(up);
++	if (count != count2) {
++		if (count2 == 0)
++			count = UART_XMIT_SIZE;
++		else
++			count = count2;
++	}
++	dma_write_counter(up->dma_rx.dmach, 0);
++
++	/* Setup DMA again using unused buffer half */
++	lcp31xx_dma_rx_setup(up);
++	pbuf = (u32) up->dma_rx.dma_buff_p;
++	pbuf += buffhalf;
++	buf = (char *) up->dma_rx.dma_buff_v;
++	buf += buffhalf;
++
++	if (breakflush) {
++		/* Flush RX FIFO */
++		while ((serial_inp(up, UART_LSR) & UART_LSR_DR) &&
++			(maxcount-- > 0))
++			ch = serial_inp(up, UART_RX);
++	}
++	else {
++		for (i = 0; i < (count - 1); i++) {
++			up->port.icount.rx++;
++			if (uart_handle_sysrq_char(&up->port, buf[i]))
++				continue;
++
++			uart_insert_char(&up->port, lsr, UART_LSR_OE, buf[i], TTY_NORMAL);
++		}
++
++		up->port.icount.rx++;
++		if (!uart_handle_sysrq_char(&up->port, buf[i]))
++			uart_insert_char(&up->port, lsr, UART_LSR_OE, buf[i], flag);
++	}
++
++	serial8250_modem_status(up);
++
++	spin_unlock(&up->port.lock);
++	tty_flip_buffer_push(up->port.state->port.tty);
++	spin_lock(&up->port.lock);
++
++	mod_timer(&up->dma_rx.timer, jiffies +
++		msecs_to_jiffies(LPC31XX_UART_RX_TIMEOUT));
++
++	/* Clear any pending RX error status and re-enable TX status interrupt */
++	status = serial_inp(up, UART_LSR);
++	serial_outp(up, UART_IER, up->ier);
++
++	spin_unlock(&up->port.lock);
++}
++
++/*
++ * DMA UART TX completion interrupt - this interrupt is more of a spotholder
++ * as it is disabled and will never fire.
++ */
++static void lpc31xx_dma_tx_interrupt(int ch, dma_irq_type_t dtype, void *handle)
++{
++	struct uart_8250_port *up = handle;
++
++	printk(KERN_INFO "serial DMA TX interrupt unexpected\n");
++	tasklet_schedule(&up->dma_tx.tasklet);
++}
++
++/*
++ * DMA UART RX completion interrupt - fires when the DMA RX transfer
++ * is complete.
++ */
++static void lpc31xx_dma_rx_interrupt(int ch, dma_irq_type_t dtype, void *handle)
++{
++	struct uart_8250_port *up = handle;
++
++	tasklet_schedule(&up->dma_rx.tasklet);
++}
++
++static void lpc31xx_uart_tx_dma_start(struct uart_8250_port *up)
++{
++	struct circ_buf *xmit = &up->port.state->xmit;
++	dma_setup_t dmatx;
++
++	/* Start a DMA transfer, DMA is idle if this is called and
++	   TX is enabled. */
++	if (up->port.x_char) {
++		serial_outp(up, UART_TX, up->port.x_char);
++		up->port.icount.tx++;
++		up->port.x_char = 0;
++		return;
++	}
++
++	if (!uart_circ_empty(xmit) && !uart_tx_stopped(&up->port)) {
++		dma_sync_single_for_device(up->port.dev,
++					   up->dma_tx.dma_buff_p,
++					   UART_XMIT_SIZE,
++					   DMA_TO_DEVICE);
++
++		up->dma_tx.count = CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE);
++		if (up->dma_tx.count > 64)
++			up->dma_tx.count = 64;
++
++		/* Note TX buffer is loaned to the DMA so the TX bytes can't
++		   be released until the DMA transfer is complete. */
++		dmatx.trans_length = up->dma_tx.count - 1;
++		dmatx.src_address = (u32) up->dma_tx.dma_buff_p;
++		dmatx.src_address += xmit->tail;
++		dmatx.dest_address = (u32) up->port.mapbase;
++		dmatx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(0) |
++			DMA_CFG_WR_SLV_NR(DMA_SLV_UART_TX);
++
++		dma_prog_channel(up->dma_tx.dmach, &dmatx);
++		up->dma_tx.active = 1;
++		dma_start_channel(up->dma_tx.dmach);
++
++		/* Enable TX interrupt on TX FIFO empty */
++		up->ier |= UART_IER_THRI;
++	}
++	else {
++		up->dma_tx.active = 0;
++		up->ier &= ~UART_IER_THRI;
++	}
++
++	serial_out(up, UART_IER, up->ier);
++
++	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
++		uart_write_wakeup(&up->port);
++}
++#endif
++
++
++static struct of_device_id uart_ids[] = {
++	{ .compatible = "nxp,lpc31xx-uart" },
++	{ /* sentinel */ }
++};
++
++static void lpc31xx_uart_pm(struct uart_port * port, unsigned int state,
++			      unsigned int oldstate)
++{
++	switch (state) {
++	case 0:
++		/* Free the pins so that UART IP will take control of it */
++		if (oldstate != -1) {
++			gpio_free(GPIO_UART_RXD);
++			gpio_free(GPIO_UART_TXD);
++		}
++		/*
++		 * Enable the peripheral clock for this serial port.
++		 * This is called on uart_open() or a resume event.
++		 */
++		/* Enable UART base clock */
++		cgu_endis_base_freq(CGU_SB_UARTCLK_BASE_ID, 1);
++
++		/* Enable UART IP clock */
++		cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 1);
++		cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
++		break;
++	case 1:
++		/* we can wake the system in this state. So leave clocks on */
++		printk(KERN_INFO "lpc31xx_uart_pm: UART can wake\n");
++		break;
++	case 3:
++		/*
++		 * Disable the peripheral clock for this serial port.
++		 * This is called on uart_close() or a suspend event.
++		 */
++		/* Disable UART IP clock */
++		cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 0);
++		cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 0);
++
++		/* Disable UART base clock */
++		cgu_endis_base_freq(CGU_SB_UARTCLK_BASE_ID, 0);
++
++		/* Free the pins and let GPIO handle it */
++		gpio_request(GPIO_UART_RXD, "uart_rx");
++		gpio_request(GPIO_UART_TXD, "uart_tx");
++
++		gpio_direction_input(GPIO_UART_RXD);
++		gpio_direction_output(GPIO_UART_TXD, 0);
++		break;
++	default:
++		printk(KERN_ERR "lpc31xx_uart_pm: unknown pm %d\n", state);
++	}
++
++}
++
++static struct plat_serial8250_port platform_serial_ports[] = {
++	{
++		.membase = (void *)io_p2v(UART_PHYS),
++		.mapbase = (unsigned long)UART_PHYS,
++		//.irq = IRQ_UART,
++		.irq = 13,
++		.uartclk = XTAL_CLOCK,
++		.regshift = 2,
++		.iotype = UPIO_MEM,
++		.type	= PORT_NXP16750,
++		.flags = UPF_BOOT_AUTOCONF | UPF_BUGGY_UART | UPF_SKIP_TEST,
++		.pm = lpc31xx_uart_pm,
++	},
++	{
++		.flags		= 0
++	},
++};
++
++static struct platform_device serial_device = {
++	.name = "serial8250",
++	.id = PLAT8250_DEV_PLATFORM,
++	.dev = {
++		.platform_data = &platform_serial_ports,
++	},
++};
++
++static struct platform_device *devices[] __initdata = {
++	&serial_device,
++};
++
++static void __init lpc31xx_uart_init(void)
++{
++	int mul, div;
++
++	struct device_node *node;
++	int irq;
++
++	node = of_find_matching_node(NULL, uart_ids);
++	if (!node)
++		return;
++
++	/* Get the interrupts property */
++	irq = irq_of_parse_and_map(node, 0);
++	if (!irq) {
++		pr_crit("LPC31xx: UART -  unable to get IRQ from DT\n");
++		return;
++	}
++	of_node_put(node);
++
++	platform_serial_ports[0].irq = irq;
++	printk("JDS - Uart IRQ %d\n", irq);
++
++	/* check what FDR bootloader is using */
++	mul = (UART_FDR_REG >> 4) & 0xF;
++	div = UART_FDR_REG & 0xF;
++	if (div != 0)  {
++		platform_serial_ports[0].uartclk = (XTAL_CLOCK * mul) / (mul + div);
++	}
++}
++
++#if defined(CONFIG_SERIAL_8250_CONSOLE)
++static int __init lpc31xx_init_console(void)
++{
++	static __initdata char serr[] =
++		KERN_ERR "Serial port #%u setup failed\n";
++	struct uart_port up;
++
++	/* Switch on the UART clocks */
++	cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
++	cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 1);
++
++ 	/*
++	 * Set up serial port #0. Do not use autodetection; the result is
++	 * not what we want.
++ 	 */
++	memset(&up, 0, sizeof(up));
++
++	lpc31xx_uart_init();
++	up.uartclk = platform_serial_ports[0].uartclk;
++	up.irq = platform_serial_ports[0].irq;
++
++	up.membase = (char *) io_p2v(UART_PHYS);
++	up.mapbase = (unsigned long)UART_PHYS,
++	up.regshift = 2;
++	up.iotype = UPIO_MEM;
++	up.type	= PORT_NXP16750;
++	up.flags = UPF_BOOT_AUTOCONF | UPF_BUGGY_UART | UPF_SKIP_TEST;
++	up.line	= 0;
++	if (early_serial_setup(&up))
++		printk(serr, up.line);
++
++	return 0;
++}
++console_initcall(lpc31xx_init_console);
++
++#endif /*CONFIG_SERIAL_8250_CONSOLE*/
++
++
++
++
+diff --git a/drivers/tty/serial/8250/Kconfig b/drivers/tty/serial/8250/Kconfig
+index 9417c27..2bdf3e3 100644
+--- a/drivers/tty/serial/8250/Kconfig
++++ b/drivers/tty/serial/8250/Kconfig
+@@ -269,6 +269,13 @@ config SERIAL_8250_DW
+ 	help
+ 	  Selecting this option will enable handling of the extra features
+ 	  present in the Synopsys DesignWare APB UART.
++	  
++config SERIAL_8250_LPC31xx
++	tristate "Support for NXP LPC31xx UART"
++	depends on SERIAL_8250 && ARCH_LPC31XX
++	default y
++	help
++	  Basic OF UART driver for NXP LPC31xx family
+ 
+ config SERIAL_8250_EM
+ 	tristate "Support for Emma Mobile intergrated serial port"
+@@ -278,9 +285,9 @@ config SERIAL_8250_EM
+ 	  port hardware found on the Emma Mobile line of processors.
+ 	  If unsure, say N.
+ 
+-config LPC31XX_SERIAL_DMA_SUPPORT
++config SERIAL_8250_LPC31xx_DMA
+ 	bool "DMA support for the LPC31XX RX/TX functions"
+-	depends on SERIAL_8250=y
++	depends on SERIAL_8250=y && SERIAL_8250_LPC31xx
+ 	help
+ 	 Enables DMA support for the UART function
+ 
+diff --git a/drivers/tty/serial/8250/Makefile b/drivers/tty/serial/8250/Makefile
+index d7533c7..cd23c22 100644
+--- a/drivers/tty/serial/8250/Makefile
++++ b/drivers/tty/serial/8250/Makefile
+@@ -13,6 +13,7 @@ obj-$(CONFIG_SERIAL_8250_CONSOLE)	+= 8250_early.o
+ obj-$(CONFIG_SERIAL_8250_FOURPORT)	+= 8250_fourport.o
+ obj-$(CONFIG_SERIAL_8250_ACCENT)	+= 8250_accent.o
+ obj-$(CONFIG_SERIAL_8250_BOCA)		+= 8250_boca.o
++obj-$(CONFIG_SERIAL_8250_LPC31xx)	+= 8250_lpc31xx.o
+ obj-$(CONFIG_SERIAL_8250_EXAR_ST16C554)	+= 8250_exar_st16c554.o
+ obj-$(CONFIG_SERIAL_8250_HUB6)		+= 8250_hub6.o
+ obj-$(CONFIG_SERIAL_8250_FSL)		+= 8250_fsl.o
