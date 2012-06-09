@@ -1,6 +1,6 @@
 Version: 1
-Previous: 22d03292a00036f980a2a66314b00dc18660dfb4
-Head: c4e5a8e713727135ae26366371f8695c9e8b5d94
+Previous: dba41c3a5b8886ce594d227c8884da1a65705ef8
+Head: faba4b4ec792a849d187e675a67bc217acb7120d
 Applied:
   base.patch: aee1e8d040dc469f6d7a3742cbce8ddf3457260c
   defconfigs.patch: cb175633e44fbb9a67d9cf25bc26e03a72ab2a7e
@@ -31,8 +31,7 @@ Applied:
   i2s-dma.patch: bbc4e4e942eef6ce2dc8daae7a8fa225000ea994
   v34-fixes.patch: aee155ed24b128e84d41515eb8499a022a5ab1c2
   rename.patch: fab8bc442623436191262181d681d6d417682d8e
-  symbol-rename.patch: 3a4cc2b41a0d104db1beb80e87729b2bb1d95d1c
-  refresh-temp: c4e5a8e713727135ae26366371f8695c9e8b5d94
+  symbol-rename.patch: faba4b4ec792a849d187e675a67bc217acb7120d
 Unapplied:
   dt-split.patch: 69503882263cb3e8932ad6b440f11247f8708b76
   evtr.patch: c63dbb9a9240bb48c14fd796d0678ae452938136
