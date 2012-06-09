@@ -49,7 +49,7 @@
 #include <mach/board.h>
 #include <mach/hardware.h>
 #include <mach/registers.h>
-#include "lpc313x-i2s-clocking.h"
+#include "lpc31xx-i2s-clocking.h"
 
 
 struct i2s_clk_setup {
