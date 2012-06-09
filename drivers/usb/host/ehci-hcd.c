@@ -1367,6 +1367,11 @@ MODULE_LICENSE ("GPL");
 #define PLATFORM_DRIVER		ehci_grlib_driver
 #endif
 
+#ifdef CONFIG_USB_EHCI_LPC
+#include "ehci-lpc.c"
+#define	PLATFORM_DRIVER		ehci_lpc_driver
+#endif
+
 #ifdef CONFIG_CPU_XLR
 #include "ehci-xls.c"
 #define PLATFORM_DRIVER		ehci_xls_driver
