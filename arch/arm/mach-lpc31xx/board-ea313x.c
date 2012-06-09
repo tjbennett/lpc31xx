@@ -1,4 +1,4 @@
-/*  arch/arm/mach-lpc313x/ea313x.c
+/*  arch/arm/mach-lpc31xx/ea313x.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
@@ -59,7 +59,7 @@
 reads but just changes address. But DM9000 requires nCS and nOE change between address. So access
 other chip select area (nCS0) to force de-assertion of nCS1 and nOE1. Or else wait for long time
 such as 80 usecs.
-LPC313x has external logic outside of MPMC IP to toggle nOE to split consecutive reads.
+LPC31xx has external logic outside of MPMC IP to toggle nOE to split consecutive reads.
 The latest Apex bootloader patch makes use of this feature.
 For this to work SYS_MPMC_WTD_DEL0 & SYS_MPMC_WTD_DEL1 should be programmed with MPMC_STWTRD0
 & MPMC_STWTRD1 values. The logic only deactivates the nOE for one clock cycle which is
@@ -105,7 +105,7 @@ static struct i2c_board_info ea3152_i2c1_devices[] __initdata = {
 };
 #endif
 
-void lpc313x_vbus_power(int enable)
+void lpc31xx_vbus_power(int enable)
 {
 	printk (KERN_INFO "enabling USB host vbus_power %d\n", enable);
 	//gpio_set_value(VBUS_PWR_EN, enable);
@@ -139,10 +139,10 @@ static const char *ea3131_dt_match[] __initconst = {
 };
 
 DT_MACHINE_START(EA313X, "NXP EA3131 (Device Tree Support)")
-	.map_io		= lpc313x_map_io,
+	.map_io		= lpc31xx_map_io,
 	.init_early	= lpc31xx_init_early,
 	.init_irq	= lpc31xx_init_irq,
-	.timer		= &lpc313x_timer,
+	.timer		= &lpc31xx_timer,
 	.init_machine	= ea3131_dt_init,
 	.dt_compat	= ea3131_dt_match,
 	.restart	= arch_reset,

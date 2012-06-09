@@ -1,5 +1,5 @@
 /*
- * LPC313x sram driver
+ * LPC31xx sram driver
  *
  * Copyright (C) 2012 Jon Smirl <jonsmirl@gmail.com?
  *
@@ -34,7 +34,7 @@
 #define MPMC_STWTWR        0x14
 #define MPMC_STWTTURN      0x18
 
-static int lpc313x_sram_probe(struct platform_device *pdev)
+static int lpc31xx_sram_probe(struct platform_device *pdev)
 {
 	const unsigned int *prop;
 	const unsigned int *ranges;
@@ -80,34 +80,34 @@ static int lpc313x_sram_probe(struct platform_device *pdev)
 	return  -EINVAL;
 }
 
-static const struct of_device_id lpc313x_sram_of_match[] = {
+static const struct of_device_id lpc31xx_sram_of_match[] = {
 	{ .compatible = "nxp,lpc31xx-sram" },
 	{},
 };
-MODULE_DEVICE_TABLE(of, lpc313x_sram_of_match);
+MODULE_DEVICE_TABLE(of, lpc31xx_sram_of_match);
 
-static struct platform_driver lpc313x_sram_driver = {
-	.probe = lpc313x_sram_probe,
+static struct platform_driver lpc31xx_sram_driver = {
+	.probe = lpc31xx_sram_probe,
 	.driver = {
 			.owner = THIS_MODULE,
-			.name = "lpc313x-sram",
-			.of_match_table = lpc313x_sram_of_match,
+			.name = "lpc31xx-sram",
+			.of_match_table = lpc31xx_sram_of_match,
 		   },
 };
 
-static int __init lpc313x_sram_init(void)
+static int __init lpc31xx_sram_init(void)
 {
-	return platform_driver_register(&lpc313x_sram_driver);
+	return platform_driver_register(&lpc31xx_sram_driver);
 }
 
-static void __exit lpc313x_sram_exit(void)
+static void __exit lpc31xx_sram_exit(void)
 {
-	platform_driver_unregister(&lpc313x_sram_driver);
+	platform_driver_unregister(&lpc31xx_sram_driver);
 }
 
-module_init(lpc313x_sram_init);
-module_exit(lpc313x_sram_exit);
+module_init(lpc31xx_sram_init);
+module_exit(lpc31xx_sram_exit);
 
 MODULE_AUTHOR("Jon Smirl <jonsmirl@gmail.com>");
-MODULE_DESCRIPTION("Driver for the LPC313x sram");
+MODULE_DESCRIPTION("Driver for the LPC31xx sram");
 MODULE_LICENSE("GPL");

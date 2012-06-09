@@ -1,9 +1,9 @@
-/*  linux/arch/arm/mach-lpc313x/include/mach/memory.h
+/*  linux/arch/arm/mach-lpc31xx/include/mach/memory.h
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- *  Memory defines for machines with LPC313x and LPC315x SoCs.
+ *  Memory defines for machines with LPC31xx SoCs.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
