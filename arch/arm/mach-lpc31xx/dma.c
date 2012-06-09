@@ -35,7 +35,7 @@
 #include <mach/clock.h>
 #include <mach/dma.h>
 
-
+#ifdef LPDMA
 static spinlock_t driver_lock; /* to guard state variables */
 
 static inline void lpc313x_dma_lock(void)
@@ -103,7 +103,7 @@ int dma_prog_channel (unsigned int chn, dma_setup_t *dma_setup)
 	return 0;
 }
 
-int dma_request_channel (char *name, dma_cb_t cb, void *data)
+int dma_request_channel_x (char *name, dma_cb_t cb, void *data)
 {
 	unsigned int mask;
 	unsigned int chn;
@@ -233,7 +233,7 @@ int dma_stop_channel_sg (unsigned int chn)
 	return 0;
 }
 
-int dma_release_channel (unsigned int chn)
+int dma_release_channel_x (unsigned int chn)
 {
 	unsigned int mask = (0x3 << (chn * 2));
 	unsigned long flags;
@@ -264,6 +264,7 @@ int dma_release_channel (unsigned int chn)
 	return 0;
 }
 
+#if 0
 static irqreturn_t dma_irq_handler (int irq, void *dev_id)
 {
 	unsigned int mask;
@@ -312,6 +313,7 @@ static irqreturn_t dma_irq_handler (int irq, void *dev_id)
 
 	return IRQ_HANDLED;
 }
+#endif
 
 int dma_read_counter (unsigned int chn, unsigned int * pcnt)
 {
@@ -484,6 +486,7 @@ int dma_channel_enabled(unsigned int chn)
 	return (DMACH_EN(chn) & 1);
 }
 
+#if 0
 static int __init lpc313x_dma_init (void)
 {
 	int ret = 0;
@@ -499,6 +502,7 @@ static int __init lpc313x_dma_init (void)
 
 	return ret;
 }
+#endif
 
 int dma_release_sg_channel (unsigned int chn)
 {
@@ -539,23 +543,44 @@ int dma_prepare_sg_list(int n, dma_sg_ll_t * sg)
     /* fixed me: not yet implement */
     return 0;
 }
+#else
+int dma_request_channel_x (char *name, dma_cb_t cb, void *data){return 0;}
+int dma_request_specific_channel (int chn, char *name, void (*cb)(int, dma_irq_type_t, void *), void *data){return 0;}
+int dma_request_sg_channel (char *name, dma_cb_t cb, void *data, dma_cb_t cb1, void *data1, int usesoftirq){return 0;}
+int dma_request_specific_sg_channel (int chn, char *name, dma_cb_t cb, void *data, dma_cb_t cb1, void *data1, int usesoftirq){return 0;}
+int dma_release_channel_x (unsigned int chn){return 0;}
+int dma_release_sg_channel (unsigned int chn){return 0;}
+int dma_prog_channel (unsigned int chn, dma_setup_t *dma_setup){return 0;}
+int dma_start_channel (unsigned int chn){return 0;}
+int dma_stop_channel (unsigned int chn){return 0;}
+int dma_prog_sg_channel(int chn, u32 dma_sg_list){return 0;}
+int dma_set_irq_mask(unsigned int chn, int half_int, int fin_int){return 0;}
+int dma_write_counter (unsigned int chn, u32 cnt){return 0;}
+int dma_stop_channel_sg (unsigned int chn){return 0;}
+int dma_channel_enabled(unsigned int chn){return 0;}
+int dma_current_state (unsigned int   chn, unsigned int * psrc, unsigned int * pdst, unsigned int * plen, unsigned int * pcfg, unsigned int * pena, unsigned int * pcnt){return 0;}
+int dma_read_counter (unsigned int chn, unsigned int * pcnt){return 0;}
+int dma_prepare_sg_list(int n, dma_sg_ll_t * sg){return 0;}
+#endif
 
-device_initcall(lpc313x_dma_init);
+//device_initcall(lpc313x_dma_init);
+
+EXPORT_SYMBOL(dma_request_channel_x);
+EXPORT_SYMBOL(dma_request_specific_channel);
+EXPORT_SYMBOL(dma_request_sg_channel);
+EXPORT_SYMBOL(dma_request_specific_sg_channel);
+
+EXPORT_SYMBOL(dma_release_channel_x);
+EXPORT_SYMBOL(dma_release_sg_channel);
 
 
 EXPORT_SYMBOL(dma_prog_channel);
-EXPORT_SYMBOL(dma_request_channel);
-EXPORT_SYMBOL(dma_request_specific_channel);
 EXPORT_SYMBOL(dma_start_channel);
 EXPORT_SYMBOL(dma_stop_channel);
-EXPORT_SYMBOL(dma_release_channel);
 EXPORT_SYMBOL(dma_set_irq_mask);
 EXPORT_SYMBOL(dma_read_counter);
 EXPORT_SYMBOL(dma_write_counter);
 EXPORT_SYMBOL(dma_current_state);
-EXPORT_SYMBOL(dma_request_sg_channel);
-EXPORT_SYMBOL(dma_request_specific_sg_channel);
 EXPORT_SYMBOL(dma_prog_sg_channel);
-EXPORT_SYMBOL(dma_release_sg_channel);
 EXPORT_SYMBOL(dma_prepare_sg_list);
 EXPORT_SYMBOL(dma_channel_enabled);
