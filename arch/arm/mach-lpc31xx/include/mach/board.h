@@ -54,19 +54,19 @@ extern struct sys_timer lpc31xx_timer;
  */
 struct lpc31xx_nand_timing
 {
-	u32 ns_trsd;
-	u32 ns_tals;
-	u32 ns_talh;
-	u32 ns_tcls;
-	u32 ns_tclh;
-	u32 ns_tdrd;
-	u32 ns_tebidel;
-	u32 ns_tch;
-	u32 ns_tcs;
-	u32 ns_treh;
-	u32 ns_trp;
-	u32 ns_trw;
-	u32 ns_twp;
+	uint32_t ns_trsd;
+	uint32_t ns_tals;
+	uint32_t ns_talh;
+	uint32_t ns_tcls;
+	uint32_t ns_tclh;
+	uint32_t ns_tdrd;
+	uint32_t ns_tebidel;
+	uint32_t ns_tch;
+	uint32_t ns_tcs;
+	uint32_t ns_treh;
+	uint32_t ns_trp;
+	uint32_t ns_trw;
+	uint32_t ns_twp;
 };
 
 /*
@@ -109,7 +109,7 @@ struct lpc31xx_spics_cfg {
  * Defines the number of chip selects and the cs data
  */
 struct lpc31xx_spi_cfg {
-	u32 num_cs; /* Number of CS supported on this board */
+	uint32_t num_cs; /* Number of CS supported on this board */
 	/* Array of cs setup data (num_cs entries) */
 	struct lpc31xx_spics_cfg *spics_cfg;
 };

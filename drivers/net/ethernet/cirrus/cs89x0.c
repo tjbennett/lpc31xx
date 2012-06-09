@@ -208,6 +208,59 @@ static int __init media_fn(char *str)
 }
 
 __setup("cs89x0_media=", media_fn);
+
+
+#ifndef CONFIG_CS89x0_PLATFORM
+/* Check for a network adaptor of this type, and return '0' iff one exists.
+   If dev->base_addr == 0, probe all likely locations.
+   If dev->base_addr == 1, always return failure.
+   If dev->base_addr == 2, allocate space for the device and return success
+   (detachable devices only).
+   Return 0 on success.
+   */
+
+struct net_device * __init cs89x0_probe(int unit)
+{
+	struct net_device *dev = alloc_etherdev(sizeof(struct net_local));
+	unsigned *port;
+	int err = 0;
+	int irq;
+	int io;
+
+	if (!dev)
+		return ERR_PTR(-ENODEV);
+
+	sprintf(dev->name, "eth%d", unit);
+	netdev_boot_setup_check(dev);
+	io = dev->base_addr;
+	irq = dev->irq;
+
+	if (net_debug)
+		printk("cs89x0:cs89x0_probe(0x%x)\n", io);
+
+	if (io > 0x1ff)	{	/* Check a single specified location. */
+		err = cs89x0_probe1(dev, io, 0);
+	} else if (io != 0) {	/* Don't probe at all. */
+		err = -ENXIO;
+	} else {
+		for (port = netcard_portlist; *port; port++) {
+			if (cs89x0_probe1(dev, *port, 0) == 0)
+				break;
+			dev->irq = irq;
+		}
+		if (!*port)
+			err = -ENODEV;
+	}
+	if (err)
+		goto out;
+	return dev;
+out:
+	free_netdev(dev);
+	printk(KERN_WARNING "cs89x0: no cs8900 or cs8920 detected.  Be sure to disable PnP with SETUP\n");
+	return ERR_PTR(err);
+}
+#endif
+
 #endif
 
 #if defined(CONFIG_MACH_IXDP2351)
@@ -234,6 +287,21 @@ writeword(unsigned long base_addr, int portno, u16 value)
 {
 	__raw_writel(value, base_addr + (portno << 1));
 }
+<<<<<<< current
+=======
+#else
+static u16
+readword(unsigned long base_addr, int portno)
+{
+	return inw(base_addr + portno);
+}
+
+static void
+writeword(unsigned long base_addr, int portno, u16 value)
+{
+	outw(value, base_addr + portno);
+}
+>>>>>>> patched
 #endif
 
 static void readwords(struct net_local *lp, int portno, void *buf, int length)
@@ -414,6 +482,7 @@ set_dma_cfg(struct net_device *dev)
 	struct net_local *lp = netdev_priv(dev);
 
 <<<<<<< current
+<<<<<<< current
 	if (lp->use_dma) {
 		if ((lp->isa_config & ANY_ISA_DMA) == 0) {
 			cs89_dbg(3, err, "set_dma_cfg(): no DMA\n");
@@ -433,6 +502,8 @@ set_dma_cfg(struct net_device *dev)
 	writeword(ioaddr, DATA_PORT, 0x0040);
 #endif
 
+=======
+>>>>>>> patched
 	/* if they give us an odd I/O address, then do ONE write to
            the address port, to get it back to address zero, where we
            expect to find the EISA signature word. An IO with a base of 0x3
@@ -521,12 +592,9 @@ dma_rx(struct net_device *dev)
 	   the driver will always do *something* instead of complain that
 	   adapter_cnf is 0. */
 
-/* quick hack for VAL3153 boards to reuse the mac address set by boot loader */
-#if !defined(CONFIG_MACH_VAL3153)
+
         if ((readreg(dev, PP_SelfST) & (EEPROM_OK | EEPROM_PRESENT)) ==
-	      (EEPROM_OK|EEPROM_PRESENT)) 
-#endif
-	{
+	      (EEPROM_OK|EEPROM_PRESENT)) {
 	        /* Load the MAC. */
 		for (i=0; i < ETH_ALEN/2; i++) {
 	                unsigned int Addr;

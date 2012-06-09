@@ -54,13 +54,13 @@ enum i2s_supp_clks {CLK_RX_0, CLK_TX_0, CLK_RX_1, CLK_TX_1};
  * the actual programmed clock rate. The programmed rate is generated on
  * the FS256 pin has a rate of (256 * clkrate).
  */
-u32 lpc31xx_main_clk_rate(u32 clkrate);
+uint32_t lpc31xx_main_clk_rate(uint32_t clkrate);
 
 /*
  * Set a specific channel's bit clock and word select rates. his applies
  * to the channel's WS and BCLK signals. Returns the actual programmed
  * WS clock rate.
  */
-u32 lpc31xx_chan_clk_enable(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq);
+uint32_t lpc31xx_chan_clk_enable(enum i2s_supp_clks chclk, uint32_t ws_freq, uint32_t bit_freq);
 
 #endif /* __LPC31XX_I2S_CLOCKING */
