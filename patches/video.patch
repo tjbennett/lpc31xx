@@ -1,5 +1,5 @@
-Bottom: e98d889f415353e420a5eb3d435d77025d48aa11
-Top:    9e4c62556b704fcccdd291572f588f234f4f1feb
+Bottom: e02e43033ae3ea312fa42c5fb4fe513ab00be828
+Top:    29f937dc7a71f8f6a42c1a9876738cac292595aa
 Author: Jon Smirl (none) <jonsmirl@terra>
 Date:   2012-06-09 16:20:03 -0400
 
@@ -9,10 +9,10 @@ video driver for ssd1289
 ---
 
 diff --git a/MAINTAINERS b/MAINTAINERS
-index b362709..f4d2218 100644
+index 14bc707..199c153 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
-@@ -6386,6 +6386,11 @@ M:	Jan-Benedict Glaw <jbglaw@lug-owl.de>
+@@ -6453,6 +6453,11 @@ M:	Jan-Benedict Glaw <jbglaw@lug-owl.de>
  S:	Maintained
  F:	arch/alpha/kernel/srm_env.c
  
@@ -25,10 +25,10 @@ index b362709..f4d2218 100644
  M:	Greg Kroah-Hartman <gregkh@linuxfoundation.org>
  L:	stable@vger.kernel.org
 diff --git a/drivers/video/Kconfig b/drivers/video/Kconfig
-index a290be5..56e9f2d 100644
+index 0217f74..d64e68d 100644
 --- a/drivers/video/Kconfig
 +++ b/drivers/video/Kconfig
-@@ -2400,6 +2400,18 @@ config FB_MXS
+@@ -2433,6 +2433,18 @@ config FB_MXS
  	help
  	  Framebuffer support for the MXS SoC.
  
@@ -48,10 +48,10 @@ index a290be5..56e9f2d 100644
  	tristate "PKUnity v3 Unigfx framebuffer support"
  	depends on FB && UNICORE32 && ARCH_PUV3
 diff --git a/drivers/video/Makefile b/drivers/video/Makefile
-index 9356add..fa717d9 100644
+index ee8dafb..92cce97 100644
 --- a/drivers/video/Makefile
 +++ b/drivers/video/Makefile
-@@ -142,6 +142,7 @@ obj-y                             += omap2/
+@@ -145,6 +145,7 @@ obj-y                             += omap2/
  obj-$(CONFIG_XEN_FBDEV_FRONTEND)  += xen-fbfront.o
  obj-$(CONFIG_FB_CARMINE)          += carminefb.o
  obj-$(CONFIG_FB_MB862XX)	  += mb862xx/

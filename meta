@@ -1,6 +1,6 @@
 Version: 1
-Previous: 3cba67e22daa53f2834e1e522ba304f75aca66a9
-Head: 7a3b921e76f2a24a1fffd729914f9a6e6a118d1a
+Previous: 5a4056e196c35b19abf3ff3c80ba12976fabaaa5
+Head: 88b3d6fca72b71cc54367f6ed2c097a195ebf0f4
 Applied:
   base.patch: aee1e8d040dc469f6d7a3742cbce8ddf3457260c
   defconfigs.patch: cb175633e44fbb9a67d9cf25bc26e03a72ab2a7e
@@ -12,18 +12,18 @@ Applied:
   usb.patch: 90db35492b7d3b70b7dd99ce93b1b8017ca42647
   gadget.patch: b48ea729897b67d6a06fabb16a1beacb58b11bce
   old8250.patch: 7a3b921e76f2a24a1fffd729914f9a6e6a118d1a
+  video.patch: 0649654a84a6c441bad7df389510257cc9a4f56a
+  phys.patch: 06de27a3bc5bec8aedefa972e46c3169dd1d1c20
+  mmc-stop-fix.patch: 756ee229edf868ef409ec0fb58018a6ebab85e9e
+  remove-config-noise.patch: b6390b20d199ae38e03aeac18320844c27b844cf
+  NXP-DMA-fixes.patch: 49dd7d9f6b94c8b856fb753ca618378e0fd900fd
+  NXP-uart-dma.patch: 37e66e87caeba75ed32164fd253863def8f43765
+  nxp-nand-dma.patch: c79eb6936eda41e6310cc61aa7148ee9644e2c47
+  nxp-audio-analog.patch: 012dcfd4f27199373557d37dd50ff8a3dd772f7a
+  reset.patch: 0e49c7e1a2edcc9b2f1d6c1cacd15cc937ffbcc4
+  adc-registers.patch: 3aa8d85c490e58e259191f47a0bb53d2d1159ba0
+  adc-pwm.patch: 88b3d6fca72b71cc54367f6ed2c097a195ebf0f4
 Unapplied:
-  video.patch: 51e64211fef8a0784a1bf6258b8338aafd693aed
-  phys.patch: a1c761971b5f0c28766c304cc16e05f33acad80f
-  mmc-stop-fix.patch: 73830760a93e29da925445932a42a80761d8448a
-  remove-config-noise.patch: 2b9f0fcb24814080e969e27b805f37c2afc928c1
-  NXP-DMA-fixes.patch: 5a3e39181cc6562773819a7afa73a664cffe6c21
-  NXP-uart-dma.patch: 76c952df9f936f649e816c29dda9b82ecc800859
-  nxp-nand-dma.patch: a240d06652c944dc4ebc6c91c1db4b444e3b2f51
-  nxp-audio-analog.patch: ffc0c2ec592fa585efe11b6cc49b1057d7511d0f
-  reset.patch: 58493e5a219ebecdf6ad44e6ee8905e8714e3ffb
-  adc-registers.patch: c163ec8f5f4dc1b53296d11f86dcc78766f8f22f
-  adc-pwm.patch: 4e51177b1799d6cbba646a3bd11fdf714c07f5bb
   device-trees.patch: 4f666439d1e52bb58bf4e4b676826666dde2f23f
   dma.patch: d7a6b1f2db311e080ceae6233e9463e7085c698f
   irq.patch: 1cd405da1704a978c4032f650cd3e71096909147
