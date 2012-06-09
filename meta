@@ -1,9 +1,8 @@
 Version: 1
-Previous: 3eca749436b8a6f4863962aab0c622e8b6de86a5
-Head: fc13201dbf85a11f15de2f3aa1cc71027ed5b37c
+Previous: f5fa02e404b9628867b859130fa96df6939bcf7f
+Head: aee1e8d040dc469f6d7a3742cbce8ddf3457260c
 Applied:
-  base.patch: 6d6c0e8b5c8932c943e4898eb1b81a16f7e90d7a
-  refresh-temp: fc13201dbf85a11f15de2f3aa1cc71027ed5b37c
+  base.patch: aee1e8d040dc469f6d7a3742cbce8ddf3457260c
 Unapplied:
   defconfigs.patch: be629dd3715ec59c2a7473f2ab44887f471e2415
   nand.patch: b69be38de51247dc262a0192f267811769c59465
