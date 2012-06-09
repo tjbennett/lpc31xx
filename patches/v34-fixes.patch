@@ -1,5 +1,5 @@
-Bottom: ab26d0a44b5e712435a184e3ce6aec56e9aa8ed1
-Top:    45164781664745e73c3937277515a29392993121
+Bottom: 4076feeabc5d7c182d5b30ffd5719de14fd3b2cd
+Top:    654a3dfc76978a9d31e69ec2ab90705fa836d73f
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-06-09 16:20:05 -0400
 
@@ -63,10 +63,10 @@ index 5a982c7..3234c0a 100644
  		dma_unmap_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
  		return ERR_PTR(-ENOMEM);
 diff --git a/drivers/tty/serial/8250/8250.c b/drivers/tty/serial/8250/8250.c
-index 3c25f09..b82fdbd 100644
+index 64e6e67..6a31317 100644
 --- a/drivers/tty/serial/8250/8250.c
 +++ b/drivers/tty/serial/8250/8250.c
-@@ -1068,7 +1068,7 @@ static void autoconfig_16550a(struct uart_8250_port *up)
+@@ -1056,7 +1056,7 @@ static void autoconfig_16550a(struct uart_8250_port *up)
  	}
  
  	/* Check if it is NXP IP 3106 UART */
@@ -101,10 +101,10 @@ index 33808b8..3be1e17 100644
  #define DEFAULT_HEARTBEAT 25
  #define WDT_IN_USE        0
 diff --git a/kernel/irq/irqdomain.c b/kernel/irq/irqdomain.c
-index 0e0ba5f..e01d683 100644
+index 41c1564..28852f8 100644
 --- a/kernel/irq/irqdomain.c
 +++ b/kernel/irq/irqdomain.c
-@@ -773,7 +773,7 @@ void irq_domain_generate_simple(const struct of_device_id *match,
+@@ -843,7 +843,7 @@ void irq_domain_generate_simple(const struct of_device_id *match,
  		(unsigned long long) phys_base, (int) irq_start);
  	node = of_find_matching_node_by_address(NULL, match, phys_base);
  	if (node)

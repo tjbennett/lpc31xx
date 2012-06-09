@@ -1,6 +1,6 @@
 Version: 1
-Previous: 5504d9db77b37e83ef3f677596b212b1accc7768
-Head: 755100cc75392b7b7a259dc9a12ab4283300adc6
+Previous: 17d3954fbb4e1b74e5b3cd2d15c76876a077e020
+Head: beda5f9bd05986d9a6445fca57fcc01deb97b8b3
 Applied:
   base.patch: aee1e8d040dc469f6d7a3742cbce8ddf3457260c
   defconfigs.patch: cb175633e44fbb9a67d9cf25bc26e03a72ab2a7e
@@ -23,15 +23,15 @@ Applied:
   reset.patch: 0e49c7e1a2edcc9b2f1d6c1cacd15cc937ffbcc4
   adc-registers.patch: 3aa8d85c490e58e259191f47a0bb53d2d1159ba0
   adc-pwm.patch: 755100cc75392b7b7a259dc9a12ab4283300adc6
+  device-trees.patch: 4edc20222ac84f6e566197922fea1a388b928a8e
+  dma.patch: 507cd79f21764580ea56f7b276a578b5aeea57db
+  irq.patch: 9ab9121bea0d03701f37d896f579a62856bc22ef
+  mmc-dma.patch: d9f38460dede8cc61c8b981b601de20112044522
+  nand-dma.patch: 8b777e6a724102dd62fca0deb83751f9a800f759
+  i2s-dma.patch: bbc4e4e942eef6ce2dc8daae7a8fa225000ea994
+  v34-fixes.patch: aee155ed24b128e84d41515eb8499a022a5ab1c2
+  rename.patch: beda5f9bd05986d9a6445fca57fcc01deb97b8b3
 Unapplied:
-  device-trees.patch: 4f666439d1e52bb58bf4e4b676826666dde2f23f
-  dma.patch: d7a6b1f2db311e080ceae6233e9463e7085c698f
-  irq.patch: 1cd405da1704a978c4032f650cd3e71096909147
-  mmc-dma.patch: 3338faa646eaa8491b1ee0b4a076355a0f353858
-  nand-dma.patch: 6cdbc83fe4bdcfc0f3cb169b63d71842babc5972
-  i2s-dma.patch: 1fb9ba2de2ac1dd2f1e212c1ef58357e8152430c
-  v34-fixes.patch: b37f044db6c68e926a7888e3138ca2e628b6de05
-  rename.patch: 8b7ddaeccf44aa4288ef40877c612aff328ec67f
   symbol-rename.patch: d73a03e4e725742708f60207fc96e45a195941ac
   dt-split.patch: 69503882263cb3e8932ad6b440f11247f8708b76
   evtr.patch: c63dbb9a9240bb48c14fd796d0678ae452938136

@@ -1,5 +1,5 @@
-Bottom: 73998312c74830078b80aae61ba1f7ca416b6ee2
-Top:    689cfd2e5541d62913df4d64d010905316c3fa67
+Bottom: d634f901e1b7d3c3888b83ca825041be0cdee005
+Top:    8f989c78cebc83fa7a0de4311b62263037162152
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-06-09 16:20:04 -0400
 
@@ -1990,10 +1990,10 @@ index 0cf5d37..160e8cc 100644
  arch_initcall(wdt_device_init);
 +#endif
 diff --git a/drivers/gpio/Makefile b/drivers/gpio/Makefile
-index 007f54b..72566a9 100644
+index 0f55662..d0b0a36 100644
 --- a/drivers/gpio/Makefile
 +++ b/drivers/gpio/Makefile
-@@ -21,6 +21,7 @@ obj-$(CONFIG_GPIO_IT8761E)	+= gpio-it8761e.o
+@@ -24,6 +24,7 @@ obj-$(CONFIG_GPIO_IT8761E)	+= gpio-it8761e.o
  obj-$(CONFIG_GPIO_JANZ_TTL)	+= gpio-janz-ttl.o
  obj-$(CONFIG_ARCH_KS8695)	+= gpio-ks8695.o
  obj-$(CONFIG_GPIO_LANGWELL)	+= gpio-langwell.o
@@ -5042,7 +5042,7 @@ index 0000000..5ac5df2
 +CONFIG_AVERAGE=y
 +# CONFIG_CORDIC is not set
 diff --git a/sound/soc/codecs/uda1380.c b/sound/soc/codecs/uda1380.c
-index 773e76f..bddaf4d 100644
+index da7fc6e..d1d7f7f 100644
 --- a/sound/soc/codecs/uda1380.c
 +++ b/sound/soc/codecs/uda1380.c
 @@ -148,6 +148,7 @@ static void uda1380_sync_cache(struct snd_soc_codec *codec)
@@ -5062,7 +5062,7 @@ index 773e76f..bddaf4d 100644
  			dev_err(codec->dev, "%s: failed\n", __func__);
  			return -EIO;
  		}
-@@ -728,6 +729,14 @@ static int uda1380_resume(struct snd_soc_codec *codec)
+@@ -726,6 +727,14 @@ static int uda1380_resume(struct snd_soc_codec *codec)
  	return 0;
  }
  
@@ -5077,7 +5077,7 @@ index 773e76f..bddaf4d 100644
  static int uda1380_probe(struct snd_soc_codec *codec)
  {
  	struct uda1380_platform_data *pdata =codec->dev->platform_data;
-@@ -739,8 +748,12 @@ static int uda1380_probe(struct snd_soc_codec *codec)
+@@ -737,8 +746,12 @@ static int uda1380_probe(struct snd_soc_codec *codec)
  	codec->hw_write = (hw_write_t)i2c_master_send;
  	codec->control_data = uda1380->control_data;
  
@@ -5090,7 +5090,7 @@ index 773e76f..bddaf4d 100644
  
  	if (gpio_is_valid(pdata->gpio_reset)) {
  		ret = gpio_request_one(pdata->gpio_reset, GPIOF_OUT_INIT_LOW,
-@@ -850,10 +863,17 @@ static const struct i2c_device_id uda1380_i2c_id[] = {
+@@ -848,10 +861,17 @@ static const struct i2c_device_id uda1380_i2c_id[] = {
  };
  MODULE_DEVICE_TABLE(i2c, uda1380_i2c_id);
  
