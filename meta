@@ -1,6 +1,6 @@
 Version: 1
-Previous: 88a8953178c8c57eec6fc1704ac2a80a8514134a
-Head: 1e9298e2a4f28c59ebcacc82b5e0dafb50117988
+Previous: 9b2cbafd61ef7604881c6e48a9fda2717aacd3eb
+Head: ca79c3e9c1c05241ec68d35903e407cb031fc221
 Applied:
   base.patch: aee1e8d040dc469f6d7a3742cbce8ddf3457260c
   defconfigs.patch: cb175633e44fbb9a67d9cf25bc26e03a72ab2a7e
@@ -37,6 +37,7 @@ Applied:
   intc.patch: 85a066e69847463b7ddcb53a7b7619ba62774f3b
   wdt.patch: 5111bbaad4e414a480083c59bdf6bd57e51ece90
   clean-val315x: 1e9298e2a4f28c59ebcacc82b5e0dafb50117988
+  refresh-temp: ca79c3e9c1c05241ec68d35903e407cb031fc221
 Unapplied:
   uart.patch: fdeecf7b13ceec1bf4a7216d084b95f3d652671d
   spi-temp: a04fc906c5784e2e443da60dbd063c841119fb63
