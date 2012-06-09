@@ -1,9 +1,9 @@
 Version: 1
-Previous: fbff5f3e6ff1a5c8fb1f4a9c9ffdd1995ab24685
-Head: cfaf025112d3856637ff34a767ef785ef5cf2ca9
+Previous: 90a20304d07f6637a0513f619c2978b770f0822c
+Head: 6d6c0e8b5c8932c943e4898eb1b81a16f7e90d7a
 Applied:
+  base.patch: 6d6c0e8b5c8932c943e4898eb1b81a16f7e90d7a
 Unapplied:
-  base.patch: 59b681781be7488ae1d7f96c7b12eedc2dabc06c
   defconfigs.patch: be629dd3715ec59c2a7473f2ab44887f471e2415
   nand.patch: b69be38de51247dc262a0192f267811769c59465
   spi.patch: 312f24e389f2f9320e4b7f40c8987e94b10c9655
