@@ -1,6 +1,6 @@
 Version: 1
-Previous: 5a4056e196c35b19abf3ff3c80ba12976fabaaa5
-Head: 88b3d6fca72b71cc54367f6ed2c097a195ebf0f4
+Previous: 8b956ccb276a3041ed53eb2667a867a5a5dbc1f1
+Head: d8d581e06e8b1b4da3e4c19e36cd3fb9b4c34f6f
 Applied:
   base.patch: aee1e8d040dc469f6d7a3742cbce8ddf3457260c
   defconfigs.patch: cb175633e44fbb9a67d9cf25bc26e03a72ab2a7e
@@ -23,6 +23,7 @@ Applied:
   reset.patch: 0e49c7e1a2edcc9b2f1d6c1cacd15cc937ffbcc4
   adc-registers.patch: 3aa8d85c490e58e259191f47a0bb53d2d1159ba0
   adc-pwm.patch: 88b3d6fca72b71cc54367f6ed2c097a195ebf0f4
+  refresh-temp: d8d581e06e8b1b4da3e4c19e36cd3fb9b4c34f6f
 Unapplied:
   device-trees.patch: 4f666439d1e52bb58bf4e4b676826666dde2f23f
   dma.patch: d7a6b1f2db311e080ceae6233e9463e7085c698f
