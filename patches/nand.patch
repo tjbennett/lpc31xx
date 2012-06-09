@@ -1,5 +1,5 @@
-Bottom: 2a439a78c15b1186e48b5d35f27fbdfb892ae1cd
-Top:    09fd4da27b5f13778663b17180f5632cb016069a
+Bottom: 785a0e236b953753734f19b72690f9d4c70fd8d0
+Top:    24c44231815791285a06f33e8db5c89d61ff83e3
 Author: Jon Smirl (none) <jonsmirl@terra>
 Date:   2012-06-09 16:20:03 -0400
 
@@ -76,10 +76,10 @@ index 36d62f1..f5e380a 100644
  
  static int __init clk_init(void)
 diff --git a/drivers/mtd/nand/Kconfig b/drivers/mtd/nand/Kconfig
-index 7d17cec..ad94889 100644
+index 31bb7e5..a43b3d1 100644
 --- a/drivers/mtd/nand/Kconfig
 +++ b/drivers/mtd/nand/Kconfig
-@@ -527,6 +527,12 @@ config MTD_NAND_SH_FLCTL
+@@ -567,6 +567,12 @@ config MTD_NAND_SH_FLCTL
  	help
  	  Several Renesas SuperH CPU has FLCTL. This option enables support
  	  for NAND Flash using FLCTL.

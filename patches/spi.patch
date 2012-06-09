@@ -1,5 +1,5 @@
-Bottom: 09fd4da27b5f13778663b17180f5632cb016069a
-Top:    b8c23d600f7c12e6b8ae2b5203d7e100a2cc5ea9
+Bottom: 24c44231815791285a06f33e8db5c89d61ff83e3
+Top:    5e4e239e6f0e02d569f4bc7fbf3c45d88ddd92af
 Author: Jon Smirl (none) <jonsmirl@terra>
 Date:   2012-06-09 16:20:03 -0400
 
@@ -70,7 +70,7 @@ index f5e380a..2d0e0bb 100644
  {
  	int i;
 diff --git a/drivers/spi/Kconfig b/drivers/spi/Kconfig
-index 00c0240..95acfdd 100644
+index cd2fe35..ff3e482 100644
 --- a/drivers/spi/Kconfig
 +++ b/drivers/spi/Kconfig
 @@ -403,6 +403,12 @@ config SPI_NUC900

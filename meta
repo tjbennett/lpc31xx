@@ -1,15 +1,15 @@
 Version: 1
-Previous: f5fa02e404b9628867b859130fa96df6939bcf7f
-Head: aee1e8d040dc469f6d7a3742cbce8ddf3457260c
+Previous: aad6ea8815caa44cc87a4f9f050113978e5b2e01
+Head: 6a8baceeb53818f91126d6238eab7fa8fcdf98f0
 Applied:
   base.patch: aee1e8d040dc469f6d7a3742cbce8ddf3457260c
+  defconfigs.patch: cb175633e44fbb9a67d9cf25bc26e03a72ab2a7e
+  nand.patch: e2e3481f5538e2f0d9d63cc6345a438847ef6362
+  spi.patch: 8234331d9c47dc3bacf958a68d416407c4f5d278
+  mmc.patch: 673288c51c150cc54cb8ca3e49b5c8e38f2b9556
+  watchdog.patch: 415cc08dee6443980e7082ff51d4c0850dc96c32
+  sound.patch: 6a8baceeb53818f91126d6238eab7fa8fcdf98f0
 Unapplied:
-  defconfigs.patch: be629dd3715ec59c2a7473f2ab44887f471e2415
-  nand.patch: b69be38de51247dc262a0192f267811769c59465
-  spi.patch: 312f24e389f2f9320e4b7f40c8987e94b10c9655
-  mmc.patch: e9277464ff0624b1964ee0ebee6685d556564a87
-  watchdog.patch: a2e4424da14a2bd37391b4c2814cdc5f9781bf90
-  sound.patch: 904ccab08eae31cb4f9bc2a69a142b7344b49748
   usb.patch: 1ecf34fb7d70d5206a50c469f89e3a0d2e7d2adf
   gadget.patch: 4c6e64e2a6d6ab4f5bceb60e1c1fa5894fd63a79
   old8250.patch: a1feab7ddea089e1560df9a4a75921541ca1f850
