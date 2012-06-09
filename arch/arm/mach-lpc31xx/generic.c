@@ -40,61 +40,6 @@
 
 /* local functions */
 
-static struct of_device_id uart_ids[] = {
-	{ .compatible = "nxp,lpc31xx-uart" },
-	{ /* sentinel */ }
-};
-
-static void lpc31xx_uart_pm(struct uart_port * port, unsigned int state,
-			      unsigned int oldstate)
-{
-	switch (state) {
-	case 0:
-		/* Free the pins so that UART IP will take control of it */
-		if (oldstate != -1) {
-			gpio_free(GPIO_UART_RXD);
-			gpio_free(GPIO_UART_TXD);
-		}
-		/*
-		 * Enable the peripheral clock for this serial port.
-		 * This is called on uart_open() or a resume event.
-		 */
-		/* Enable UART base clock */
-		cgu_endis_base_freq(CGU_SB_UARTCLK_BASE_ID, 1);
-
-		/* Enable UART IP clock */
-		cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 1);
-		cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
-		break;
-	case 1:
-		/* we can wake the system in this state. So leave clocks on */
-		printk(KERN_INFO "lpc31xx_uart_pm: UART can wake\n");
-		break;
-	case 3:
-		/*
-		 * Disable the peripheral clock for this serial port.
-		 * This is called on uart_close() or a suspend event.
-		 */
-		/* Disable UART IP clock */
-		cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 0);
-		cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 0);
-
-		/* Disable UART base clock */
-		cgu_endis_base_freq(CGU_SB_UARTCLK_BASE_ID, 0);
-
-		/* Free the pins and let GPIO handle it */
-		gpio_request(GPIO_UART_RXD, "uart_rx");
-		gpio_request(GPIO_UART_TXD, "uart_tx");
-
-		gpio_direction_input(GPIO_UART_RXD);
-		gpio_direction_output(GPIO_UART_TXD, 0);
-		break;
-	default:
-		printk(KERN_ERR "lpc31xx_uart_pm: unknown pm %d\n", state);
-	}
-
-}
-
 static const struct of_device_id wdt_of_match[] __initconst = {
 	{ .compatible = "nxp,lpc31xx-wdt", },
 	{},
@@ -136,40 +81,12 @@ void lpc31xx_arch_reset(char mode, const char *cmd)
 	/*NOTREACHED*/
 }
 
-
-static struct plat_serial8250_port platform_serial_ports[] = {
-	{
-		.membase = (void *)io_p2v(UART_PHYS),
-		.mapbase = (unsigned long)UART_PHYS,
-		//.irq = IRQ_UART,
-		.irq = 13,
-		.uartclk = XTAL_CLOCK,
-		.regshift = 2,
-		.iotype = UPIO_MEM,
-		.type	= PORT_NXP16750,
-		.flags = UPF_BOOT_AUTOCONF | UPF_BUGGY_UART | UPF_SKIP_TEST,
-		.pm = lpc31xx_uart_pm,
-	},
-	{
-		.flags		= 0
-	},
-};
-
-static struct platform_device serial_device = {
-	.name = "serial8250",
-	.id = PLAT8250_DEV_PLATFORM,
-	.dev = {
-		.platform_data = &platform_serial_ports,
-	},
-};
-
 struct platform_device lpc31xx_pcm_device = {
 	.name = "lpc31xx-pcm-audio",
 	.id = -1,
 };
 
 static struct platform_device *devices[] __initdata = {
-	&serial_device,
 	&lpc31xx_pcm_device,
 };
 
@@ -236,36 +153,6 @@ void __init lpc31xx_map_io(void)
 }
 extern int __init cgu_init(char *str);
 
-void __init lpc31xx_uart_init(void)
-{
-	int mul, div;
-
-	struct device_node *node;
-	int irq;
-
-	node = of_find_matching_node(NULL, uart_ids);
-	if (!node)
-		return;
-
-	/* Get the interrupts property */
-	irq = irq_of_parse_and_map(node, 0);
-	if (!irq) {
-		pr_crit("LPC31xx: UART -  unable to get IRQ from DT\n");
-		return;
-	}
-	of_node_put(node);
-
-	platform_serial_ports[0].irq = irq;
-	printk("JDS - Uart IRQ %d\n", irq);
-
-	/* check what FDR bootloader is using */
-	mul = (UART_FDR_REG >> 4) & 0xF;
-	div = UART_FDR_REG & 0xF;
-	if (div != 0)  {
-		platform_serial_ports[0].uartclk = (XTAL_CLOCK * mul) / (mul + div);
-	}
-}
-
 void __init lpc31xx_init(void)
 {
 	/* cgu init */
@@ -310,49 +197,9 @@ void __init lpc31xx_init(void)
 	/* AUDIO CODEC CLOCK (256FS) */
 	GPIO_DRV_IP(IOCONF_I2STX_1, 0x8);
 #endif
-	lpc31xx_uart_init();
 
 	platform_add_devices(devices, ARRAY_SIZE(devices));
 }
-
-
-#if defined(CONFIG_SERIAL_8250_CONSOLE)
-static int __init lpc31xx_init_console(void)
-{
-	static __initdata char serr[] =
-		KERN_ERR "Serial port #%u setup failed\n";
-	struct uart_port up;
-
-	/* Switch on the UART clocks */
-	cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
-	cgu_clk_en_dis(CGU_SB_UART_U_CLK_ID, 1);
-
- 	/*
-	 * Set up serial port #0. Do not use autodetection; the result is
-	 * not what we want.
- 	 */
-	memset(&up, 0, sizeof(up));
-
-	lpc31xx_uart_init();
-	up.uartclk = platform_serial_ports[0].uartclk;
-	up.irq = platform_serial_ports[0].irq;
-
-	up.membase = (char *) io_p2v(UART_PHYS);
-	up.mapbase = (unsigned long)UART_PHYS,
-	up.regshift = 2;
-	up.iotype = UPIO_MEM;
-	up.type	= PORT_NXP16750;
-	up.flags = UPF_BOOT_AUTOCONF | UPF_BUGGY_UART | UPF_SKIP_TEST;
-	up.line	= 0;
-	if (early_serial_setup(&up))
-		printk(serr, up.line);
-
-	return 0;
-}
-console_initcall(lpc31xx_init_console);
-
-#endif /*CONFIG_SERIAL_8250_CONSOLE*/
-
 
 
 
