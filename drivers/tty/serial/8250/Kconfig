@@ -277,3 +277,10 @@ config SERIAL_8250_EM
 	  Selecting this option will add support for the integrated serial
 	  port hardware found on the Emma Mobile line of processors.
 	  If unsure, say N.
+
+config LPC31XX_SERIAL_DMA_SUPPORT
+	bool "DMA support for the LPC31XX RX/TX functions"
+	depends on SERIAL_8250=y
+	help
+	 Enables DMA support for the UART function
+
