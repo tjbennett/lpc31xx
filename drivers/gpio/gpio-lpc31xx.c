@@ -193,7 +193,7 @@ static int __devinit lpc31xx_simple_gpiochip_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	chip->index = (res->start >> 6) & 7;
+	chip->index = (res->start >> 6) & 0xF;
 	gpio_evt[chip->index].chip = chip;
 
 	gc = &chip->mmchip.gc;
