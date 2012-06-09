@@ -82,7 +82,7 @@ static int lpc31xx_pm_begin(suspend_state_t state)
 static void lpc31xx_clk_debug(void)
 {
 #ifdef CONFIG_PM_DEBUG
-	u32 i, clk_pcr;
+	uint32_t i, clk_pcr;
 	/* print all clocks which are not auto_wake enabled and are still
 	 * running before entering low-power states.
 	 */
@@ -95,11 +95,11 @@ static void lpc31xx_clk_debug(void)
 #endif
 }
 
-static int lpc31xx_enter_sleep(u32 standby)
+static int lpc31xx_enter_sleep(uint32_t standby)
 {
-	int (*lpc31xx_suspend_ptr) (u32);
+	int (*lpc31xx_suspend_ptr) (uint32_t);
 	int i;
-	u32 base_clk_state = 0;
+	uint32_t base_clk_state = 0;
 
 #if defined(BACKUP_ISRAM)
 	void *iram_swap_area;

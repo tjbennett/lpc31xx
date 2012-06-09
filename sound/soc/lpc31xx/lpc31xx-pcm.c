@@ -93,7 +93,7 @@ struct lpc31xx_i2sdma_data {
 	/* DMA configuration and support */
 	int dmach;
 	volatile dma_addr_t dma_cur;
-	u32 dma_cfg_base;
+	uint32_t dma_cfg_base;
 #if defined (CONFIG_SND_USE_DMA_LINKLIST)
 	dma_sg_ll_t *p_sg_cpu;
 	dma_sg_ll_t *p_sg_dma;
@@ -289,7 +289,7 @@ static int lpc31xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 
 #if defined (CONFIG_SND_USE_DMA_LINKLIST)
 	int i, tch;
-	u32 addr;
+	uint32_t addr;
 	dma_sg_ll_t *p_sg_cpuw, *p_sg_dmaw;
 	unsigned long timeout;
 
@@ -307,11 +307,11 @@ static int lpc31xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		p_sg_dmaw = prtd->p_sg_dma;
 
 		/* Build a linked list that wraps around */
-		addr = (u32) prtd->dma_buffer;
+		addr = (uint32_t) prtd->dma_buffer;
 		for (i = 0; i < prtd->num_periods; i++) {
 			p_sg_cpuw->setup.trans_length = (prtd->period_size / 4) - 1;
 			p_sg_cpuw->setup.cfg = prtd->dma_cfg_base;
-			p_sg_cpuw->next_entry = (u32) (p_sg_dmaw + 1);
+			p_sg_cpuw->next_entry = (uint32_t) (p_sg_dmaw + 1);
 
 			if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 				p_sg_cpuw->setup.src_address = addr;
@@ -324,7 +324,7 @@ static int lpc31xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 
 			/* Wrap end of list back to start? */
 			if (i == (prtd->num_periods - 1))
-				p_sg_cpuw->next_entry = (u32) prtd->p_sg_dma;
+				p_sg_cpuw->next_entry = (uint32_t) prtd->p_sg_dma;
 
 			p_sg_cpuw++;
 			p_sg_dmaw++;
@@ -339,7 +339,7 @@ static int lpc31xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		add_timer(&prtd->timer[tch]);
 
 		/* Program DMA channel and start it */
-		dma_prog_sg_channel(prtd->dmach, (u32) prtd->p_sg_dma);
+		dma_prog_sg_channel(prtd->dmach, (uint32_t) prtd->p_sg_dma);
 		dma_set_irq_mask(prtd->dmach, 1, 1);
 #else
 	dma_setup_t dmasetup;
@@ -349,11 +349,11 @@ static int lpc31xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		prtd->dma_cur = prtd->dma_buffer;
 
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-			dmasetup.src_address = (u32) prtd->dma_buffer;
+			dmasetup.src_address = (uint32_t) prtd->dma_buffer;
 			dmasetup.dest_address = TX_FIFO_ADDR;
 		}
 		else {
-			dmasetup.dest_address = (u32) prtd->dma_buffer;
+			dmasetup.dest_address = (uint32_t) prtd->dma_buffer;
 			dmasetup.src_address = RX_FIFO_ADDR;
 		}
 
