@@ -1,6 +1,6 @@
 Version: 1
-Previous: 9c61eef735560cb333c64d8ffedb366dfdf9c85b
-Head: ae5d1a01477a46c417e348b4b166de7d7d35ec0e
+Previous: 85e218ae30a5e782cae9bfdace7008a12518fd6e
+Head: b48ea729897b67d6a06fabb16a1beacb58b11bce
 Applied:
   base.patch: aee1e8d040dc469f6d7a3742cbce8ddf3457260c
   defconfigs.patch: cb175633e44fbb9a67d9cf25bc26e03a72ab2a7e
@@ -10,8 +10,7 @@ Applied:
   watchdog.patch: 415cc08dee6443980e7082ff51d4c0850dc96c32
   sound.patch: 630af251f8395c67dd8b52645100f1dfd11f34b8
   usb.patch: 90db35492b7d3b70b7dd99ce93b1b8017ca42647
-  gadget.patch: dd12c41fee6822a3f8ff06f7188d777536ca7df1
-  refresh-temp: ae5d1a01477a46c417e348b4b166de7d7d35ec0e
+  gadget.patch: b48ea729897b67d6a06fabb16a1beacb58b11bce
 Unapplied:
   old8250.patch: a1feab7ddea089e1560df9a4a75921541ca1f850
   video.patch: 51e64211fef8a0784a1bf6258b8338aafd693aed
