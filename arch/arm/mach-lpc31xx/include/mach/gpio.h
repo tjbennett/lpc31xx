@@ -26,7 +26,7 @@
 #include <linux/irqflags.h>
 #include <mach/hardware.h>
 
-#define ARCH_NR_GPIOS 1024
+#define ARCH_NR_GPIOS 256
 
 #define GPIO_PORT_MASK  0x0FE0
 #define GPIO_PIN_MASK   0x001F
