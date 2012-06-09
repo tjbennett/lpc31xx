@@ -1068,7 +1068,7 @@ static void autoconfig_16550a(struct uart_8250_port *up)
 	}
 
 	/* Check if it is NXP IP 3106 UART */
-	serial_outp(up, UART_SCR, 0xDF);
+	serial_out(up, UART_SCR, 0xDF);
 	status1 = serial_in(up, UART_SCR);
 	if(status1 == 0xDF) {
 		/*scratch register present */

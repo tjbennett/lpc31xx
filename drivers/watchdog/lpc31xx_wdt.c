@@ -32,6 +32,8 @@
 #include <linux/interrupt.h>
 #include <linux/clk.h>
 
+#include <mach/hardware.h>
+
 #define MAX_HEARTBEAT 120
 #define DEFAULT_HEARTBEAT 25
 #define WDT_IN_USE        0
