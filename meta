@@ -1,6 +1,6 @@
 Version: 1
-Previous: dba41c3a5b8886ce594d227c8884da1a65705ef8
-Head: faba4b4ec792a849d187e675a67bc217acb7120d
+Previous: 88a8953178c8c57eec6fc1704ac2a80a8514134a
+Head: 1e9298e2a4f28c59ebcacc82b5e0dafb50117988
 Applied:
   base.patch: aee1e8d040dc469f6d7a3742cbce8ddf3457260c
   defconfigs.patch: cb175633e44fbb9a67d9cf25bc26e03a72ab2a7e
@@ -32,12 +32,12 @@ Applied:
   v34-fixes.patch: aee155ed24b128e84d41515eb8499a022a5ab1c2
   rename.patch: fab8bc442623436191262181d681d6d417682d8e
   symbol-rename.patch: faba4b4ec792a849d187e675a67bc217acb7120d
+  dt-split.patch: a0876e155c7389d8e5f7be66ecfa5388feb42729
+  evtr.patch: 13b16a39e7de0c771f2e7049d2ab311db946254a
+  intc.patch: 85a066e69847463b7ddcb53a7b7619ba62774f3b
+  wdt.patch: 5111bbaad4e414a480083c59bdf6bd57e51ece90
+  clean-val315x: 1e9298e2a4f28c59ebcacc82b5e0dafb50117988
 Unapplied:
-  dt-split.patch: 69503882263cb3e8932ad6b440f11247f8708b76
-  evtr.patch: c63dbb9a9240bb48c14fd796d0678ae452938136
-  intc.patch: 174d6f22fd6db07f61a6ec0ad782a67c1ca347b7
-  wdt.patch: 02a4d5cc5993701f32d49c4bce8566529e29e70e
-  clean-val315x: d14bb064166448ead02b9eabad7ec01df59deb05
   uart.patch: fdeecf7b13ceec1bf4a7216d084b95f3d652671d
   spi-temp: a04fc906c5784e2e443da60dbd063c841119fb63
   spi-rewrite: 26bf4841d21c8d795e4bdeccd8ef69b7cea709ff
