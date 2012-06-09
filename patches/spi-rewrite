@@ -1,5 +1,5 @@
-Bottom: 4e1ba9747e1da7613da5ad459b5a435367b9affa
-Top:    700e85b8f4228e9c080b27a846dc1879814003b1
+Bottom: 9e2bf393f7aec7da7ae91a683c2d199346d6e1e9
+Top:    339217c05b57ba9d3dd37cffe3ffedbf8eb566d0
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-06-09 16:20:05 -0400
 
@@ -23,7 +23,7 @@ index aa51274..9a9d5d0 100644
  
  	gc = &chip->mmchip.gc;
 diff --git a/drivers/mtd/devices/m25p80.c b/drivers/mtd/devices/m25p80.c
-index 1924d24..17a84de 100644
+index 5d0d68c..81289a7 100644
 --- a/drivers/mtd/devices/m25p80.c
 +++ b/drivers/mtd/devices/m25p80.c
 @@ -15,6 +15,8 @@
@@ -3368,18 +3368,18 @@ index c544e3a..ee6f7c9 100644
  MODULE_LICENSE("GPL");
 -MODULE_ALIAS("platform:lpc31xx-spi");
 diff --git a/drivers/spi/spi.c b/drivers/spi/spi.c
-index 3d8f662..c24c327 100644
+index 1041cb8..dbc9d31 100644
 --- a/drivers/spi/spi.c
 +++ b/drivers/spi/spi.c
-@@ -18,6 +18,8 @@
+@@ -19,6 +19,8 @@
   * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
   */
  
 +#define DEBUG
 +
  #include <linux/kernel.h>
+ #include <linux/kmod.h>
  #include <linux/device.h>
- #include <linux/init.h>
 diff --git a/dt_config b/dt_config
 index 0998c92..1053e11 100644
 --- a/dt_config
