@@ -1,5 +1,5 @@
-#ifndef __LPC313x_PWM_H__
-#define __LPC313x_PWM_H__
+#ifndef __LPC31xx_PWM_H__
+#define __LPC31xx_PWM_H__
 
 
 #define PWM_AUTHOR        "Michael Schwarz"
@@ -29,7 +29,7 @@
 
 
 // device
-#define DEVICE_NAME           "lpc313x_pwm"
+#define DEVICE_NAME           "lpc31xx_pwm"
 #define DEVICE_LEN            4
 
 
@@ -39,4 +39,4 @@ static ssize_t device_read(struct file *, char *, size_t, loff_t *);
 static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
 
 
-#endif // __LPC313x_PWM_H__
+#endif // __LPC31xx_PWM_H__

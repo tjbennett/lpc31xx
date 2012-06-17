@@ -652,7 +652,7 @@ static const struct of_device_id evtr_of_match[] __initconst = {
 	{},
 };
 
-static int __devinit lpc313x_evtr_probe(struct platform_device *pdev)
+static int __devinit lpc31xx_evtr_probe(struct platform_device *pdev)
 {
 	const __be32 *ip;
 	struct device_node *np = pdev->dev.of_node;
@@ -682,30 +682,30 @@ static int __devinit lpc313x_evtr_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int lpc313x_evtr_remove(struct platform_device *pdev)
+static int lpc31xx_evtr_remove(struct platform_device *pdev)
 {
 	return -EBUSY;
 }
 
-static struct platform_driver lpc313x_evtr_driver = {
+static struct platform_driver lpc31xx_evtr_driver = {
 	.driver = {
 		.name = "lpc31xx-evtr",
 		.owner = THIS_MODULE,
 		.of_match_table = evtr_of_match,
 	},
-	.probe = lpc313x_evtr_probe,
-	.remove = lpc313x_evtr_remove,
+	.probe = lpc31xx_evtr_probe,
+	.remove = lpc31xx_evtr_remove,
 };
 
-static __init int lpc313x_evtr_init(void)
+static __init int lpc31xx_evtr_init(void)
 {
-	if (platform_driver_register(&lpc313x_evtr_driver))
+	if (platform_driver_register(&lpc31xx_evtr_driver))
 		printk(KERN_ERR "Unable to register Event Router driver\n");
 
 	return 0;
 }
 
 /* Make sure we get initialised before anyone else tries to use us */
-core_initcall(lpc313x_evtr_init);
+core_initcall(lpc31xx_evtr_init);
 
 

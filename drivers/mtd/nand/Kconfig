@@ -568,11 +568,11 @@ config MTD_NAND_SH_FLCTL
 	  Several Renesas SuperH CPU has FLCTL. This option enables support
 	  for NAND Flash using FLCTL.
 	  
-config MTD_NAND_LPC313X
-	tristate "Support for NAND Controller on NXP LPC313x"
+config MTD_NAND_LPC31XX
+	tristate "Support for NAND Controller on NXP LPC31xx"
 	depends on ARCH_LPC31XX
 	help
-	  This enables the NAND flash controller on the LPC313x
+	  This enables the NAND flash controller on the LPC31xx
 
 config MTD_NAND_DAVINCI
         tristate "Support NAND on DaVinci SoC"
