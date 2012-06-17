@@ -1,0 +1,69 @@
+Bottom: 339217c05b57ba9d3dd37cffe3ffedbf8eb566d0
+Top:    785d6bc3464c6165c60bc2fd4ac4026dc0d59579
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-06-16 22:11:33 -0400
+
+Refresh of spi-rewrite
+
+---
+
+diff --git a/drivers/spi/spi-lpc31xx.c b/drivers/spi/spi-lpc31xx.c
+index ee6f7c9..946d692 100644
+--- a/drivers/spi/spi-lpc31xx.c
++++ b/drivers/spi/spi-lpc31xx.c
+@@ -622,7 +622,6 @@ static void readwriter(struct lpc31xx_spi *espi)
+ 	spi_writel(DMA_SET_REG, 0);
+ 
+ 	/* read as long as RX FIFO has frames in it */
+-	if (espi->read != READING_NULL) d_printk("Read ");
+ 	while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
+ 		switch (espi->read) {
+ 		case READING_NULL:
+@@ -639,10 +638,8 @@ static void readwriter(struct lpc31xx_spi *espi)
+ 		espi->rx += (espi->cur_chip->n_bytes);
+ 		espi->exp_fifo_level--;
+ 	}
+-	if (espi->read != READING_NULL) d_printk("\n");
+ 
+ 	/* write as long as TX FIFO has room */
+-	if (espi->write != WRITING_NULL) printk("Write ");
+ 	while ((espi->exp_fifo_level < SPI_FIFO_DEPTH) && (espi->tx < espi->tx_end)) {
+ 		switch (espi->write) {
+ 		case WRITING_NULL:
+@@ -659,7 +656,6 @@ static void readwriter(struct lpc31xx_spi *espi)
+ 		espi->tx += (espi->cur_chip->n_bytes);
+ 		espi->exp_fifo_level++;
+ 		/* read as long as RX FIFO has frames in it */
+-		if (espi->read != READING_NULL) d_printk("Read ");
+ 		while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
+ 			switch (espi->read) {
+ 			case READING_NULL:
+@@ -676,9 +672,7 @@ static void readwriter(struct lpc31xx_spi *espi)
+ 			espi->rx += (espi->cur_chip->n_bytes);
+ 			espi->exp_fifo_level--;
+ 		}
+-		if (espi->read != READING_NULL) d_printk("\n");
+ 	}
+-	if (espi->write != WRITING_NULL) d_printk("\n");
+ 
+ 	/*
+ 	 * When we exit here the TX FIFO should be full and the RX FIFO
+@@ -1475,7 +1469,7 @@ static void do_interrupt_transfer(struct lpc31xx_spi *espi)
+ 	unsigned long time, timeout;
+ 	uint32_t tmp;
+ 
+-	dev_dbg(&espi->pdev->dev, "do_polling_transfer\n");
++	dev_dbg(&espi->pdev->dev, "do_interrupt_transfer\n");
+ 
+ 	chip = espi->cur_chip;
+ 	message = espi->cur_msg;
+@@ -2129,8 +2123,7 @@ lpc31xx_probe(struct platform_device *pdev)
+ 		dev_err(&pdev->dev, "failed to get irq resources\n");
+ 		goto err_no_irq;
+ 	}
+-
+-	status = request_irq(espi->irq, lpc31xx_interrupt_handler, 0, "lpc31xx-spi", espi);
++	status = request_irq(espi->irq, lpc31xx_interrupt_handler, 0, pdev->name, espi);
+ 	if (status < 0) {
+ 		dev_err(&pdev->dev, "probe - cannot get IRQ (%d)\n", status);
+ 		goto err_no_irq;
