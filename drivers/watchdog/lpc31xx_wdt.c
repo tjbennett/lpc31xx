@@ -327,12 +327,23 @@ static int lpc31xx_wdt_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id lpc31xx_wdt_of_match[] = {
+	{ .compatible = "nxp,lpc31xx-wdt" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, lpc31xx_wdt_of_match);
+#endif
+
 static struct platform_driver lpc31xx_wdt_driver = {
 	.probe = lpc31xx_wdt_probe,
 	.remove = __devexit_p(lpc31xx_wdt_remove),
 	.driver = {
-		   .owner = THIS_MODULE,
-		   .name = "lpc31xx-wdt",
+			.owner = THIS_MODULE,
+			.name = "lpc31xx-wdt",
+#ifdef CONFIG_OF
+			.of_match_table = lpc31xx_wdt_of_match,
+#endif
 		   },
 };
 

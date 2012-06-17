@@ -140,10 +140,8 @@ static struct snd_soc_dai_link ea3131_uda1380_dai[] = {
 	{
 		.name = "uda1380",
 		.stream_name = "uda1380",
-		.codec_name	= "uda1380-codec.1-001a",
-		.cpu_dai_name = "lpc313x-i2s.0",
 		.codec_dai_name = "uda1380-hifi",
-		.platform_name	= "lpc313x-audio.0",
+		.platform_name	= "lpc31xx-pcm-audio",
 		.init = ea3131_uda1380_init,
 		.ops = &ea3131_uda1380_ops,
 	},
@@ -161,54 +159,55 @@ static struct uda1380_platform_data uda1380_info = {
 	.gpio_reset = -1,
 };
 
-static struct i2c_board_info i2c_board_info[] = {
-	{
-		I2C_BOARD_INFO("uda1380", 0x1A),
-		.platform_data = &uda1380_info,
-	},
-};
-
 static struct platform_device *ea3131_snd_device;
 
-static int __devinit ea3131_asoc_probe(struct platform_device *pd)
+static int __devinit ea3131_asoc_probe(struct platform_device *pdev)
 {
 	struct platform_device *snd_dev;
 	int ret = 0;
 	struct i2c_adapter *adapter;
-	struct i2c_client *client;
 
 	/*
 	 * Enable CODEC clock first or I2C will fail to the CODEC
 	 */
 	lpc313x_main_clk_rate(48000);
 
-#if defined (CONFIG_SND_I2C1_CHANNEL_UDA1380)
-	adapter = i2c_get_adapter(1);
-#else
-	adapter = i2c_get_adapter(0);
-#endif
-	if (!adapter)
-		return -ENODEV;
-	client = i2c_new_device(adapter, i2c_board_info);
-	i2c_put_adapter(adapter);
-	if (!client)
-		return -ENODEV;
-
 	snd_dev = platform_device_alloc("soc-audio", -1);
 	if (!snd_dev) {
-		dev_err(&pd->dev, "failed to alloc soc-audio devicec\n");
+		dev_err(&pdev->dev, "failed to alloc soc-audio device\n");
 		return -ENOMEM;
+	}
+
+	ea3131_uda1380_dai[0].codec_of_node = of_parse_phandle(
+			pdev->dev.of_node, "audio-codec", 0);
+	if (!ea3131_uda1380_dai[0].codec_of_node) {
+		dev_err(&pdev->dev,
+			"Property 'audio-codec' missing or invalid\n");
+		ret = -EINVAL;
+		goto err;
+	}
+
+	ea3131_uda1380_dai[0].cpu_dai_of_node = of_parse_phandle(
+			pdev->dev.of_node, "i2s-controller", 0);
+	if (!ea3131_uda1380_dai[0].cpu_dai_of_node) {
+		dev_err(&pdev->dev,
+			"Property 'i2s-controller' missing or invalid\n");
+		ret = -EINVAL;
+		goto err;
 	}
 
 	platform_set_drvdata(snd_dev, &snd_soc_machine_ea3131);
 
 	ret = platform_device_add(snd_dev);
 	if (ret) {
-		dev_err(&pd->dev, "failed to add soc-audio dev\n");
+		dev_err(&pdev->dev, "failed to add soc-audio dev\n");
 		return -ENODEV;
 	}
 
-	platform_set_drvdata(pd, snd_dev);
+	platform_set_drvdata(pdev, snd_dev);
+	return 0;
+
+err:
 	return ret;
 }
 
@@ -220,11 +219,22 @@ static int __devexit ea3131_asoc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id ea3131_asoc_of_match[] = {
+	{ .compatible = "ea,ea3131-uda1380" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ea3131_asoc_of_match);
+#endif
+
 static struct platform_driver ea3131_asoc_platdrv = {
 	.driver	= {
 		.owner	= THIS_MODULE,
-		.name	= "lpc313x-uda1380",
+		.name	= "ea3131-uda1380",
 		//.pm	= ea3131_asoc_pm,
+#ifdef CONFIG_OF
+		.of_match_table = ea3131_asoc_of_match,
+#endif
 	},
 	.probe	= ea3131_asoc_probe,
 	.remove	= __devexit_p(ea3131_asoc_remove),
@@ -244,7 +254,7 @@ module_init(ea3131_asoc_modinit);
 module_exit(ea3131_asoc_modexit);
 
 MODULE_AUTHOR("Kevin Wells <kevin.wells@nxp.com>");
-MODULE_DESCRIPTION("ASoC machine driver for LPC313X/UDA1380");
+MODULE_DESCRIPTION("ASoC machine driver for EA3131/UDA1380");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("platform:lpc313x-uda1380");
+MODULE_ALIAS("platform:ea3131-uda1380");
 
