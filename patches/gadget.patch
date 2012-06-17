@@ -1,7 +1,7 @@
-Bottom: 22b4d4b14d7c62deaadeefb8a9b54bfc539fadc0
-Top:    9c06dd71fc0212187c529791be024355a2cfdc0d
+Bottom: 3306e3f8a7c6ecf99d051e113b956f3725dee262
+Top:    5d8d8a74a3fe28cf0d0142273d59076044a73e1a
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-09 16:20:03 -0400
+Date:   2012-06-16 22:11:52 -0400
 
 USB Gadget support for lpc31xx
 
@@ -93,7 +93,7 @@ index 0000000..68d862b
 +{
 +}
 diff --git a/drivers/usb/gadget/fsl_udc_core.c b/drivers/usb/gadget/fsl_udc_core.c
-index 2831685..0314ed2 100644
+index bc6f9bb..c62f2bd 100644
 --- a/drivers/usb/gadget/fsl_udc_core.c
 +++ b/drivers/usb/gadget/fsl_udc_core.c
 @@ -17,7 +17,9 @@

@@ -1,7 +1,7 @@
-Bottom: 3c14f0f6a5fd8f7fbc1a23b8d4b669266bb9e657
-Top:    22b4d4b14d7c62deaadeefb8a9b54bfc539fadc0
+Bottom: 753f861ede958e7c7a021cdc670954c18b4903a1
+Top:    3306e3f8a7c6ecf99d051e113b956f3725dee262
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-09 16:20:03 -0400
+Date:   2012-06-16 22:11:52 -0400
 
 USB support for lpc31xx
 
@@ -97,7 +97,7 @@ index a7773a3..e4a26e6 100644
  	default y if MICROBLAZE
  	default y if SPARC_LEON
 diff --git a/drivers/usb/core/hub.c b/drivers/usb/core/hub.c
-index 04fb834..7ffbd23 100644
+index 25a7422..48d295f 100644
 --- a/drivers/usb/core/hub.c
 +++ b/drivers/usb/core/hub.c
 @@ -1556,7 +1556,7 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
@@ -240,10 +240,10 @@ index 9e0a89c..03936eb 100644
  obj-$(CONFIG_USB_HCD_SSB)	+= ssb-hcd.o
 +
 diff --git a/drivers/usb/host/ehci-hcd.c b/drivers/usb/host/ehci-hcd.c
-index b100f5f..c59ee81 100644
+index 800be38..c0207cb 100644
 --- a/drivers/usb/host/ehci-hcd.c
 +++ b/drivers/usb/host/ehci-hcd.c
-@@ -1367,6 +1367,11 @@ MODULE_LICENSE ("GPL");
+@@ -1369,6 +1369,11 @@ MODULE_LICENSE ("GPL");
  #define PLATFORM_DRIVER		ehci_grlib_driver
  #endif
  

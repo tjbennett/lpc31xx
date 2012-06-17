@@ -1,7 +1,7 @@
-Bottom: e02e43033ae3ea312fa42c5fb4fe513ab00be828
-Top:    29f937dc7a71f8f6a42c1a9876738cac292595aa
+Bottom: e57c3ceb8c884695f442a1dad2208231191b2253
+Top:    a1e5efa9ab603c3eeeb230bbad3ef46a69672574
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-09 16:20:03 -0400
+Date:   2012-06-16 22:11:53 -0400
 
 video driver for ssd1289
 
@@ -9,10 +9,10 @@ video driver for ssd1289
 ---
 
 diff --git a/MAINTAINERS b/MAINTAINERS
-index 14bc707..199c153 100644
+index 3e30a3a..6029377 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
-@@ -6453,6 +6453,11 @@ M:	Jan-Benedict Glaw <jbglaw@lug-owl.de>
+@@ -6461,6 +6461,11 @@ M:	Jan-Benedict Glaw <jbglaw@lug-owl.de>
  S:	Maintained
  F:	arch/alpha/kernel/srm_env.c
  
