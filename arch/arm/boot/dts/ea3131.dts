@@ -46,7 +46,7 @@
 	};
 	spi@15002000 {
 		gpios = <&gpio_spi 4 0  /* chip selects */
-			 &gpio_ebi_i2stx_0 3 0>; 
+			 &gpio_ebi_i2stx_0 3 0>;
 		s25sl032a@0 {
 			compatible = "code,s25sl032a";
 			reg = <0>;
@@ -56,12 +56,11 @@
 			compatible = "ti,ads7846";
 			reg = <1>;
 			spi-max-frequency = <1200000>;
-			interrupts = <20>;
 			vref_delay_usecs = <100>;
 			x-plate-ohms = <419>;
 			y-plate-ohms = <486>;
 			interrupt-parent = <&evtr>;
-			pen-irq = <7 4>;
+			interrupts = <7 4>;
 			gpio-pendown = <&gpio_gpio 4 0>;
 		};
 	};
