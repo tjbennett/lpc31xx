@@ -39,7 +39,7 @@
 /***********************************************************************
 * CGU driver package data
 ***********************************************************************/
-static u32 g_clkin_freq[CGU_FIN_SELECT_MAX];
+static uint32_t g_clkin_freq[CGU_FIN_SELECT_MAX];
 
 /***********************************************************************
 * CGU driver private functions
@@ -52,9 +52,9 @@ static u32 g_clkin_freq[CGU_FIN_SELECT_MAX];
 *     This is used to calculate the madd and msub width in frac div
 *     registers.Reasonably fast.
 **********************************************************************/
-static u32 cgu_fdiv_num_bits(unsigned int i)
+static uint32_t cgu_fdiv_num_bits(unsigned int i)
 {
-	u32 x = 0, y = 16;
+	uint32_t x = 0, y = 16;
 
 	for (; y > 0; y = y >> 1) {
 		if (i >> y) {
@@ -69,9 +69,9 @@ static u32 cgu_fdiv_num_bits(unsigned int i)
 	return x;
 }
 
-static inline u32 f_mult_m_div_n(u32 f_in, u32 m, u32 n)
+static inline uint32_t f_mult_m_div_n(uint32_t f_in, uint32_t m, uint32_t n)
 {
-	u32 temp;
+	uint32_t temp;
 	union {
 		unsigned long word[2];
 		unsigned long long longword;
@@ -173,9 +173,9 @@ static unsigned int pl550_p(int x)
 /***********************************************************************
 *     Finds ESR index corresponding to the requested clock Id.
 **********************************************************************/
-u32 cgu_clkid2esrid(CGU_CLOCK_ID_T clkid)
+uint32_t cgu_clkid2esrid(CGU_CLOCK_ID_T clkid)
 {
-	u32 esrIndex = (u32)clkid;
+	uint32_t esrIndex = (uint32_t)clkid;
 
 	switch (clkid)
 	{
@@ -200,9 +200,9 @@ u32 cgu_clkid2esrid(CGU_CLOCK_ID_T clkid)
 /***********************************************************************
 *     Finds BCR index corresponding to the requested domain Id.
 **********************************************************************/
-u32 cgu_DomainId2bcrid(CGU_DOMAIN_ID_T domainid)
+uint32_t cgu_DomainId2bcrid(CGU_DOMAIN_ID_T domainid)
 {
-	u32 bcridx = CGU_INVALID_ID;
+	uint32_t bcridx = CGU_INVALID_ID;
 	switch (domainid)
 	{
 	case CGU_SB_SYS_BASE_ID:
@@ -225,10 +225,10 @@ u32 cgu_DomainId2bcrid(CGU_DOMAIN_ID_T domainid)
 *	   clock.
 **********************************************************************/
 void cgu_ClkId2DomainId(CGU_CLOCK_ID_T clkid, CGU_DOMAIN_ID_T* pDomainId,
-                        u32* pSubdomainId)
+                        uint32_t* pSubdomainId)
 {
-	u32 esrIndex, esrReg;
-	u32 fracdiv_base = CGU_INVALID_ID;
+	uint32_t esrIndex, esrReg;
+	uint32_t fracdiv_base = CGU_INVALID_ID;
 
 	/*    1. Get the domain ID */
 
@@ -304,9 +304,9 @@ void cgu_ClkId2DomainId(CGU_CLOCK_ID_T clkid, CGU_DOMAIN_ID_T* pDomainId,
 * Configure the selected fractional divider
 *********************************************************************/
 /* frac divider config function */
-u32 cgu_fdiv_config(u32 fdId, CGU_FDIV_SETUP_T fdivCfg, u32 enable)
+uint32_t cgu_fdiv_config(uint32_t fdId, CGU_FDIV_SETUP_T fdivCfg, uint32_t enable)
 {
-	u32 conf, maddw, msubw, maxw, fdWidth;
+	uint32_t conf, maddw, msubw, maxw, fdWidth;
 	int madd, msub;
 
 	/* calculating program values to see if they fit in fractional divider*/
@@ -314,8 +314,8 @@ u32 cgu_fdiv_config(u32 fdId, CGU_FDIV_SETUP_T fdivCfg, u32 enable)
 	msub = -fdivCfg.n;
 
 	/* Find required bit width of madd & msub:*/
-	maddw = cgu_fdiv_num_bits((u32)madd);
-	msubw = cgu_fdiv_num_bits((u32)fdivCfg.n);
+	maddw = cgu_fdiv_num_bits((uint32_t)madd);
+	msubw = cgu_fdiv_num_bits((uint32_t)fdivCfg.n);
 	maxw = (maddw > msubw) ? maddw : msubw;
 	fdWidth = CGU_SB_BASE0_FDIV0_W;
 
@@ -352,7 +352,7 @@ u32 cgu_fdiv_config(u32 fdId, CGU_FDIV_SETUP_T fdivCfg, u32 enable)
 /***********************************************************************
 * Get frequency of requested base domain clock.
 **********************************************************************/
-u32 cgu_get_base_freq(CGU_DOMAIN_ID_T baseid)
+uint32_t cgu_get_base_freq(CGU_DOMAIN_ID_T baseid)
 {
 	/* get base frequency for the domain */
 	return g_clkin_freq[CGU_SB_SSR_FS_GET(CGU_SB->base_ssr[baseid])];
@@ -361,9 +361,9 @@ u32 cgu_get_base_freq(CGU_DOMAIN_ID_T baseid)
 /***********************************************************************
 * Set frequency of requested base domain.
 **********************************************************************/
-void cgu_set_base_freq(CGU_DOMAIN_ID_T baseid, u32 fin_sel)
+void cgu_set_base_freq(CGU_DOMAIN_ID_T baseid, uint32_t fin_sel)
 {
-	u32 baseSCR;
+	uint32_t baseSCR;
 
 	/* Switch configuration register*/
 	baseSCR = CGU_SB->base_scr[baseid] & ~CGU_SB_SCR_FS_MASK;
@@ -395,7 +395,7 @@ void cgu_set_base_freq(CGU_DOMAIN_ID_T baseid, u32 fin_sel)
 void cgu_hpll_config(CGU_HPLL_ID_T pllid, CGU_HPLL_SETUP_T* pllsetup)
 {
 	CGU_HP_CFG_REGS* hppll;
-	u32 switched_domains = 0;
+	uint32_t switched_domains = 0;
 	CGU_DOMAIN_ID_T domainId;
 
 	/**********************************************************
@@ -466,7 +466,7 @@ void cgu_hpll_config(CGU_HPLL_ID_T pllid, CGU_HPLL_SETUP_T* pllsetup)
 /***********************************************************************
 * Set external enable feature for the requested clock
 **********************************************************************/
-void cgu_clk_set_exten(CGU_CLOCK_ID_T clkid, u32 enable)
+void cgu_clk_set_exten(CGU_CLOCK_ID_T clkid, uint32_t enable)
 {
 	switch (clkid)
 	{
@@ -519,13 +519,13 @@ void cgu_clk_set_exten(CGU_CLOCK_ID_T clkid, u32 enable)
 * Notes: None
 *
 **********************************************************************/
-u32 cgu_get_clk_freq(CGU_CLOCK_ID_T clkid)
+uint32_t cgu_get_clk_freq(CGU_CLOCK_ID_T clkid)
 {
-	u32 freq = 0;
+	uint32_t freq = 0;
 	CGU_DOMAIN_ID_T domainId;
-	u32 subDomainId;
+	uint32_t subDomainId;
 	int n, m;
-	u32 fdcVal;
+	uint32_t fdcVal;
 
 	/* get domain and frac div info for the clock */
 	cgu_ClkId2DomainId(clkid, &domainId, &subDomainId);
@@ -580,7 +580,7 @@ u32 cgu_get_clk_freq(CGU_CLOCK_ID_T clkid)
 void cgu_set_subdomain_freq(CGU_CLOCK_ID_T clkid, CGU_FDIV_SETUP_T fdiv_cfg)
 {
 	CGU_DOMAIN_ID_T domainId;
-	u32 subDomainId, base_freq, bcrId;
+	uint32_t subDomainId, base_freq, bcrId;
 
 	/* get domain and frac div info for the clock */
 	cgu_ClkId2DomainId(clkid, &domainId, &subDomainId);
@@ -611,16 +611,16 @@ void cgu_set_subdomain_freq(CGU_CLOCK_ID_T clkid, CGU_FDIV_SETUP_T fdiv_cfg)
 /***********************************************************************
 * Get frequency of requested PLL clock.
 **********************************************************************/
-u32 cgu_get_pll_freq(CGU_HPLL_ID_T pll_id, u32 infreq)
+uint32_t cgu_get_pll_freq(CGU_HPLL_ID_T pll_id, uint32_t infreq)
 {
-	u32 mdec;     /* 17 bits */
-	u32 ndec;     /* 10 bits */
-	u32 pdec;     /*  7 bits */
-	u32 mode;
-	u32 M = 0;
-	u32 N = 0;
-	u32 P = 0;
-	u32 ofreq = 0;
+	uint32_t mdec;     /* 17 bits */
+	uint32_t ndec;     /* 10 bits */
+	uint32_t pdec;     /*  7 bits */
+	uint32_t mode;
+	uint32_t M = 0;
+	uint32_t N = 0;
+	uint32_t P = 0;
+	uint32_t ofreq = 0;
 
 
 	mdec = CGU_CFG->hp[pll_id].mdec;  /* dec val feedback divider */
@@ -694,8 +694,8 @@ u32 cgu_get_pll_freq(CGU_HPLL_ID_T pll_id, u32 infreq)
  */
 static int lpc31xx_cgu_clocks_show(struct seq_file *s, void *v)
 {
-	u32 clk_id = CGU_SYS_FIRST;
-	u32 end_id = (CGU_SYSCLK_O_LAST + 1);
+	uint32_t clk_id = CGU_SYS_FIRST;
+	uint32_t end_id = (CGU_SYSCLK_O_LAST + 1);
 	char* str[2] = { "OFF", " ON"}; 
 
 	while (clk_id < end_id) {
@@ -743,7 +743,7 @@ static void lpc31xx_cgu_init_debugfs(void) {}
 int __init cgu_init(char *str)
 {
 	int i, j;
-	u32 flags;
+	uint32_t flags;
 	/* disable all non-essential clocks, enabel main clocks and wakeup
 	 * enables.
 	 */
@@ -804,7 +804,7 @@ static unsigned long local_return_parent_rate(struct clk *clk)
 
 static int local_onoff_enable(struct clk *clk, int enable)
 {
-	u32 tmp;
+	uint32_t tmp;
 
 	tmp = __raw_readl(clk->enable_reg);
 
