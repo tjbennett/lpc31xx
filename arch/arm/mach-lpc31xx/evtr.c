@@ -75,6 +75,7 @@ typedef enum _EVT_TYPE_
   EVT_EBI_D_4,
   EVT_EBI_D_5,
   EVT_EBI_D_6,
+
   EVT_EBI_D_7,
   EVT_EBI_D_8,
   EVT_EBI_D_9,
@@ -107,6 +108,7 @@ typedef enum _EVT_TYPE_
   EVT_GPIO14,
   EVT_GPIO15,
   EVT_GPIO16,
+
   EVT_GPIO17,
   EVT_GPIO18,
   EVT_NAND_NCS_0,
@@ -139,6 +141,7 @@ typedef enum _EVT_TYPE_
   EVT_I2C_SDA1,
   EVT_I2C_SCL1,
   EVT_PWM_DATA,
+
   EVT_AD_NINT_I,
   EVT_PLAY_DET_I,
   EVT_timer0_intct1,
