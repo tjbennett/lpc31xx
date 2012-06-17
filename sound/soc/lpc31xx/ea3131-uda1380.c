@@ -39,9 +39,9 @@
 #include <sound/uda1380.h>
 
 #include "../codecs/uda1380.h"
-#include "lpc313x-pcm.h"
-#include "lpc313x-i2s.h"
-#include "lpc313x-i2s-clocking.h"
+#include "lpc31xx-pcm.h"
+#include "lpc31xx-i2s.h"
+#include "lpc31xx-i2s-clocking.h"
 
 #define SND_MODNAME "lpc313x_uda1380"
 
