@@ -9,8 +9,6 @@ obj-$(CONFIG_OF) += dt.o
 
 
 # Specific board support
-obj-$(CONFIG_MACH_EA313X) += board-ea313x.o
-obj-$(CONFIG_MACH_EA3152) += board-ea313x.o
 obj-$(CONFIG_LPC3152_AD) += psu.o
 
 # Power Management
