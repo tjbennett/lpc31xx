@@ -843,7 +843,7 @@ void irq_domain_generate_simple(const struct of_device_id *match,
 		(unsigned long long) phys_base, (int) irq_start);
 	node = of_find_matching_node_by_address(NULL, match, phys_base);
 	if (node)
-		irq_domain_add_legacy(node, 32, irq_start, 0,
+		irq_domain_add_legacy(node, 30, irq_start, 0,
 				      &irq_domain_simple_ops, NULL);
 }
 EXPORT_SYMBOL_GPL(irq_domain_generate_simple);
