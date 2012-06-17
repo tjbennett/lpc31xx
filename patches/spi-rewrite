@@ -1,5 +1,5 @@
 Bottom: 9e2bf393f7aec7da7ae91a683c2d199346d6e1e9
-Top:    339217c05b57ba9d3dd37cffe3ffedbf8eb566d0
+Top:    785d6bc3464c6165c60bc2fd4ac4026dc0d59579
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-06-09 16:20:05 -0400
 
@@ -36,7 +36,7 @@ index 5d0d68c..81289a7 100644
  #include <linux/err.h>
  #include <linux/errno.h>
 diff --git a/drivers/spi/spi-lpc31xx.c b/drivers/spi/spi-lpc31xx.c
-index c544e3a..ee6f7c9 100644
+index c544e3a..946d692 100644
 --- a/drivers/spi/spi-lpc31xx.c
 +++ b/drivers/spi/spi-lpc31xx.c
 @@ -1,59 +1,88 @@
@@ -610,7 +610,7 @@ index c544e3a..ee6f7c9 100644
  	clk = clk_get(NULL, "spi_pclk");
  	clk_disable(clk);
  	clk_put(clk);
-@@ -338,894 +479,1509 @@ static void lpc31xx_spi_clks_disable(void)
+@@ -338,894 +479,1503 @@ static void lpc31xx_spi_clks_disable(void)
  	clk_put(clk);
  }
  
@@ -892,7 +892,6 @@ index c544e3a..ee6f7c9 100644
 +	spi_writel(DMA_SET_REG, 0);
 +
 +	/* read as long as RX FIFO has frames in it */
-+	if (espi->read != READING_NULL) d_printk("Read ");
 +	while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
 +		switch (espi->read) {
 +		case READING_NULL:
@@ -911,14 +910,12 @@ index c544e3a..ee6f7c9 100644
 +		espi->rx += (espi->cur_chip->n_bytes);
 +		espi->exp_fifo_level--;
 +	}
-+	if (espi->read != READING_NULL) d_printk("\n");
  
 -		dev_dbg(&spi->dev,
 -			"  xfer %p: len %u tx %p/%08x rx %p/%08x DMAmapped=%d\n",
 -			t, t->len, t->tx_buf, t->tx_dma,
 -			t->rx_buf, t->rx_dma, msg->is_dma_mapped);
 +	/* write as long as TX FIFO has room */
-+	if (espi->write != WRITING_NULL) printk("Write ");
 +	while ((espi->exp_fifo_level < SPI_FIFO_DEPTH) && (espi->tx < espi->tx_end)) {
 +		switch (espi->write) {
 +		case WRITING_NULL:
@@ -935,7 +932,6 @@ index c544e3a..ee6f7c9 100644
 +		espi->tx += (espi->cur_chip->n_bytes);
 +		espi->exp_fifo_level++;
 +		/* read as long as RX FIFO has frames in it */
-+		if (espi->read != READING_NULL) d_printk("Read ");
 +		while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
 +			switch (espi->read) {
 +			case READING_NULL:
@@ -952,9 +948,7 @@ index c544e3a..ee6f7c9 100644
 +			espi->rx += (espi->cur_chip->n_bytes);
 +			espi->exp_fifo_level--;
 +		}
-+		if (espi->read != READING_NULL) d_printk("\n");
  	}
-+	if (espi->write != WRITING_NULL) d_printk("\n");
  
  	/*
 -	 * Now that we own the message, let's initialize it so that it is
@@ -1565,16 +1559,23 @@ index c544e3a..ee6f7c9 100644
 +{
 +	struct dma_chan *rxchan = espi->dma_rx_channel;
 +	struct dma_chan *txchan = espi->dma_tx_channel;
-+
+ 
+-	nents = dma_map_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
+-	if (!nents)
+-		return ERR_PTR(-ENOMEM);
 +	dmaengine_terminate_all(rxchan);
 +	dmaengine_terminate_all(txchan);
 +	unmap_free_dma_scatter(espi);
 +	espi->dma_running = false;
 +}
  
--	nents = dma_map_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
--	if (!nents)
+-	txd = dmaengine_prep_slave_sg(chan, sgt->sgl, nents,
+-					slave_dirn, DMA_CTRL_ACK);
+-	if (!txd) {
+-		dma_unmap_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
 -		return ERR_PTR(-ENOMEM);
+-	}
+-	return txd;
 +static void lpc31xx_dma_remove(struct lpc31xx_spi *espi)
 +{
 +	if (espi->dma_running)
@@ -1585,20 +1586,13 @@ index c544e3a..ee6f7c9 100644
 +		dma_release_channel(espi->dma_rx_channel);
 +	kfree(espi->dummypage);
 +}
- 
--	txd = dmaengine_prep_slave_sg(chan, sgt->sgl, nents,
--					slave_dirn, DMA_CTRL_ACK);
--	if (!txd) {
--		dma_unmap_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
--		return ERR_PTR(-ENOMEM);
--	}
--	return txd;
++
 +#else
 +static inline int configure_dma(struct lpc31xx_spi *espi)
 +{
 +	return -ENODEV;
-+}
-+
+ }
+ 
 +static inline int lpc31xx_dma_probe(struct lpc31xx_spi *espi)
 +{
 +	return 0;
@@ -1606,9 +1600,9 @@ index c544e3a..ee6f7c9 100644
 +
 +static inline void lpc31xx_dma_remove(struct lpc31xx_spi *espi)
 +{
- }
++}
 +#endif
- 
++
  /**
 - * lpc31xx_spi_dma_finish() - finishes with a DMA transfer
 - * @espi: lpc31xx SPI controller struct
@@ -1650,11 +1644,12 @@ index c544e3a..ee6f7c9 100644
 +			"bad message state in interrupt handler");
 +		/* Never fail */
 +		return IRQ_HANDLED;
-+	}
+ 	}
 +#ifdef JDS
 +	/* Read the Interrupt Status Register */
 +	irq_status = readw(SSP_MIS(espi->virtbase));
-+
+ 
+-	dma_unmap_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
 +	if (unlikely(!irq_status))
 +		return IRQ_NONE;
 +
@@ -1701,9 +1696,8 @@ index c544e3a..ee6f7c9 100644
 +		writew((readw(SSP_IMSC(espi->virtbase)) &
 +		       ~SSP_IMSC_MASK_TXIM) | SSP_IMSC_MASK_RXIM,
 +		       SSP_IMSC(espi->virtbase));
- 	}
- 
--	dma_unmap_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
++	}
++
 +	/*
 +	 * Since all transactions must write as much as shall be read,
 +	 * we can conclude the entire transaction once RX is complete.
@@ -2078,8 +2072,7 @@ index c544e3a..ee6f7c9 100644
 +	giveback(espi);
 +	return;
 +}
- 
--	msg->actual_length += t->len;
++
 +static void do_interrupt_transfer(struct lpc31xx_spi *espi)
 +{
 +	struct spi_message *message = NULL;
@@ -2088,6 +2081,9 @@ index c544e3a..ee6f7c9 100644
 +	struct lpc31xx_spi_chip *chip;
 +	unsigned long time, timeout;
 +	uint32_t tmp;
+ 
+-	msg->actual_length += t->len;
++	dev_dbg(&espi->pdev->dev, "do_interrupt_transfer\n");
  
 -	/*
 -	 * After this transfer is finished, perform any possible
@@ -2107,8 +2103,6 @@ index c544e3a..ee6f7c9 100644
 -			lpc31xx_spi_cs_control(msg->spi, false);
 -			cond_resched();
 -			lpc31xx_spi_cs_control(msg->spi, true);
-+	dev_dbg(&espi->pdev->dev, "do_polling_transfer\n");
-+
 +	chip = espi->cur_chip;
 +	message = espi->cur_msg;
 +
@@ -2264,12 +2258,9 @@ index c544e3a..ee6f7c9 100644
 +	struct lpc31xx_spi *espi = spi_master_get_devdata(master);
  
 -	jds_printk("JDS - lpc31xx_spi_process_message\n");
-+	dev_dbg(&espi->pdev->dev, "lpc31xx_prepare_transfer_hardware\n");
- 	/*
+-	/*
 -	 * Enable the SPI controller and its clock.
-+	 * Just make sure we have all we need to run the transfer by syncing
-+	 * with the runtime PM framework.
- 	 */
+-	 */
 -	err = lpc31xx_spi_enable(espi);
 -	if (err) {
 -		dev_err(&espi->pdev->dev, "failed to enable SPI controller\n");
@@ -2279,10 +2270,13 @@ index c544e3a..ee6f7c9 100644
 -	err = lpc31xx_fifo_flush(espi);
 -	if (err)
 -		return;
--	/*
++	dev_dbg(&espi->pdev->dev, "lpc31xx_prepare_transfer_hardware\n");
+ 	/*
 -	 * We explicitly handle FIFO level. This way we don't have to check TX
 -	 * FIFO status using %SSPSR_TNF bit which may cause RX FIFO overruns.
--	 */
++	 * Just make sure we have all we need to run the transfer by syncing
++	 * with the runtime PM framework.
+ 	 */
 -	espi->fifo_level = 0;
 +	pm_runtime_get_sync(&espi->pdev->dev);
 +	return 0;
@@ -2619,12 +2613,12 @@ index c544e3a..ee6f7c9 100644
 +		dev_dbg(&spi->dev,
 +			"allocated memory for controller's runtime state\n");
 +	}
++
++	/* Get controller data if one is supplied */
++	chip_info = spi->controller_data;
  
 -#if 0
 -	espi->dma_rx_data.port = EP93XX_DMA_SSP;
-+	/* Get controller data if one is supplied */
-+	chip_info = spi->controller_data;
-+
 +	if (chip_info == NULL) {
 +#ifdef JDS
 +		chip_info = &lpc31xx_default_chip_info;
@@ -2818,7 +2812,7 @@ index c544e3a..ee6f7c9 100644
  }
  
  /*
-@@ -1233,11 +1989,10 @@ static void lpc31xx_spi_release_dma(struct lpc31xx_spi *espi)
+@@ -1233,11 +1983,10 @@ static void lpc31xx_spi_release_dma(struct lpc31xx_spi *espi)
   */
  static void lpc31xx_spi_prep(struct lpc31xx_spi *espi)
  {
@@ -2832,7 +2826,7 @@ index c544e3a..ee6f7c9 100644
  
  	/* Clear FIFOs */
  	lpc31xx_fifo_flush(espi);
-@@ -1247,145 +2002,148 @@ static void lpc31xx_spi_prep(struct lpc31xx_spi *espi)
+@@ -1247,145 +1996,147 @@ static void lpc31xx_spi_prep(struct lpc31xx_spi *espi)
  	lpc31xx_int_clr(espi, SPI_ALL_INTS);
  
  	/* Setup master mode, normal transmit mode, and interslave delay */
@@ -2909,9 +2903,9 @@ index c544e3a..ee6f7c9 100644
 +	int i, ngpios, status = 0;
  	struct resource *res;
 -	int i, ngpios, error;
--
--	jds_printk("JDS - lpc31xx_spi_probe\n");
  
+-	jds_printk("JDS - lpc31xx_spi_probe\n");
+-
 -	ngpios = of_gpio_count(pdev->dev.of_node); /* always one even if no gpios */
 -	master = spi_alloc_master(&pdev->dev, sizeof(*espi) + (sizeof(*chip) * min(ngpios, 1)));
 -	if (!master) {
@@ -2980,8 +2974,10 @@ index c544e3a..ee6f7c9 100644
  		dev_err(&pdev->dev, "unable to request iomem resources\n");
 -		error = -EBUSY;
 -		goto fail_put_clock;
--	}
--
++		status = -EBUSY;
++		goto err_no_ioregion;
+ 	}
+ 
 -	espi->sspdr_phys = res->start;
 -	espi->regs_base = ioremap(res->start, resource_size(res));
 -	jds_printk("JDS - base %p phys %x\n", espi->regs_base , res->start);
@@ -2989,22 +2985,20 @@ index c544e3a..ee6f7c9 100644
 -		dev_err(&pdev->dev, "failed to map resources\n");
 -		error = -ENODEV;
 -		goto fail_free_mem;
-+		status = -EBUSY;
-+		goto err_no_ioregion;
- 	}
- 
--	error = request_irq(espi->irq, lpc31xx_spi_interrupt, 0, "lpc31xx-spi", espi);
--	if (error) {
--		dev_err(&pdev->dev, "failed to request irq\n");
--		goto fail_unmap_regs;
 +	espi->phybase = res->start;
 +	espi->virtbase = ioremap(res->start, resource_size(res));
 +	if (espi->virtbase == NULL) {
 +		status = -ENOMEM;
 +		goto err_no_ioremap;
  	}
--	disable_irq(espi->irq);
  
+-	error = request_irq(espi->irq, lpc31xx_spi_interrupt, 0, "lpc31xx-spi", espi);
+-	if (error) {
+-		dev_err(&pdev->dev, "failed to request irq\n");
+-		goto fail_unmap_regs;
+-	}
+-	disable_irq(espi->irq);
+-
 -#if 0
 -	if (lpc31xx_spi_setup_dma(espi))
 -		dev_warn(&pdev->dev, "DMA setup failed. Falling back to PIO\n");
@@ -3047,16 +3041,16 @@ index c544e3a..ee6f7c9 100644
  
 -	/* Keep SPI clocks off until a transfer is performed to save power */
 -	lpc31xx_spi_clks_disable();
+-
+-	spin_lock_init(&espi->lock);
+-	init_completion(&espi->wait);
 +	espi->irq = platform_get_irq(pdev, 4);
 +	if (espi->irq < 0) {
 +		status = espi->irq;
 +		dev_err(&pdev->dev, "failed to get irq resources\n");
 +		goto err_no_irq;
 +	}
- 
--	spin_lock_init(&espi->lock);
--	init_completion(&espi->wait);
-+	status = request_irq(espi->irq, lpc31xx_interrupt_handler, 0, "lpc31xx-spi", espi);
++	status = request_irq(espi->irq, lpc31xx_interrupt_handler, 0, pdev->name, espi);
 +	if (status < 0) {
 +		dev_err(&pdev->dev, "probe - cannot get IRQ (%d)\n", status);
 +		goto err_no_irq;
@@ -3073,7 +3067,7 @@ index c544e3a..ee6f7c9 100644
  	for (i = 0; i < ngpios; i++) {
  		int gpio;
  		enum of_gpio_flags flags;
-@@ -1393,158 +2151,192 @@ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
+@@ -1393,158 +2144,192 @@ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
  		gpio = of_get_gpio_flags(pdev->dev.of_node, i, &flags);
  		if (!gpio_is_valid(gpio)) {
  			dev_err(&pdev->dev, "invalid gpio #%d: %d\n", i, gpio);
