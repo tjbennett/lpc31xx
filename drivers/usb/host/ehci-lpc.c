@@ -315,6 +315,7 @@ static int lpc_ehci_resume(struct device *dev)
 static int lpc313x_ehci_suspend(struct platform_device *pdev, pm_message_t state)
 {
 #ifdef CONFIG_PM
+#define IRQ_VBUS_OVRC  32  /* Detect VBUS over current - Host mode */
 	disable_irq(IRQ_VBUS_OVRC);
 	/* Shutoff vbus power */
 	lpc313x_vbus_power(0);
@@ -327,6 +328,10 @@ static int lpc313x_ehci_suspend(struct platform_device *pdev, pm_message_t state
 #endif
 	return 0;
 }
+
+/* Macros to compute the bank based on EVENT_T */
+#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
+#define EVT_usb_atx_pll_lock	0x79
 
 static int lpc313x_ehci_resume(struct platform_device * pdev)
 {
