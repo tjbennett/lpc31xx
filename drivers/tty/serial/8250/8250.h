@@ -13,6 +13,18 @@
 
 #include <linux/serial_8250.h>
 
+#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+struct LPC31XX_DMA {
+	dma_addr_t		dma_buff_p;
+	void			*dma_buff_v;
+	int			dmach;
+	struct tasklet_struct	tasklet;
+	int			count;
+	struct timer_list	timer;		/* "no irq" timer */
+	int			active;
+};
+#endif
+
 struct uart_8250_port {
 	struct uart_port	port;
 	struct timer_list	timer;		/* "no irq" timer */
@@ -41,6 +53,12 @@ struct uart_8250_port {
 	/* 8250 specific callbacks */
 	int			(*dl_read)(struct uart_8250_port *);
 	void			(*dl_write)(struct uart_8250_port *, int);
+
+#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+	struct LPC31XX_DMA dma_rx;
+	struct LPC31XX_DMA dma_tx;
+	int buff_half_offs;
+#endif
 };
 
 struct old_serial_port {
