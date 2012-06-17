@@ -336,6 +336,7 @@ EXPORT_SYMBOL_GPL(of_irq_map_one);
  */
 int of_irq_to_resource(struct device_node *dev, int index, struct resource *r)
 {
+	int type;
 	int irq = irq_of_parse_and_map(dev, index);
 
 	/* Only dereference the resource if both the

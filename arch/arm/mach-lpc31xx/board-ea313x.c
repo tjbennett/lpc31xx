@@ -141,7 +141,7 @@ static const char *ea3131_dt_match[] __initconst = {
 DT_MACHINE_START(EA313X, "NXP EA3131 (Device Tree Support)")
 	.map_io		= lpc313x_map_io,
 	.init_early	= lpc31xx_init_early,
-	.init_irq	= lpc313x_init_irq,
+	.init_irq	= lpc31xx_init_irq,
 	.timer		= &lpc313x_timer,
 	.init_machine	= ea3131_dt_init,
 	.dt_compat	= ea3131_dt_match,
