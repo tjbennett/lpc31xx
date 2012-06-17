@@ -33,7 +33,7 @@
 #include <mach/dma.h>
 #include "lpc313x-pcm.h"
 
-#define SND_NAME "lpc313x-audio"
+#define SND_NAME "lpc31xx-pcm-audio"
 static u64 lpc313x_pcm_dmamask = DMA_BIT_MASK(32);
 
 #if defined (CONFIG_SND_USE_DMA_LINKLIST)

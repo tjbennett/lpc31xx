@@ -111,66 +111,69 @@ static struct platform_device serial_device = {
 	},
 };
 
+struct platform_device lpc31xx_pcm_device = {
+	.name = "lpc31xx-pcm-audio",
+	.id = -1,
+};
 
 static struct platform_device *devices[] __initdata = {
 	&serial_device,
+	&lpc31xx_pcm_device,
 };
 
 static struct map_desc lpc313x_io_desc[] __initdata = {
 	{
-		.virtual	= io_p2v(IO_INTC_PHYS),
-		.pfn		= __phys_to_pfn(IO_INTC_PHYS),
-		.length		= IO_INTC_SIZE,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_APB01_PHYS),
-		.pfn		= __phys_to_pfn(IO_APB01_PHYS),
-		.length		= IO_APB01_SIZE,
+		.virtual	= io_p2v(IO_APB1_PHYS),
+		.pfn		= __phys_to_pfn(IO_APB1_PHYS),
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
 	{
 		.virtual	= io_p2v(IO_APB2_PHYS),
 		.pfn		= __phys_to_pfn(IO_APB2_PHYS),
-		.length		= IO_APB2_SIZE,
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
 	{
 		.virtual	= io_p2v(IO_APB3_PHYS),
 		.pfn		= __phys_to_pfn(IO_APB3_PHYS),
-		.length		= IO_APB3_SIZE,
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
 	{
 		.virtual	= io_p2v(IO_APB4_PHYS),
 		.pfn		= __phys_to_pfn(IO_APB4_PHYS),
-		.length		= IO_APB4_SIZE,
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
-#if 0
 	{
-		.virtual	= io_p2v(IO_DMA_REG_PHYS),
-		.pfn		= __phys_to_pfn(IO_DMA_REG_PHYS),
-		.length		= IO_DMA_REG_SIZE,
+		.virtual	= io_p2v(IO_SDMMC_PHYS),
+		.pfn		= __phys_to_pfn(IO_SDMMC_PHYS),
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
-#endif
 	{
-		.virtual	= io_p2v(IO_MPMC_CFG_PHYS),
-		.pfn		= __phys_to_pfn(IO_MPMC_CFG_PHYS),
-		.length		= IO_MPMC_CFG_SIZE,
+		.virtual	= io_p2v(IO_USB_PHYS),
+		.pfn		= __phys_to_pfn(IO_USB_PHYS),
+		.length		= SZ_1M,
+		.type		= MT_DEVICE
+	},
+	{
+		.virtual	= io_p2v(EXT_SRAM0_PHYS),
+		.pfn		= __phys_to_pfn(EXT_SRAM0_PHYS),
+		.length		= SZ_1M,
+		.type		= MT_DEVICE
+	},
+	{
+		.virtual	= io_p2v(IO_INTC_PHYS),
+		.pfn		= __phys_to_pfn(IO_INTC_PHYS),
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
 	{
 		.virtual	= io_p2v(IO_NAND_BUF_PHYS),
 		.pfn		= __phys_to_pfn(IO_NAND_BUF_PHYS),
-		.length		= IO_NAND_BUF_SIZE,
-		.type		= MT_DEVICE
-	},
-	{
-		.virtual	= io_p2v(IO_ISRAM0_PHYS),
-		.pfn		= __phys_to_pfn(IO_ISRAM0_PHYS),
-		.length		= IO_ISRAM0_SIZE,
+		.length		= SZ_1M,
 		.type		= MT_DEVICE
 	},
 };
@@ -193,9 +196,10 @@ void __init lpc313x_uart_init(void)
 	}
 }
 
-int __init lpc313x_init(void)
+void __init lpc313x_init(void)
 {
 	/* cgu init */
+	clk_init();
 	cgu_init("");
 	/* Switch on the UART clocks */
 	cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
