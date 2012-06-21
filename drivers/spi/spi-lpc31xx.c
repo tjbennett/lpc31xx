@@ -15,7 +15,7 @@
  * GNU General Public License for more details.
  */
 
-//#define DEBUG
+#define DEBUG
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -1097,6 +1097,7 @@ static void lpc31xx_dma_remove(struct lpc31xx_spi *espi)
 #else
 static inline int configure_dma(struct lpc31xx_spi *espi)
 {
+	dev_dbg(&espi->pdev->dev, "configure_dma\n");
 	return -ENODEV;
 }
 
@@ -1136,7 +1137,7 @@ static irqreturn_t lpc31xx_interrupt_handler(int irq, void *dev_id)
 		/* Never fail */
 		return IRQ_HANDLED;
 	}
-#ifdef JDS
+
 	/* Read the Interrupt Status Register */
 	irq_status = readw(SSP_MIS(espi->virtbase));
 
@@ -1166,11 +1167,16 @@ static irqreturn_t lpc31xx_interrupt_handler(int irq, void *dev_id)
 		 * mark message with bad status so it can be
 		 * retried.
 		 */
+		lpc31xx_int_dis(espi, SPI_ALL_INTS);
+		lpc31xx_int_clr(espi, SPI_ALL_INTS);
+		spi_writel(CONFIG_REG, (spi_readl(CONFIG_REG) & ~SPI_CFG_ENABLE));
+#ifdef JDS
 		writew(DISABLE_ALL_INTERRUPTS,
 		       SSP_IMSC(espi->virtbase));
 		writew(CLEAR_ALL_INTERRUPTS, SSP_ICR(espi->virtbase));
 		writew((readw(SSP_CR1(espi->virtbase)) &
 			(~SSP_CR1_MASK_SSE)), SSP_CR1(espi->virtbase));
+#endif
 		msg->state = STATE_ERROR;
 
 		/* Schedule message queue handler */
@@ -1194,9 +1200,13 @@ static irqreturn_t lpc31xx_interrupt_handler(int irq, void *dev_id)
 	 * At this point, all TX will always be finished.
 	 */
 	if (espi->rx >= espi->rx_end) {
+#ifdef JDS
 		writew(DISABLE_ALL_INTERRUPTS,
 		       SSP_IMSC(espi->virtbase));
 		writew(CLEAR_ALL_INTERRUPTS, SSP_ICR(espi->virtbase));
+#endifm
+		lpc31xx_int_dis(espi, SPI_ALL_INTS);
+		lpc31xx_int_clr(espi, SPI_ALL_INTS);
 		if (unlikely(espi->rx > espi->rx_end)) {
 			dev_warn(&espi->pdev->dev, "read %u surplus "
 				 "bytes (did you request an odd "
@@ -1212,7 +1222,7 @@ static irqreturn_t lpc31xx_interrupt_handler(int irq, void *dev_id)
 		tasklet_schedule(&espi->pump_transfers);
 		return IRQ_HANDLED;
 	}
-#endif
+
 	return IRQ_HANDLED;
 }
 
@@ -1331,12 +1341,12 @@ static void do_interrupt_dma_transfer(struct lpc31xx_spi *espi)
 {
 	dev_dbg(&espi->pdev->dev, "do_interrupt_dma_transfer\n");
 
-#ifdef JDS
 	/*
 	 * Default is to enable all interrupts except RX -
 	 * this will be enabled once TX is complete
 	 */
-	uint32_t irqflags = ENABLE_ALL_INTERRUPTS & ~SSP_IMSC_MASK_RXIM;
+	//uint32_t irqflags = ENABLE_ALL_INTERRUPTS & ~SSP_IMSC_MASK_RXIM;
+	uint32_t irqflags = SPI_ALL_INTS;
 
 	/* Enable target chip, if not already active */
 	if (!espi->next_msg_cs_active)
@@ -1358,14 +1368,18 @@ static void do_interrupt_dma_transfer(struct lpc31xx_spi *espi)
 			goto err_config_dma;
 		}
 		/* Disable interrupts in DMA mode, IRQ from DMA controller */
-		irqflags = DISABLE_ALL_INTERRUPTS;
+//		irqflags = DISABLE_ALL_INTERRUPTS;
+		irqflags = 0;
 	}
 err_config_dma:
 	/* Enable SSP, turn on interrupts */
-	writew((readw(SSP_CR1(espi->virtbase)) | SSP_CR1_MASK_SSE),
-	       SSP_CR1(espi->virtbase));
-	writew(irqflags, SSP_IMSC(espi->virtbase));
-#endif
+//	writew((readw(SSP_CR1(espi->virtbase)) | SSP_CR1_MASK_SSE),
+//	       SSP_CR1(espi->virtbase));
+//	writew(irqflags, SSP_IMSC(espi->virtbase));
+	lpc31xx_int_en(espi, irqflags);
+	spi_writel(CONFIG_REG, (spi_readl(CONFIG_REG) | SPI_CFG_ENABLE));
+
+	dev_dbg(&espi->pdev->dev, "interrupt/dma transfer ongoing ...\n");
 }
 
 static void do_polling_transfer(struct lpc31xx_spi *espi)
@@ -1378,98 +1392,6 @@ static void do_polling_transfer(struct lpc31xx_spi *espi)
 	uint32_t tmp;
 
 	dev_dbg(&espi->pdev->dev, "do_polling_transfer\n");
-
-	chip = espi->cur_chip;
-	message = espi->cur_msg;
-
-	while (message->state != STATE_DONE) {
-		/* Handle for abort */
-		if (message->state == STATE_ERROR)
-			break;
-		transfer = espi->cur_transfer;
-
-		/* Setup timing and levels before initial chip select */
-		tmp = spi_readl(SLV_SET2_REG(0)) & ~(SPI_SLV2_SPO | SPI_SLV2_SPH);
-		/* Clock high between transfers */
-#ifdef JDS
-		tmp |= SPI_SLV2_SPO;
-		/* Data captured on 2nd clock edge */
-		tmp |= SPI_SLV2_SPH;
-#endif
-		spi_writel(SLV_SET2_REG(0), tmp);
-
-		/* Delay if requested at end of transfer */
-		if (message->state == STATE_RUNNING) {
-			previous =
-			    list_entry(transfer->transfer_list.prev,
-				       struct spi_transfer, transfer_list);
-			if (previous->delay_usecs)
-				udelay(previous->delay_usecs);
-			if (previous->cs_change)
-				lpc31xx_cs_control(espi, true);
-		} else {
-			/* STATE_START */
-			message->state = STATE_RUNNING;
-			if (!espi->next_msg_cs_active)
-				lpc31xx_cs_control(espi, true);
-		}
-
-		/* Configuration Changing Per Transfer */
-		if (set_up_next_transfer(espi, transfer)) {
-			/* Error path */
-			message->state = STATE_ERROR;
-			break;
-		}
-		/* Flush FIFOs and enable SSI */
-		flush(espi);
-		/* Make sure FIFO is flushed, clear pending interrupts, DMA
-		   initially disabled, and then enable SPI interface */
-		spi_writel(CONFIG_REG, (spi_readl(CONFIG_REG) | SPI_CFG_ENABLE));
-
-		dev_dbg(&espi->pdev->dev, "polling transfer ongoing ...\n");
-
-		timeout = jiffies + msecs_to_jiffies(SPI_POLLING_TIMEOUT);
-		while (espi->tx < espi->tx_end || espi->rx < espi->rx_end) {
-			time = jiffies;
-			readwriter(espi);
-			if (time_after(time, timeout)) {
-				dev_warn(&espi->pdev->dev,
-				"%s: timeout!\n", __func__);
-				message->state = STATE_ERROR;
-				goto out;
-			}
-			cpu_relax();
-		}
-
-		/* Update total byte transferred */
-		message->actual_length += espi->cur_transfer->len;
-		if (espi->cur_transfer->cs_change)
-			lpc31xx_cs_control(espi, false);
-
-		/* Move to next transfer */
-		message->state = next_transfer(espi);
-	}
-out:
-	/* Handle end of message */
-	if (message->state == STATE_DONE)
-		message->status = 0;
-	else
-		message->status = -EIO;
-
-	giveback(espi);
-	return;
-}
-
-static void do_interrupt_transfer(struct lpc31xx_spi *espi)
-{
-	struct spi_message *message = NULL;
-	struct spi_transfer *transfer = NULL;
-	struct spi_transfer *previous = NULL;
-	struct lpc31xx_spi_chip *chip;
-	unsigned long time, timeout;
-	uint32_t tmp;
-
-	dev_dbg(&espi->pdev->dev, "do_interrupt_transfer\n");
 
 	chip = espi->cur_chip;
 	message = espi->cur_msg;
@@ -1577,8 +1499,6 @@ static int lpc31xx_transfer_one_message(struct spi_master *master,
 		do_polling_transfer(espi);
 		break;
 	case INTERRUPT_TRANSFER:
-		do_interrupt_transfer(espi);
-		break;
 	case DMA_TRANSFER:
 		do_interrupt_dma_transfer(espi);
 		break;
