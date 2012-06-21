@@ -1,6 +1,6 @@
 Version: 1
-Previous: c3a248f8af7d919a615ead1f928f4e7ad7ae3753
-Head: 74d5c71713d58a86f2f841e324e54d3a9f384977
+Previous: 3c04f10bc226fd3c5a901923f1fa5c2c9439e9eb
+Head: 4b6e92fe7f4fffbfefdee1fc997dd0de0f478d95
 Applied:
   base.patch: 7206f3ac2aea47f9216728701a9d0851dd3604d9
   defconfigs.patch: 31e6f1e62b27385eafbe55350f2dc6750869f60c
@@ -40,5 +40,6 @@ Applied:
   uart.patch: ab8679ede298c6e1156cb9dc4a526378b0e40bb8
   spi-temp: 68d8c9b8c2c8e95e40095e7e3a8d010257645ec1
   spi-rewrite: 74d5c71713d58a86f2f841e324e54d3a9f384977
+  refresh-temp: 4b6e92fe7f4fffbfefdee1fc997dd0de0f478d95
 Unapplied:
 Hidden:
