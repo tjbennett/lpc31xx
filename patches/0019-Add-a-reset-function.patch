@@ -1,0 +1,30 @@
+Bottom: 14b5d3fdeb40815ad9b4a01c0509af5e1e4044ee
+Top:    c88e679cf5bc28aeb46bbf9a6ec6bee86939d9d2
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-06-16 22:11:55 -0400
+
+From a2f49dc662181764987eecd2b11d503f191c255f Mon Sep 17 00:00:00 2001
+Subject: Add a reset function
+
+
+---
+
+diff --git a/arch/arm/mach-lpc31xx/board-ea313x.c b/arch/arm/mach-lpc31xx/board-ea313x.c
+index b7864a4..0e537ec 100644
+--- a/arch/arm/mach-lpc31xx/board-ea313x.c
++++ b/arch/arm/mach-lpc31xx/board-ea313x.c
+@@ -47,6 +47,7 @@
+ #include <mach/gpio.h>
+ #include <mach/i2c.h>
+ #include <mach/board.h>
++#include <mach/system.h>
+ 
+ static struct lpc313x_mci_irq_data irq_data = {
+ 	.irq = IRQ_SDMMC_CD,
+@@ -735,6 +736,7 @@ MACHINE_START(EA313X, "NXP EA313X")
+ 	.init_irq	= lpc313x_init_irq,
+ 	.timer		= &lpc313x_timer,
+ 	.init_machine	= ea313x_init,
++	.restart	= arch_reset,
+ MACHINE_END
+ #endif

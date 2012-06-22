@@ -1,0 +1,30 @@
+Bottom: c88e679cf5bc28aeb46bbf9a6ec6bee86939d9d2
+Top:    9b3e4832118d911ece879e67a4494831ce07baab
+Author: Jon Smirl <jonsmirl@gmail.com>
+Date:   2012-06-16 22:11:55 -0400
+
+From 6062de501a4e910188dc3e59d69179a58341ad95 Mon Sep 17 00:00:00 2001
+Subject: ADC register defines
+
+
+---
+
+diff --git a/arch/arm/mach-lpc31xx/include/mach/registers.h b/arch/arm/mach-lpc31xx/include/mach/registers.h
+index 45af7fc..01f4114 100644
+--- a/arch/arm/mach-lpc31xx/include/mach/registers.h
++++ b/arch/arm/mach-lpc31xx/include/mach/registers.h
+@@ -276,6 +276,14 @@
+  * ADC_REG register definitions
+  **********************************************************************/
+ #define ADC_CON_REG            __REG (ADC_PHYS + 0x20)
++#define ADC_R0_REG             __REG (ADC_PHYS + 0x00)
++#define ADC_R1_REG             __REG (ADC_PHYS + 0x04)
++#define ADC_R2_REG             __REG (ADC_PHYS + 0x08)
++#define ADC_R3_REG             __REG (ADC_PHYS + 0x0C)
++#define ADC_CSEL_REG           __REG (ADC_PHYS + 0x24)
++#define ADC_INT_ENABLE_REG     __REG (ADC_PHYS + 0x28)
++#define ADC_INT_STATUS_REG     __REG (ADC_PHYS + 0x2C)
++#define ADC_INT_CLEAR_REG      __REG (ADC_PHYS + 0x30)
+ 
+ /***********************************************************************
+  * SYS_REG register definitions
