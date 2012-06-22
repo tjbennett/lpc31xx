@@ -1,5 +1,5 @@
 Version: 1
-Previous: 47242e0afc11bed63b183c4cece15f0d65423bec
+Previous: a672599ccf095c8408dcf6bb15e2a46db0d81061
 Head: 5e35c889ca32d553df2887372aac549fbd45c032
 Applied:
   0001-base-patches-minus-8250.patch: 5f39294ef43ee928918f2c658278039ddfce0a33
@@ -41,5 +41,4 @@ Applied:
   0037-spi-temp.patch: e0cb8027c4b2303ea8792280346d28283cdb02df
   0038-spi-rewrite.patch: 5e35c889ca32d553df2887372aac549fbd45c032
 Unapplied:
-  series: 9f3096c1dd06ee6fd8859ff19fd229bb0d46e815
 Hidden:
