@@ -102,7 +102,7 @@ static int inline *gpc(void __iomem *base, int reg)
 	return (int *)(base + reg);
 }
 
-static int lpc3131_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
+static int lpc31xx_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
 {
 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
 	void __iomem *base = mm_gc->regs;
@@ -116,7 +116,7 @@ static int lpc3131_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
 	return 0;
 }
 
-static int lpc3131_gpio_direction_output(struct gpio_chip *chip, unsigned gpio, int value)
+static int lpc31xx_gpio_direction_output(struct gpio_chip *chip, unsigned gpio, int value)
 {
 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
 	int __iomem *base = mm_gc->regs;
@@ -133,7 +133,7 @@ static int lpc3131_gpio_direction_output(struct gpio_chip *chip, unsigned gpio, 
 	return 0;
 }
 
-static int lpc3131_gpio_get_value(struct gpio_chip *chip, unsigned gpio)
+static int lpc31xx_gpio_get_value(struct gpio_chip *chip, unsigned gpio)
 {
 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
 	int __iomem *base = mm_gc->regs;
@@ -144,7 +144,7 @@ static int lpc3131_gpio_get_value(struct gpio_chip *chip, unsigned gpio)
 	return value;
 }
 
-static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int value)
+static void lpc31xx_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int value)
 {
 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(chip);
 	int __iomem *base = mm_gc->regs;
@@ -156,24 +156,24 @@ static void lpc3131_gpio_set_value(struct gpio_chip *chip, unsigned gpio, int va
 		*gpc(base, GPIO_M0_RESET) = pin;
 }
 
-extern int event_to_irq(int event);
+extern int lpc31xx_event_to_irq(int event);
 
-static int lpc3131_gpio_to_irq(struct gpio_chip *gc, unsigned gpio)
+static int lpc31xx_gpio_to_irq(struct gpio_chip *gc, unsigned gpio)
 {
 	struct of_mm_gpio_chip *mm_gc = to_of_mm_gpio_chip(gc);
 	struct lpc31xx_gpio_chip *chip = container_of(mm_gc, struct lpc31xx_gpio_chip, mmchip);
 
-	return event_to_irq(gpio_evt[chip->index].evt[gpio]);
+	return lpc31xx_event_to_irq(gpio_evt[chip->index].evt[gpio]);
 }
 
-int lpc3131_reg_to_gpio(unsigned index, unsigned gpio)
+int lpc31xx_reg_to_gpio(unsigned index, unsigned gpio)
 {
 	struct lpc31xx_gpio_chip *chip;
 
 	chip = gpio_evt[index].chip;
 	return chip->mmchip.gc.base + gpio;
 }
-EXPORT_SYMBOL(lpc3131_reg_to_gpio);
+EXPORT_SYMBOL(lpc31xx_reg_to_gpio);
 
 
 static int lpc31xx_gpiochip_remove(struct platform_device *ofdev)
@@ -198,11 +198,11 @@ static int __devinit lpc31xx_simple_gpiochip_probe(struct platform_device *pdev)
 
 	gc = &chip->mmchip.gc;
 	gc->ngpio            = gpio_evt[chip->index].count;
-	gc->direction_input  = lpc3131_gpio_direction_input;
-	gc->direction_output = lpc3131_gpio_direction_output;
-	gc->get              = lpc3131_gpio_get_value;
-	gc->set              = lpc3131_gpio_set_value;
-	gc->to_irq	     = lpc3131_gpio_to_irq;
+	gc->direction_input  = lpc31xx_gpio_direction_input;
+	gc->direction_output = lpc31xx_gpio_direction_output;
+	gc->get              = lpc31xx_gpio_get_value;
+	gc->set              = lpc31xx_gpio_set_value;
+	gc->to_irq	     = lpc31xx_gpio_to_irq;
 
 	ret = of_mm_gpiochip_add(pdev->dev.of_node, &chip->mmchip);
 	if (ret)
