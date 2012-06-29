@@ -102,8 +102,8 @@
 #if defined(CONFIG_USB_GADGET_FSL_USB2) || defined(CONFIG_USB_OTG)
 static struct resource lpc31xx_usb_resource[] = {
 	[0] = {
-		.start = (u32) (USBOTG_PHYS),
-		.end   = (u32) (USBOTG_PHYS + SZ_4K),
+		.start = (uint32_t) (USBOTG_PHYS),
+		.end   = (uint32_t) (USBOTG_PHYS + SZ_4K),
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
@@ -188,8 +188,8 @@ static void lpc31xx_vbusen_timer(unsigned long data)
 int __init usbotg_init(void)
 {
 	int over;
-	u32 bank = EVT_GET_BANK(EVT_usb_atx_pll_lock);
-	u32 bit_pos = EVT_usb_atx_pll_lock & 0x1F;
+	uint32_t bank = EVT_GET_BANK(EVT_usb_atx_pll_lock);
+	uint32_t bit_pos = EVT_usb_atx_pll_lock & 0x1F;
 	int retval = 0;
 
 	/* enable USB to AHB clock */

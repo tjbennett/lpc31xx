@@ -69,95 +69,6 @@
 #define UART_ICR_REG      __REG (UART_PHYS + 0x24)
 #define UART_FDR_REG      __REG (UART_PHYS + 0x28)
 
-#if 0
-/***********************************************************************
- * SPI register definitions
- **********************************************************************/
-#define SPI_CONFIG_REG    __REG (SPI_PHYS + 0x00)
-#define SPI_SLV_ENAB_REG  __REG (SPI_PHYS + 0x04)
-#define SPI_TXF_FLUSH_REG __REG (SPI_PHYS + 0x08)
-#define SPI_FIFO_DATA_REG __REG (SPI_PHYS + 0x0C)
-#define SPI_NHP_POP_REG   __REG (SPI_PHYS + 0x10)
-#define SPI_NHP_MODE_REG  __REG (SPI_PHYS + 0x14)
-#define SPI_DMA_SET_REG   __REG (SPI_PHYS + 0x18)
-#define SPI_STS_REG       __REG (SPI_PHYS + 0x1C)
-#define SPI_HWINFO_REG    __REG (SPI_PHYS + 0x20)
-#define SPI_SLV_SET1_REG(slv) __REG (SPI_PHYS + 0x24 + (8 * slv))
-#define SPI_SLV_SET2_REG(slv) __REG (SPI_PHYS + 0x28 + (8 * slv))
-#define SPI_INT_TRSH_REG  __REG (SPI_PHYS + 0xFD4)
-#define SPI_INT_CLRE_REG  __REG (SPI_PHYS + 0xFD8)
-#define SPI_INT_SETE_REG  __REG (SPI_PHYS + 0xFDC)
-#define SPI_INT_STS_REG   __REG (SPI_PHYS + 0xFE0)
-#define SPI_INT_ENAB_REG  __REG (SPI_PHYS + 0xFE4)
-#define SPI_INT_CLRS_REG  __REG (SPI_PHYS + 0xFE8)
-#define SPI_INT_SETS_REG  __REG (SPI_PHYS + 0xFEC)
-#define SPI_MOD_ID_REG    __REG (SPI_PHYS + 0xFFC)
-
-/* SPI device contants */
-#define SPI_FIFO_DEPTH  64 /* 64 words (16bit) deep */
-#define SPI_NUM_SLAVES  3  /* number of slaves supported */
-#define SPI_MAX_DIV2    254
-#define SPI_MAX_DIVIDER 65024 /* = 254 * (255 + 1) */
-#define SPI_MIN_DIVIDER 2
-
-/* SPI Configuration register definitions (SPI_CONFIG_REG) */
-#define SPI_CFG_INTER_DLY(n)      _SBF(16, ((n) & 0xFFFF))
-#define SPI_CFG_INTER_DLY_GET(n)  (((n) >> 16) & 0xFFFF)
-#define SPI_CFG_UPDATE_EN         _BIT(7)
-#define SPI_CFG_SW_RESET          _BIT(6)
-#define SPI_CFG_SLAVE_DISABLE     _BIT(4)
-#define SPI_CFG_MULTI_SLAVE       _BIT(3)
-#define SPI_CFG_LOOPBACK          _BIT(2)
-#define SPI_CFG_SLAVE_MODE        _BIT(1)
-#define SPI_CFG_ENABLE            _BIT(0)
-
-/* SPI slave_enable register definitions (SPI_SLV_ENAB_REG) */
-#define SPI_SLV_EN(n)             _SBF(((n) << 1), 0x1)
-#define SPI_SLV_SUSPEND(n)        _SBF(((n) << 1), 0x3)
-
-/* SPI tx_fifo_flush register definitions (SPI_TXF_FLUSH_REG) */
-#define SPI_TXFF_FLUSH            _BIT(1)
-
-/* SPI dma_settings register definitions (SPI_DMA_SET_REG) */
-#define SPI_DMA_TX_EN             _BIT(1)
-#define SPI_DMA_RX_EN             _BIT(0)
-
-/* SPI status register definitions (SPI_STS_REG) */
-#define SPI_ST_SMS_BUSY           _BIT(5)
-#define SPI_ST_BUSY               _BIT(4)
-#define SPI_ST_RX_FF              _BIT(3)
-#define SPI_ST_RX_EMPTY           _BIT(2)
-#define SPI_ST_TX_FF              _BIT(1)
-#define SPI_ST_TX_EMPTY           _BIT(0)
-
-/* SPI slv_setting registers definitions (SPI_SLV_SET1_REG) */
-#define SPI_SLV1_INTER_TX_DLY(n)  _SBF(24, ((n) & 0xFF))
-#define SPI_SLV1_NUM_WORDS(n)     _SBF(16, ((n) & 0xFF))
-#define SPI_SLV1_CLK_PS(n)        _SBF(8, ((n) & 0xFF))
-#define SPI_SLV1_CLK_PS_GET(n)    (((n) >> 8) & 0xFF)
-#define SPI_SLV1_CLK_DIV1(n)      ((n) & 0xFF)
-#define SPI_SLV1_CLK_DIV1_GET(n)  ((n) & 0xFF)
-
-/* SPI slv_setting registers definitions (SPI_SLV_SET2_REG) */
-#define SPI_SLV2_PPCS_DLY(n)      _SBF(9, ((n) & 0xFF))
-#define SPI_SLV2_CS_HIGH          _BIT(8)
-#define SPI_SLV2_SSI_MODE         _BIT(7)
-#define SPI_SLV2_SPO              _BIT(6)
-#define SPI_SLV2_SPH              _BIT(5)
-#define SPI_SLV2_WD_SZ(n)         ((n) & 0x1F)
-
-/* SPI int_threshold registers definitions (SPI_INT_TRSH_REG) */
-#define SPI_INT_TSHLD_TX(n)       _SBF(8, ((n) & 0xFF))
-#define SPI_INT_TSHLD_RX(n)       ((n) & 0xFF)
-
-/* SPI intterrupt registers definitions ( SPI_INT_xxx) */
-#define SPI_SMS_INT               _BIT(4)
-#define SPI_TX_INT                _BIT(3)
-#define SPI_RX_INT                _BIT(2)
-#define SPI_TO_INT                _BIT(1)
-#define SPI_OVR_INT               _BIT(0)
-#define SPI_ALL_INTS              (SPI_SMS_INT | SPI_TX_INT | SPI_RX_INT | SPI_TO_INT | SPI_OVR_INT)
-#endif
 
 /***********************************************************************
  * ADC_REG register definitions
@@ -196,24 +107,6 @@
 #define SYS_MUX_LCD_EBI     __REG (SYS_PHYS + 0x90)
 #define SYS_MUX_GPIO_MCI    __REG (SYS_PHYS + 0x94)
 #define SYS_MUX_NAND_MCI    __REG (SYS_PHYS + 0x98)
-
-/***********************************************************************
- * GPIO register definitions
- **********************************************************************/
-#if 0
-#define GPIO_STATE(port)     __REG (GPIO_PHYS + (port) + 0x00)
-#define GPIO_STATE_M0(port)  __REG (GPIO_PHYS + (port) + 0x10)
-#define GPIO_M0_SET(port)    __REG (GPIO_PHYS + (port) + 0x14)
-#define GPIO_M0_RESET(port)  __REG (GPIO_PHYS + (port) + 0x18)
-#define GPIO_STATE_M1(port)  __REG (GPIO_PHYS + (port) + 0x20)
-#define GPIO_M1_SET(port)    __REG (GPIO_PHYS + (port) + 0x24)
-#define GPIO_M1_RESET(port)  __REG (GPIO_PHYS + (port) + 0x28)
-#endif
-
-#define GPIO_OUT_LOW(port, pin)  do { GPIO_M1_SET(port) = pin; GPIO_M0_RESET(port) = pin;} while(0)
-#define GPIO_OUT_HIGH(port, pin) do { GPIO_M1_SET(port) = pin; GPIO_M0_SET(port) = pin;} while(0)
-#define GPIO_IN(port, pin)       do { GPIO_M1_RESET(port) = pin; GPIO_M0_RESET(port) = pin;} while(0)
-#define GPIO_DRV_IP(port, pin)   do { GPIO_M1_RESET(port) = pin; GPIO_M0_SET(port) = pin;} while(0)
 
 #define IOCONF_EBI_MCI       (0x000)
 #define IOCONF_EBI_I2STX_0   (0x040)
