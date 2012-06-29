@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-lpc313x/include/mach/lpc315x_ad.h
+ * arch/arm/mach-lpc31xx/include/mach/lpc315x_ad.h
  *
  * Author: Kevin Wells <kevin.wells@nxp.com>
  *

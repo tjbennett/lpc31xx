@@ -1,5 +1,5 @@
 /*
- * sound/soc/lpc313x/lpc313x-i2s.h
+ * sound/soc/lpc31xx/lpc31xx-i2s.h
  *
  * Author: Kevin Wells <kevin.wells@nxp.com>
  *
@@ -20,14 +20,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __SOUND_SOC_LPC313X_I2S_H
-#define __SOUND_SOC_LPC313X_I2S_H
+#ifndef __SOUND_SOC_LPC31XX_I2S_H
+#define __SOUND_SOC_LPC31XX_I2S_H
 
 #include <linux/types.h>
 
-extern struct snd_soc_dai_driver lpc313x_i2s_dai;
+extern struct snd_soc_dai_driver lpc31xx_i2s_dai;
 
-struct lpc31xx_i2s_info {
+struct lpc31xx_i2s_res_info {
 	struct resource			*mem;
 	void __iomem			*regs;
 };

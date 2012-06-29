@@ -1,9 +1,9 @@
-/*  arch/arm/mach-lpc313x/time.c
+/*  arch/arm/mach-lpc31xx/time.c
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- *  Timer driver for LPC313x & LPC315x.
+ *  Timer driver for LPC31xx
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,20 +37,20 @@
 //#include <mach/cgu.h>
 
 
-static irqreturn_t lpc313x_timer_interrupt(int irq, void *dev_id)
+static irqreturn_t lpc31xx_timer_interrupt(int irq, void *dev_id)
 {
 	TIMER_CLEAR(TIMER0_PHYS) = 0;
 	timer_tick();
 	return IRQ_HANDLED;
 }
 
-static struct irqaction lpc313x_timer_irq = {
-	.name		= "LPC313x Timer Tick",
+static struct irqaction lpc31xx_timer_irq = {
+	.name		= "LPC31xx Timer Tick",
 	.flags		= IRQF_DISABLED | IRQF_TIMER | IRQF_IRQPOLL,
-	.handler	= lpc313x_timer_interrupt,
+	.handler	= lpc31xx_timer_interrupt,
 };
 
-static void __init lpc313x_timer_init (void)
+static void __init lpc31xx_timer_init (void)
 {
 	/* Switch on needed Timer clocks & switch off others*/
 	cgu_clk_en_dis(CGU_SB_TIMER0_PCLK_ID, 1);
@@ -64,33 +64,33 @@ static void __init lpc313x_timer_init (void)
 	TIMER_LOAD(TIMER0_PHYS) = LATCH;
 	TIMER_CONTROL(TIMER0_PHYS) = (TM_CTRL_ENABLE | TM_CTRL_PERIODIC);
 	TIMER_CLEAR(TIMER0_PHYS) = 0;
-	setup_irq (IRQ_TIMER0, &lpc313x_timer_irq);
+	setup_irq (IRQ_TIMER0, &lpc31xx_timer_irq);
 }
 
 /*!
  * Returns number of us since last clock interrupt.  Note that interrupts
  * will have been disabled by do_gettimeoffset()
  */
-static unsigned long lpc313x_gettimeoffset(void)
+static unsigned long lpc31xx_gettimeoffset(void)
 {
 	u32 elapsed = LATCH - TIMER_VALUE(TIMER0_PHYS);
 	return ((elapsed * 100) / (XTAL_CLOCK / 20000));
 }
 
-static void lpc313x_timer_suspend(void)
+static void lpc31xx_timer_suspend(void)
 {
 	TIMER_CONTROL(TIMER0_PHYS) &= ~TM_CTRL_ENABLE;	/* disable timers */
 }
 
-static void lpc313x_timer_resume(void)
+static void lpc31xx_timer_resume(void)
 {
 	TIMER_CONTROL(TIMER0_PHYS) |= TM_CTRL_ENABLE;	/* enable timers */
 }
 
 
-struct sys_timer lpc313x_timer = {
-	.init = lpc313x_timer_init,
-	.offset = lpc313x_gettimeoffset,
-	.suspend = lpc313x_timer_suspend,
-	.resume = lpc313x_timer_resume,
+struct sys_timer lpc31xx_timer = {
+	.init = lpc31xx_timer_init,
+	.offset = lpc31xx_gettimeoffset,
+	.suspend = lpc31xx_timer_suspend,
+	.resume = lpc31xx_timer_resume,
 };

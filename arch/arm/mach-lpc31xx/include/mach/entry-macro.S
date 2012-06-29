@@ -1,7 +1,7 @@
 /*
- * linux/arch/arm/mach-lpc313x/include/mach/entry-macro.S
+ * linux/arch/arm/mach-lpc31xx/include/mach/entry-macro.S
  *
- * Low-level IRQ helper macros for LPC313x-based platforms
+ * Low-level IRQ helper macros for LPC31xx-based platforms
  *
  * This file is licensed under  the terms of the GNU General Public
  * License version 2. This program is licensed "as is" without any
