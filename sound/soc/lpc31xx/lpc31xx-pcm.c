@@ -32,7 +32,7 @@
 
 #include <mach/dma.h>
 #include <mach/hardware.h>
-#include "lpc313x-pcm.h"
+#include "lpc31xx-pcm.h"
 
 #define SND_NAME "lpc31xx-pcm-audio"
 static u64 lpc313x_pcm_dmamask = DMA_BIT_MASK(32);
