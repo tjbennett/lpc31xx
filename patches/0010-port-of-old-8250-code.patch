@@ -1,7 +1,7 @@
-Bottom: 5d8d8a74a3fe28cf0d0142273d59076044a73e1a
-Top:    e57c3ceb8c884695f442a1dad2208231191b2253
+Bottom: 8a86f1762ed501f1507bb7437d4c844b08cfe144
+Top:    90fba30484d9daa3230ed847d87b0e0e4193f761
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-16 22:11:53 -0400
+Date:   2012-06-29 12:31:27 -0400
 
 From 8ed230d4713b295aa5f43f011169c46392bed741 Mon Sep 17 00:00:00 2001
 Subject: port of old 8250 code
@@ -10,7 +10,7 @@ Subject: port of old 8250 code
 ---
 
 diff --git a/drivers/tty/serial/8250/8250.c b/drivers/tty/serial/8250/8250.c
-index 47d061b..9c9e472 100644
+index 6e1958a..6a6184e 100644
 --- a/drivers/tty/serial/8250/8250.c
 +++ b/drivers/tty/serial/8250/8250.c
 @@ -16,6 +16,76 @@

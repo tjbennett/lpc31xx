@@ -1,7 +1,7 @@
-Bottom: 66b7f291dc0fb8eafbc9b8277c85f29590d554fb
-Top:    9460cb9f93fcdc03d16c5ec7fc8426c57e7175b9
+Bottom: 1e901a621680be021dad079838532a6d45cee06e
+Top:    4f1bb3b07c7d36b928c269a0dd9dc96f90be8c43
 Author: Bangaragiri G <bangaragiri.g@nxp.com>
-Date:   2012-06-16 22:11:54 -0400
+Date:   2012-06-29 12:31:30 -0400
 
 From 201a5376a1b37ab8f3f870fe3126587d259250b9 Mon Sep 17 00:00:00 2001
 Subject: arm:lpc313x: UART DMA support fixes
@@ -67,7 +67,7 @@ index 8ed8230..4980a58 100644
  	up.iotype = UPIO_MEM;
  	up.type	= PORT_NXP16750;
 diff --git a/drivers/tty/serial/8250/8250.c b/drivers/tty/serial/8250/8250.c
-index 9c9e472..64e6e67 100644
+index 6a6184e..9232842 100644
 --- a/drivers/tty/serial/8250/8250.c
 +++ b/drivers/tty/serial/8250/8250.c
 @@ -39,7 +39,7 @@

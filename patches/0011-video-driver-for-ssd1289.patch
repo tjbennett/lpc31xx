@@ -1,7 +1,7 @@
-Bottom: e57c3ceb8c884695f442a1dad2208231191b2253
-Top:    a1e5efa9ab603c3eeeb230bbad3ef46a69672574
+Bottom: 90fba30484d9daa3230ed847d87b0e0e4193f761
+Top:    3d5bc5087bae4ea13e42d8ae52c81690e9f721be
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-16 22:11:53 -0400
+Date:   2012-06-29 12:31:27 -0400
 
 From 3e9f1e15f648bc46cfa253101e154a9b5d49d332 Mon Sep 17 00:00:00 2001
 Subject: video driver for ssd1289
@@ -10,7 +10,7 @@ Subject: video driver for ssd1289
 ---
 
 diff --git a/MAINTAINERS b/MAINTAINERS
-index 3e30a3a..6029377 100644
+index eb22272..2e1152b 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
 @@ -6461,6 +6461,11 @@ M:	Jan-Benedict Glaw <jbglaw@lug-owl.de>

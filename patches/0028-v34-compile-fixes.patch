@@ -1,7 +1,7 @@
-Bottom: 17b7b6dd4e4331434c74e47ae77af4dd8db2106b
-Top:    f526f27482a2c7a094715df4c3aaf962627855ae
+Bottom: 664586781716c7288917a78c2258cb7a11128da3
+Top:    082f8f94ddf65cb711e32f6930efffbd2134cd2a
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-06-16 22:11:57 -0400
+Date:   2012-06-29 12:31:37 -0400
 
 From 954fe1906bd7d5260bf70194fe86bb3f392bd579 Mon Sep 17 00:00:00 2001
 Subject: v34 compile fixes
@@ -64,7 +64,7 @@ index 5a982c7..3234c0a 100644
  		dma_unmap_sg(chan->device->dev, sgt->sgl, sgt->nents, dir);
  		return ERR_PTR(-ENOMEM);
 diff --git a/drivers/tty/serial/8250/8250.c b/drivers/tty/serial/8250/8250.c
-index 64e6e67..6a31317 100644
+index 9232842..9ee60d9 100644
 --- a/drivers/tty/serial/8250/8250.c
 +++ b/drivers/tty/serial/8250/8250.c
 @@ -1056,7 +1056,7 @@ static void autoconfig_16550a(struct uart_8250_port *up)

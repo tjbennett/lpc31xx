@@ -1,7 +1,7 @@
-Bottom: ef25b61b36ce7ec46bd80f9ab959d54979e5b21a
-Top:    759ad6032cb044034424abe9b2c5e09861885639
+Bottom: 3f122a52170912ecbf165b4de73e262f52a379a1
+Top:    d6a9adcdee97e0b2e983b38a700b46ccda0bae7a
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-06-16 22:11:58 -0400
+Date:   2012-06-29 12:31:42 -0400
 
 From ab8679ede298c6e1156cb9dc4a526378b0e40bb8 Mon Sep 17 00:00:00 2001
 Subject: uart
@@ -10,10 +10,10 @@ Subject: uart
 ---
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 72fff0a..5aac277 100644
+index c445b03..80c4eee 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
-@@ -555,6 +555,20 @@ config ARCH_KIRKWOOD
+@@ -556,6 +556,20 @@ config ARCH_KIRKWOOD
  	  Support for the following Marvell Kirkwood series SoCs:
  	  88F6180, 88F6192 and 88F6281.
  
@@ -34,7 +34,7 @@ index 72fff0a..5aac277 100644
  config ARCH_LPC32XX
  	bool "NXP LPC32XX"
  	select CLKSRC_MMIO
-@@ -979,19 +993,6 @@ config ARCH_ZYNQ
+@@ -981,19 +995,6 @@ config ARCH_ZYNQ
  	help
  	  Support for Xilinx Zynq ARM Cortex A9 Platform
  
@@ -583,7 +583,7 @@ index d2e4ad5..1476bd6 100644
  #ifdef CONFIG_DM9000_FORCE_SIMPLE_PHY_POLL
  	db->flags |= DM9000_PLATF_SIMPLE_PHY;
 diff --git a/drivers/tty/serial/8250/8250.c b/drivers/tty/serial/8250/8250.c
-index 6a31317..340e142 100644
+index 9ee60d9..3361902 100644
 --- a/drivers/tty/serial/8250/8250.c
 +++ b/drivers/tty/serial/8250/8250.c
 @@ -193,7 +193,7 @@ static unsigned long probe_rsa[PORT_RSA_MAX];

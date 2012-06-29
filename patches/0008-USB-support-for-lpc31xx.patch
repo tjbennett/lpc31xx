@@ -1,7 +1,7 @@
-Bottom: 753f861ede958e7c7a021cdc670954c18b4903a1
-Top:    3306e3f8a7c6ecf99d051e113b956f3725dee262
+Bottom: b825838df04c1f4ea20d593e87d640e197f0b4d7
+Top:    c7679e2daffcb14424ce6e5e55373b609f80a4ad
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-16 22:11:52 -0400
+Date:   2012-06-29 12:31:26 -0400
 
 From 4f4dc1ae8001490d1b40128183b47fb41011da91 Mon Sep 17 00:00:00 2001
 Subject: USB support for lpc31xx

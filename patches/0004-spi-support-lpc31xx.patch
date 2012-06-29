@@ -1,7 +1,7 @@
-Bottom: 4a9b29e332fee4e2e670d5b4ac8936c54d887143
-Top:    b7f9767fdab03214f1def7185a9d2bd1e8335026
+Bottom: dabca4632e001d98f323c5aec88045b654c05273
+Top:    a60bac010e59fd6c8336ec52e7a92fa2b1214e10
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-16 22:11:51 -0400
+Date:   2012-06-29 12:31:23 -0400
 
 From a4ff19b2760489c44bac3e2a043373f5deb4dc18 Mon Sep 17 00:00:00 2001
 Subject: spi support lpc31xx

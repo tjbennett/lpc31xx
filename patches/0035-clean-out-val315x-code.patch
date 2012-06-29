@@ -1,7 +1,7 @@
-Bottom: 6baf96ddd1532cf71c3854cfa2c3af2c78008a04
-Top:    ef25b61b36ce7ec46bd80f9ab959d54979e5b21a
+Bottom: fa28e1f897be46616ad41ee5d2dc9c79c0a1820d
+Top:    3f122a52170912ecbf165b4de73e262f52a379a1
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-06-16 22:11:58 -0400
+Date:   2012-06-29 12:31:41 -0400
 
 From f45aa9f1770517c8743bac87effff7a221bb3244 Mon Sep 17 00:00:00 2001
 Subject: clean out val315x code

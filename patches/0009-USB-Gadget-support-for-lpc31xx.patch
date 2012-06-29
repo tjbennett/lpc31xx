@@ -1,7 +1,7 @@
-Bottom: 3306e3f8a7c6ecf99d051e113b956f3725dee262
-Top:    5d8d8a74a3fe28cf0d0142273d59076044a73e1a
+Bottom: c7679e2daffcb14424ce6e5e55373b609f80a4ad
+Top:    8a86f1762ed501f1507bb7437d4c844b08cfe144
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-16 22:11:52 -0400
+Date:   2012-06-29 12:31:26 -0400
 
 From 8e87d9f6c23e6d1a38f14a823e20da3911e9dd41 Mon Sep 17 00:00:00 2001
 Subject: USB Gadget support for lpc31xx

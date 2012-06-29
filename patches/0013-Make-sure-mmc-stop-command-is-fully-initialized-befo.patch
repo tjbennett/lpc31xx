@@ -1,7 +1,7 @@
-Bottom: 145d82bbaf15cdb0b76411a300e7ef871360f8fd
-Top:    9c52aff7f37b80ab75805495b56191d772b6cbdc
+Bottom: 327bd5efcfa4314dba3fd2f3726d4098c591ea73
+Top:    e82ce5e2fed3aa678bd1b9a292c06d7cb849a4f3
 Author: Jon Smirl <jonsmirl@terra>
-Date:   2012-06-16 22:11:54 -0400
+Date:   2012-06-29 12:31:28 -0400
 
 From b485de4ab2a5e7ff22f4e7b5a19c470a2c9f4db7 Mon Sep 17 00:00:00 2001
 Subject: Make sure mmc stop command is fully initialized before issuing the

@@ -1,7 +1,7 @@
-Bottom: 19a0e9586ad6ffacfd847e3ce78e39c41337ef17
-Top:    4eb154d9a62188a2a1d30e0b1b2d2716783599a8
+Bottom: 1fcd12613e6b52b228ff6a6f4a61b9a941980279
+Top:    bf5e9afd9eba2573e3772c5c414f45095c5da659
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-16 22:11:51 -0400
+Date:   2012-06-29 12:31:22 -0400
 
 From 31e6f1e62b27385eafbe55350f2dc6750869f60c Mon Sep 17 00:00:00 2001
 Subject: Default configs for lpc31xx dev boards

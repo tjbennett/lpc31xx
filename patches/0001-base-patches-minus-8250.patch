@@ -1,7 +1,7 @@
-Bottom: 2187b071ec88547a35e5154eaf0dc11c788cd97a
-Top:    19a0e9586ad6ffacfd847e3ce78e39c41337ef17
+Bottom: 5fa64d47f28cde6b8151b75c7047a98292d084ca
+Top:    1fcd12613e6b52b228ff6a6f4a61b9a941980279
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-16 22:11:51 -0400
+Date:   2012-06-29 12:31:22 -0400
 
 From 7206f3ac2aea47f9216728701a9d0851dd3604d9 Mon Sep 17 00:00:00 2001
 Subject: base patches minus 8250
@@ -10,10 +10,10 @@ Subject: base patches minus 8250
 ---
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 84449dd..4cfb074 100644
+index a91009c..ce84b30 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
-@@ -978,6 +978,20 @@ config ARCH_ZYNQ
+@@ -980,6 +980,20 @@ config ARCH_ZYNQ
  	select USE_OF
  	help
  	  Support for Xilinx Zynq ARM Cortex A9 Platform
@@ -34,7 +34,7 @@ index 84449dd..4cfb074 100644
  endchoice
  
  #
-@@ -1091,6 +1105,8 @@ source "arch/arm/mach-vt8500/Kconfig"
+@@ -1093,6 +1107,8 @@ source "arch/arm/mach-vt8500/Kconfig"
  
  source "arch/arm/mach-w90x900/Kconfig"
  
@@ -43,7 +43,7 @@ index 84449dd..4cfb074 100644
  # Definitions to make life easier
  config ARCH_ACORN
  	bool
-@@ -1744,7 +1760,7 @@ config LEDS
+@@ -1746,7 +1762,7 @@ config LEDS
  		   ARCH_LUBBOCK || MACH_MAINSTONE || ARCH_NETWINDER || \
  		   ARCH_OMAP || ARCH_P720T || ARCH_PXA_IDP || \
  		   ARCH_SA1100 || ARCH_SHARK || ARCH_VERSATILE || \
@@ -52,7 +52,7 @@ index 84449dd..4cfb074 100644
  		   ARCH_KS8695 || MACH_RD88F5182 || ARCH_REALVIEW
  	help
  	  If you say Y here, the LEDs on your machine will be used
-@@ -1760,7 +1776,7 @@ config LEDS
+@@ -1762,7 +1778,7 @@ config LEDS
  config LEDS_TIMER
  	bool "Timer LED" if (!ARCH_CDB89712 && !ARCH_OMAP) || \
  			    OMAP_OSK_MISTRAL || MACH_OMAP_H2 \
@@ -61,7 +61,7 @@ index 84449dd..4cfb074 100644
  	depends on LEDS
  	depends on !GENERIC_CLOCKEVENTS
  	default y if ARCH_EBSA110
-@@ -1779,7 +1795,7 @@ config LEDS_CPU
+@@ -1781,7 +1797,7 @@ config LEDS_CPU
  	bool "CPU usage LED" if (!ARCH_CDB89712 && !ARCH_EBSA110 && \
  			!ARCH_OMAP) \
  			|| OMAP_OSK_MISTRAL || MACH_OMAP_H2 \
