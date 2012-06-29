@@ -351,6 +351,15 @@ config IMX2_WDT
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx2_wdt.
 
+config LPC31XX_WATCHDOG
+	tristate "NXP LPC31xx watchdog"
+	depends on ARCH_LPC31XX
+	help
+	  Say Y here if to include support for the watchdog timer
+	  for the NXP's LPC31xx uC SoC.
+	  To compile this driver as a module, choose M here: the
+	  module will be called lpc313x_wdt.
+
 # AVR32 Architecture
 
 config AT32AP700X_WDT
