@@ -19,6 +19,8 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#define DEBUG
+
 #include <linux/kernel.h>
 #include <linux/kmod.h>
 #include <linux/device.h>
