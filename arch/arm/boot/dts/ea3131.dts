@@ -16,6 +16,18 @@
 		bootargs = "console=ttyS0,115200n8 root=/dev/mmcblk0p3 init=/etc/preinit rw rootwait loglevel=7";
 	};
 
+	evtr@13000000 {
+		events = <
+			0 0x67 3 /* irq 0 EVT_wdog_m0, EVT_RISING_EDGE */
+			0 0x7A 2 /* irq 1 EVT_usb_otg_vbus_pwr_en, EVT_FALLING_EDGE */
+			0 0x77 2 /* irq 2 EVT_USB_VBUS, EVT_FALLING_EDGE */
+			0 0x7b 0 /* irq 3 EVT_USB_ID, EVT_ACTIVE_LOW */
+			1 0x18 1 /* irq 4 EVT_mNAND_RYBN3, EVT_ACTIVE_HIGH, DM9000_ETH_INT */
+			2 0x50 0 /* irq 5 EVT_mI2STX_BCK0, EVT_ACTIVE_LOW, SDMMC_CD */
+			3 0x55 0 /* irq 6 EVT_I2SRX_WS0, EVT_ACTIVE_LOW, EA_VBUS_OVRC */
+			3 0x33 1 /* irq 7 EVT_GPIO4, EVT_ACTIVE_HIGH, PENDOWN */
+		>;
+	};
 	i2c@1300a000 {
 		slave-addr = <0x6E>;
 		pca9532: leds@60 {
@@ -33,22 +45,24 @@
 		};
 	};
 	spi@15002000 {
+		gpios = <&gpio_spi 4 0  /* chip selects */
+			 &gpio_ebi_i2stx_0 3 0>; 
 		s25sl032a@0 {
 			compatible = "code,s25sl032a";
-			spi-max-frequency = <1000000>;
 			reg = <0>;
+			spi-max-frequency = <1000000>;
 		};
 		ads7846@1 {
 			compatible = "ti,ads7846";
-			spi-max-frequency = <1200000>;
 			reg = <1>;
+			spi-max-frequency = <1200000>;
 			interrupts = <20>;
 			vref_delay_usecs = <100>;
-			x_plate_ohms = <419>;
-			y_plate_ohms = <486>;
-			pen_irq = <37>;
-			gpio_pendown = <&gpio_gpio 4 0>;
-			gpio_cs = <&gpio_ebi_i2stx_0 3 0>; 
+			x-plate-ohms = <419>;
+			y-plate-ohms = <486>;
+			interrupt-parent = <&evtr>;
+			pen-irq = <7 4>;
+			gpio-pendown = <&gpio_gpio 4 0>;
 		};
 	};
 	sound {
@@ -65,17 +79,19 @@
 		slot@0 {
 			width = <4>;
 			detect-delays = <250>;
-			gpio-cd = <&gpio_cgu 7 0>;
-			gpio-power = <&gpio_ebi_i2stx_0 5 0>;
-			/* gpio-power = <&gpio_ebi_i2stx_0 5 0>; broken in hardware */
-			/* gpio-wp = <>; not implemented in hardware */
-			/* gpio-select = <>; not implemented in hardware */
 			voltage-ranges = <3200 3400>;
+			gpios = <
+				&gpio_ebi_mci 7 0 /* card detect */
+				0 /* write protect, no hardware */
+				&gpio_ebi_i2stx_0 5 0 /* power, broken hardware design */
+				0 /* slot select, no hardware */
+			>;
+			interrupt-parent = <&evtr>;
+			interrupt = <6 8>;
 		};
 	};
 	usb@19000000 {
 		vbus-over =  <&gpio_i2srx_0 2 0>;
-		vbus-interrupts = <36>;
 	};
 	sram@20000000 {
 		mpmc-config = <0x81 0 0 31 0 3 0>;
@@ -85,12 +101,18 @@
 		};
 	};
 	sram@20020000 {
-		/* enable oe toggle between consec reads */
+		/* enable oe toggle between consecutive reads */
 		mpmc-config = <0x81 1 1 4 1 1 2 0x24>;
 		dm9000@20020000 {
 			compatible = "davicom,dm9000";
 			reg = <0x20020000 0x100 0x20030000 0x100>;
+			/* interrupt-parent = <&evtr>; 
+			interrupts = <4 4>; */
 			interrupts = <34>;
+			gpios = <
+				&gpio_ebi_i2stx_0 2 0 /* main irq, map gpio to irq */
+				0  /* WOL irq, map gpio to irq */
+			>;
 		};			
 	};
 	memory@30000000 {
