@@ -45,10 +45,25 @@
 #include <mach/registers.h>
 #include <mach/dma.h>
 #include <mach/board.h>
+#include <mach/gpio.h>
 
 /* Register access macros */
-#define spi_readl(reg) __raw_readl(&SPI_##reg)
-#define spi_writel(reg,value) __raw_writel((value),&SPI_##reg)
+#define spi_readl(reg) _spi_readl(&SPI_##reg)
+#define spi_writel(reg,value) _spi_writel((value),&SPI_##reg)
+
+static inline void _spi_writel(uint16_t value, volatile void *reg)
+{
+	printk("spi_write %p value %x\n", reg, value);
+	__raw_writew(value, reg);
+}
+
+static inline uint16_t _spi_readl(volatile void *reg)
+{
+	uint16_t value;
+	value = __raw_readw(reg);
+	printk("spi_read %p value %x\n", reg, value);
+	return value;
+}
 
 struct lpc313xspi
 {
@@ -745,6 +760,57 @@ static int lpc313x_spi_transfer(struct spi_device *spi, struct spi_message *m)
 	return 0;
 }
 
+#ifdef CONFIG_OF
+static void spi_set_cs0_state(int cs_num, int state)
+{
+	(void) cs_num;
+	lpc313x_gpio_set_value(GPIO_SPI_CS_OUT0, state);
+}
+
+static void spi_set_cs1_state(int cs_num, int state)
+{
+	(void) cs_num;
+printk("cs1 state %d\n", state);
+	lpc313x_gpio_set_value(GPIO_MUART_CTS_N, state);
+}
+
+static void spi_set_cs2_state(int cs_num, int state)
+{
+printk("cs2 state %d\n", state);
+	(void) cs_num;
+	lpc313x_gpio_set_value(GPIO_MUART_RTS_N, state);
+}
+
+struct lpc313x_spics_cfg lpc313x_stdspics_cfg[] =
+{
+	/* SPI CS0 */
+	[0] =
+	{
+		.spi_spo	= 0, /* Low clock between transfers */
+		.spi_sph	= 0, /* Data capture on first clock edge (high edge with spi_spo=0) */
+		.spi_cs_set	= spi_set_cs0_state,
+	},
+	[1] =
+	{
+		.spi_spo	= 0, /* Low clock between transfers */
+		.spi_sph	= 0, /* Data capture on first clofck edge (high edge with spi_spo=0) */
+		.spi_cs_set	= spi_set_cs1_state,
+	},
+	[2] =
+	{
+		.spi_spo	= 0, /* Low clock between transfers */
+		.spi_sph	= 1, /* Data capture on first clock edge (high edge with spi_spo=0) */
+		.spi_cs_set	= spi_set_cs2_state,
+	},
+};
+
+struct lpc313x_spi_cfg lpc313x_spidata =
+{
+	.num_cs			= ARRAY_SIZE(lpc313x_stdspics_cfg),
+	.spics_cfg		= lpc313x_stdspics_cfg,
+};
+#endif
+
 /*
  * SPI driver probe
  */
@@ -773,6 +839,9 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
 
 	/* Is a board specific configuration available? */
 	spidat->psppcfg = (struct lpc313x_spi_cfg *) pdev->dev.platform_data;
+#ifdef CONFIG_OF
+	spidat->psppcfg = &lpc313x_spidata;
+#endif
 	if (spidat->psppcfg == NULL)
 	{
 		/* No platform data, exit */
@@ -876,6 +945,9 @@ static int __init lpc313x_spi_probe(struct platform_device *pdev)
 		ret = -EBUSY;
 		goto errout4;
 	}
+#ifdef CONFIG_OF
+	master->dev.of_node = of_node_get(pdev->dev.of_node);
+#endif
 
 	ret = spi_register_master(master);
 	if (ret)
@@ -972,6 +1044,14 @@ static int lpc313x_spi_resume(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id lpc313x_spi_of_match[] = {
+	{ .compatible = "nxp,lpc31xx-spi" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, lpc313x_spi_of_match);
+#endif
+
 static struct platform_driver lpc313x_spi_driver = {
 	.probe		= lpc313x_spi_probe,
 	.remove		= __devexit_p(lpc313x_spi_remove),
@@ -980,6 +1060,9 @@ static struct platform_driver lpc313x_spi_driver = {
 	.driver		= {
 		.name	= "spi_lpc313x",
 		.owner	= THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table = lpc313x_spi_of_match,
+#endif
 	},
 };
 
