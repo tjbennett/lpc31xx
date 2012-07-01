@@ -24,6 +24,7 @@
 #ifndef __ASM_ARCH_DMA_H
 #define __ASM_ARCH_DMA_H
 
+#include <linux/dmaengine.h>
 #include <mach/constants.h>
 
 /***********************************************************************
@@ -186,7 +187,7 @@ int dma_prog_channel (unsigned int, dma_setup_t   *);
  *
  * Returns: channel number on success, otherwise (negative) failure
  */
-int dma_request_channel (char *, dma_cb_t cb, void *);
+int dma_request_channel_x (char *, dma_cb_t cb, void *);
 
 /*
  * Request specific SDMA channel
@@ -245,7 +246,7 @@ int dma_stop_channel (unsigned int);
  *
  * Returns: 0 on success, otherwise failure
  */
-int dma_release_channel (unsigned int);
+int dma_release_channel_x (unsigned int);
 
 /*
  * Read channel counter
@@ -388,5 +389,24 @@ int dma_release_sg_channel (unsigned int);
  * Returns: 0 is disabled, otherwise !0
  */
 int dma_channel_enabled(unsigned int);
+
+
+/**
+ * struct lpc31xx_dma_data - configuration data for the LPC31xx dmaengine
+ * @port: peripheral which is requesting the channel
+ * @direction: TX/RX channel
+ * @name: optional name for the channel, this is displayed in /proc/interrupts
+ *
+ * This information is passed as private channel parameter in a filter
+ * function. Note that this is only needed for slave/cyclic channels.  For
+ * memcpy channels %NULL data should be passed.
+ */
+struct lpc31xx_dma_data {
+	int port;
+	enum dma_transfer_direction	direction;
+	const char *name;
+};
+
+
 
 #endif				/* _ASM_ARCH_DMA_H */
