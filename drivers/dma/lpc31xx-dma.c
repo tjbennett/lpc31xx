@@ -30,6 +30,9 @@
 #include <linux/dma-mapping.h>
 
 #include <mach/dma.h>
+#include <mach/clock.h>
+
+typedef u32 uint32_t;
 
 struct lpc31xx_dma_engine;
 
@@ -116,6 +119,7 @@ struct lpc31xx_dma_engine {
 #define INTERRUPT_NEXT_BUFFER 2
 
 	struct lpc31xx_dma_chan	channels[DMA_MAX_CHANNELS];
+	int irq;
 };
 
 static inline struct device *chan2dev(struct lpc31xx_dma_chan *edmac)
@@ -1124,9 +1128,14 @@ static int __init lpc31xx_dma_probe(struct platform_device *pdev)
 		goto err_init;
 	}
 
+	edma->irq = platform_get_irq(pdev, 0);
+	if (edma->irq < 0) {
+		dev_err(&pdev->dev, "failed to get irq resources\n");
+		goto err_init;
+	}
 	dma_irq_mask = 0xFFFFFFFF;
 	DMACH_IRQ_MASK = dma_irq_mask;
-	ret = request_irq (IRQ_DMA, lpc31xx_dma_irq_handler, 0, "DMAC", edma);
+	ret = request_irq (edma->irq, lpc31xx_dma_irq_handler, 0, "DMAC", edma);
 	if (ret)
 		printk (KERN_ERR "request_irq() returned error %d\n", ret);
 
@@ -1144,6 +1153,7 @@ static int __exit lpc31xx_dma_remove(struct platform_device *pdev)
 	struct lpc31xx_dma_engine *edma = platform_get_drvdata(pdev);
 
 	dma_async_device_unregister(&edma->dma_dev);
+	free_irq(edma->irq, edma);
 	kfree(edma);
 	return 0;
 }
