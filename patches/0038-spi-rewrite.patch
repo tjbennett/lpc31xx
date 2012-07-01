@@ -1,5 +1,5 @@
 Bottom: 43021815bcb4288ecae21a21dff6c3a738b7cf59
-Top:    8137ff753dd4ab62e8091cfd6dcd3cf460e3d0e2
+Top:    90bc30ec1b68764752659089735b56b988e75e24
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-06-29 12:31:43 -0400
 
@@ -36,7 +36,7 @@ index 5d0d68c..81289a7 100644
  #include <linux/err.h>
  #include <linux/errno.h>
 diff --git a/drivers/spi/spi-lpc31xx.c b/drivers/spi/spi-lpc31xx.c
-index c544e3a..a8de7e7 100644
+index c544e3a..cb3acfa 100644
 --- a/drivers/spi/spi-lpc31xx.c
 +++ b/drivers/spi/spi-lpc31xx.c
 @@ -1,61 +1,92 @@
@@ -311,7 +311,7 @@ index c544e3a..a8de7e7 100644
 +
 +/**
 + * enum spi_clock_params - clock parameters, to set SPI clock at a
-+ * desired freq
++ * desired frequency
 + */
 +struct spi_clock_params {
 +	uint8_t cpsdvsr; /* value from 2 to 254 (even only!) */
@@ -449,7 +449,7 @@ index c544e3a..a8de7e7 100644
 + * @cr1: Value of control register CR1 of SSP
 + * @dmacr: Value of DMA control Register of SSP
 + * @cpsr: Value of Clock prescale register
-+ * @n_bytes: how many bytes(power of 2) reqd for a given data width of client
++ * @n_bytes: how many bytes(power of 2) required for a given data width of client
 + * @enable_dma: Whether to enable DMA or not
 + * @read: function ptr to be used to read when doing xfer for this chip
 + * @write: function ptr to be used to write when doing xfer for this chip
@@ -591,7 +591,7 @@ index c544e3a..a8de7e7 100644
  	clk = clk_get(NULL, "spi_pclk");
  	clk_disable(clk);
  	clk_put(clk);
-@@ -338,894 +456,1441 @@ static void lpc31xx_spi_clks_disable(void)
+@@ -338,894 +456,1440 @@ static void lpc31xx_spi_clks_disable(void)
  	clk_put(clk);
  }
  
@@ -2156,10 +2156,9 @@ index c544e3a..a8de7e7 100644
 +			message->state = STATE_ERROR;
 +			break;
 +		}
-+		/* Flush FIFOs and enable SSI */
-+		flush(espi);
 +		/* Make sure FIFO is flushed, clear pending interrupts, DMA
 +		   initially disabled, and then enable SPI interface */
++		flush(espi);
 +		spi_writel(CONFIG_REG, (spi_readl(CONFIG_REG) | SPI_CFG_ENABLE));
 +
 +		dev_dbg(&espi->pdev->dev, "polling transfer ongoing ...\n");
@@ -2736,7 +2735,7 @@ index c544e3a..a8de7e7 100644
  }
  
  /*
-@@ -1233,159 +1898,160 @@ static void lpc31xx_spi_release_dma(struct lpc31xx_spi *espi)
+@@ -1233,159 +1897,160 @@ static void lpc31xx_spi_release_dma(struct lpc31xx_spi *espi)
   */
  static void lpc31xx_spi_prep(struct lpc31xx_spi *espi)
  {
@@ -2994,7 +2993,7 @@ index c544e3a..a8de7e7 100644
  	for (i = 0; i < ngpios; i++) {
  		int gpio;
  		enum of_gpio_flags flags;
-@@ -1393,158 +2059,192 @@ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
+@@ -1393,158 +2058,192 @@ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
  		gpio = of_get_gpio_flags(pdev->dev.of_node, i, &flags);
  		if (!gpio_is_valid(gpio)) {
  			dev_err(&pdev->dev, "invalid gpio #%d: %d\n", i, gpio);
