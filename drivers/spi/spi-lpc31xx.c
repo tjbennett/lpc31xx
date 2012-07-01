@@ -218,7 +218,7 @@ enum spi_mode {
 
 /**
  * enum spi_clock_params - clock parameters, to set SPI clock at a
- * desired freq
+ * desired frequency
  */
 struct spi_clock_params {
 	uint8_t cpsdvsr; /* value from 2 to 254 (even only!) */
@@ -325,7 +325,7 @@ struct lpc31xx_spi {
  * @cr1: Value of control register CR1 of SSP
  * @dmacr: Value of DMA control Register of SSP
  * @cpsr: Value of Clock prescale register
- * @n_bytes: how many bytes(power of 2) reqd for a given data width of client
+ * @n_bytes: how many bytes(power of 2) required for a given data width of client
  * @enable_dma: Whether to enable DMA or not
  * @read: function ptr to be used to read when doing xfer for this chip
  * @write: function ptr to be used to write when doing xfer for this chip
@@ -1428,10 +1428,9 @@ static void do_polling_transfer(struct lpc31xx_spi *espi)
 			message->state = STATE_ERROR;
 			break;
 		}
-		/* Flush FIFOs and enable SSI */
-		flush(espi);
 		/* Make sure FIFO is flushed, clear pending interrupts, DMA
 		   initially disabled, and then enable SPI interface */
+		flush(espi);
 		spi_writel(CONFIG_REG, (spi_readl(CONFIG_REG) | SPI_CFG_ENABLE));
 
 		dev_dbg(&espi->pdev->dev, "polling transfer ongoing ...\n");
