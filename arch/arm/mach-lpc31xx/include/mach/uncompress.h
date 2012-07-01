@@ -1,9 +1,9 @@
-/*  linux/arch/arm/mach-lpc313x/include/mach/uncompress.h
+/*  linux/arch/arm/mach-lpc31xx/include/mach/uncompress.h
  *  
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- * Decompression UART routines for LPC313x and LPC315x SoCs.
+ * Decompression UART routines for LPC31xx SoCs.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

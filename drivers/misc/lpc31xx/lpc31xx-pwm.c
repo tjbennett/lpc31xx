@@ -3,7 +3,7 @@
  *  Author:    Michael Schwarz
  *  Copyright (C) 2011 Michael Schwarz
  *
- * PWM module for LPC313x
+ * PWM module for LPC31xx
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,7 +65,7 @@ static ssize_t device_write(struct file *filp, const char *buff, size_t len, lof
  pwm_value = (in_buffer[0] + (in_buffer[1] << 8));
  PWM_TMR_REG = pwm_value & PWM_MR_MASK;
  
- printk("[lpc313x pwm debug message] pwm to %d (%d%%)\n", pwm_value, pwm_value * 100 / 4095);
+ printk("[lpc31xx pwm debug message] pwm to %d (%d%%)\n", pwm_value, pwm_value * 100 / 4095);
 
  return len;
 }
@@ -90,7 +90,7 @@ static int device_release(struct inode *inode, struct file *file) {
 
 
 int __init init_pwm(void) {
- printk("[lpc313x pwm] pwm frequency: %u Hz\n", cgu_get_clk_freq(CGU_SB_PWM_CLK_ID) / 4096);
+ printk("[lpc31xx pwm] pwm frequency: %u Hz\n", cgu_get_clk_freq(CGU_SB_PWM_CLK_ID) / 4096);
  
  /* enable clock for PWM */
  cgu_clk_en_dis(CGU_SB_PWM_PCLK_ID, 1);
@@ -103,11 +103,11 @@ int __init init_pwm(void) {
  
  dev_major = register_chrdev(0, DEVICE_NAME, &fops);
  if (dev_major < 0) {
-  printk(KERN_ALERT "[lpc313x pwm] Registering char device failed with %d\n", dev_major);
+  printk(KERN_ALERT "[lpc31xx pwm] Registering char device failed with %d\n", dev_major);
   return dev_major;
  }
- printk(KERN_INFO "[lpc313x pwm] driver loaded with major %d\n", dev_major);
- printk(KERN_INFO "[lpc313x pwm] >> $ mknod /dev/%s c %d 0\n", DEVICE_NAME, dev_major);
+ printk(KERN_INFO "[lpc31xx pwm] driver loaded with major %d\n", dev_major);
+ printk(KERN_INFO "[lpc31xx pwm] >> $ mknod /dev/%s c %d 0\n", DEVICE_NAME, dev_major);
  
  pwm_value = 0; 
  
@@ -115,7 +115,7 @@ int __init init_pwm(void) {
 }
 
 void __exit cleanup_pwm(void) {
- printk("[lpc313x pwm] cleanup\n");
+ printk("[lpc31xx pwm] cleanup\n");
  
  /* disable clock for PWM */
  cgu_clk_en_dis(CGU_SB_PWM_PCLK_ID, 0);

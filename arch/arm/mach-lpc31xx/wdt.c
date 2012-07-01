@@ -1,7 +1,7 @@
 /*
- * LPC313x Watchdog timer device registration
+ * LPC31xx Watchdog timer device registration
  *
- * drivers/watchdog/wdt_lpc313x.c
+ * drivers/watchdog/wdt_lpc31xx.c
  *
  * Copyright (C) 2009 NXP Semiconductors
  *
@@ -34,7 +34,7 @@ static struct resource watchdog_resources[] = {
 };
 
 static struct platform_device watchdog_device = {
-	.name = "lpc313x-wdt",
+	.name = "lpc31xx-wdt",
 	.id = -1,
 	.num_resources = ARRAY_SIZE(watchdog_resources),
 	.resource = watchdog_resources,

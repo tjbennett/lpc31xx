@@ -1,5 +1,5 @@
 /*
- * sound/soc/lpc313x/lpc313x-pcm.c
+ * sound/soc/lpc31xx/lpc31xx-pcm.c
  *
  * Author: Kevin Wells <kevin.wells@nxp.com>
  *
@@ -35,7 +35,7 @@
 #include "lpc31xx-pcm.h"
 
 #define SND_NAME "lpc31xx-pcm-audio"
-static u64 lpc313x_pcm_dmamask = DMA_BIT_MASK(32);
+static u64 lpc31xx_pcm_dmamask = DMA_BIT_MASK(32);
 
 #if defined (CONFIG_SND_USE_DMA_LINKLIST)
 /* The DMA controller in the LPC31XX has limited interrupt support
@@ -70,7 +70,7 @@ static u64 lpc313x_pcm_dmamask = DMA_BIT_MASK(32);
 #define RX_DMA_CHCFG DMA_SLV_I2SRX1_L
 #endif
 
-static const struct snd_pcm_hardware lpc313x_pcm_hardware = {
+static const struct snd_pcm_hardware lpc31xx_pcm_hardware = {
 	.info = (SNDRV_PCM_INFO_MMAP |
 		 SNDRV_PCM_INFO_MMAP_VALID |
 		 SNDRV_PCM_INFO_INTERLEAVED |
@@ -84,7 +84,7 @@ static const struct snd_pcm_hardware lpc313x_pcm_hardware = {
 	.buffer_bytes_max = (MAX_PERIODS * MAX_BYTES_PERIOD)
 };
 
-struct lpc313x_dma_data {
+struct lpc31xx_i2sdma_data {
 	dma_addr_t dma_buffer;	/* physical address of DMA buffer */
 	dma_addr_t dma_buffer_end; /* first address beyond DMA buffer */
 	size_t period_size;
@@ -105,10 +105,10 @@ struct lpc313x_dma_data {
 /*
  * DMA ISR - occurs when a new DMA buffer is needed
  */
-static void lpc313x_pcm_dma_irq(int ch, dma_irq_type_t dtype, void *handle) {
+static void lpc31xx_pcm_dma_irq(int ch, dma_irq_type_t dtype, void *handle) {
 	struct snd_pcm_substream *substream = (struct snd_pcm_substream *) handle;
 	struct snd_pcm_runtime *rtd = substream->runtime;
-	struct lpc313x_dma_data *prtd = rtd->private_data;
+	struct lpc31xx_i2sdma_data *prtd = rtd->private_data;
 
 	(void) dtype;
 	(void) ch;
@@ -123,10 +123,10 @@ static void lpc313x_pcm_dma_irq(int ch, dma_irq_type_t dtype, void *handle) {
 }
 
 #if defined (CONFIG_SND_USE_DMA_LINKLIST)
-static void lpc313x_check_dmall(unsigned long data) {
+static void lpc31xx_check_dmall(unsigned long data) {
 	struct snd_pcm_substream *substream = (struct snd_pcm_substream *) data;
 	struct snd_pcm_runtime *rtd = substream->runtime;
-	struct lpc313x_dma_data *prtd = rtd->private_data;
+	struct lpc31xx_i2sdma_data *prtd = rtd->private_data;
 
 	/* Determine buffer position from current DMA position. We don't need
 	   the exact address, just the last finished period */
@@ -144,11 +144,11 @@ static void lpc313x_check_dmall(unsigned long data) {
 }
 #endif
 
-static int lpc313x_pcm_allocate_dma_buffer(struct snd_pcm *pcm, int stream)
+static int lpc31xx_pcm_allocate_dma_buffer(struct snd_pcm *pcm, int stream)
 {
 	struct snd_pcm_substream *substream = pcm->streams[stream].substream;
 	struct snd_dma_buffer *dmabuf = &substream->dma_buffer;
-	size_t size = lpc313x_pcm_hardware.buffer_bytes_max;
+	size_t size = lpc31xx_pcm_hardware.buffer_bytes_max;
 
 	dmabuf->dev.type = SNDRV_DMA_TYPE_DEV;
 	dmabuf->dev.dev = pcm->card->dev;
@@ -156,7 +156,7 @@ static int lpc313x_pcm_allocate_dma_buffer(struct snd_pcm *pcm, int stream)
 	dmabuf->area = dma_alloc_coherent(pcm->card->dev, size,
 					  &dmabuf->addr, GFP_KERNEL);
 
-	pr_debug("lpc313x-pcm:"
+	pr_debug("lpc31xx-pcm:"
 		"preallocate_dma_buffer: area=%p, addr=%p, size=%d\n",
 		(void *) dmabuf->area,
 		(void *) dmabuf->addr,
@@ -173,11 +173,11 @@ static int lpc313x_pcm_allocate_dma_buffer(struct snd_pcm *pcm, int stream)
 /*
  * PCM operations
  */
-static int lpc313x_pcm_hw_params(struct snd_pcm_substream *substream,
+static int lpc31xx_pcm_hw_params(struct snd_pcm_substream *substream,
 			         struct snd_pcm_hw_params *params)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct lpc313x_dma_data *prtd = runtime->private_data;
+	struct lpc31xx_i2sdma_data *prtd = runtime->private_data;
 
 	/* this may get called several times by oss emulation
 	 * with different params
@@ -193,9 +193,9 @@ static int lpc313x_pcm_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int lpc313x_pcm_hw_free(struct snd_pcm_substream *substream)
+static int lpc31xx_pcm_hw_free(struct snd_pcm_substream *substream)
 {
-	struct lpc313x_dma_data *prtd = substream->runtime->private_data;
+	struct lpc31xx_i2sdma_data *prtd = substream->runtime->private_data;
 
 	/* Return the DMA channel */
 	if (prtd->dmach != -1) {
@@ -215,16 +215,16 @@ static int lpc313x_pcm_hw_free(struct snd_pcm_substream *substream)
 	return 0;
 }
 
-static int lpc313x_pcm_prepare(struct snd_pcm_substream *substream)
+static int lpc31xx_pcm_prepare(struct snd_pcm_substream *substream)
 {
-	struct lpc313x_dma_data *prtd = substream->runtime->private_data;
+	struct lpc31xx_i2sdma_data *prtd = substream->runtime->private_data;
 
 	/* Setup DMA channel */
 	if (prtd->dmach == -1) {
 		if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 #if defined (CONFIG_SND_USE_DMA_LINKLIST)
 			prtd->dmach = dma_request_sg_channel("I2STX",
-				lpc313x_pcm_dma_irq, substream, 0, 0, 0);
+				lpc31xx_pcm_dma_irq, substream, 0, 0, 0);
 			prtd->dma_cfg_base = DMA_CFG_TX_WORD |
 				DMA_CFG_RD_SLV_NR(0) | DMA_CFG_CMP_CH_EN |
 				DMA_CFG_WR_SLV_NR(TX_DMA_CHCFG) |
@@ -232,7 +232,7 @@ static int lpc313x_pcm_prepare(struct snd_pcm_substream *substream)
 
 #else
 			prtd->dmach = dma_request_channel("I2STX",
-				lpc313x_pcm_dma_irq, substream);
+				lpc31xx_pcm_dma_irq, substream);
 			prtd->dma_cfg_base = DMA_CFG_TX_WORD |
 				DMA_CFG_RD_SLV_NR(0) | DMA_CFG_CIRC_BUF |
 				DMA_CFG_WR_SLV_NR(TX_DMA_CHCFG);
@@ -241,7 +241,7 @@ static int lpc313x_pcm_prepare(struct snd_pcm_substream *substream)
 		else {
 #if defined (CONFIG_SND_USE_DMA_LINKLIST)
 			prtd->dmach = dma_request_sg_channel("I2SRX",
-				lpc313x_pcm_dma_irq, substream, 0, 0, 0);
+				lpc31xx_pcm_dma_irq, substream, 0, 0, 0);
 			prtd->dma_cfg_base = DMA_CFG_TX_WORD |
 				DMA_CFG_WR_SLV_NR(0) | DMA_CFG_CMP_CH_EN |
 				DMA_CFG_RD_SLV_NR(RX_DMA_CHCFG) |
@@ -249,7 +249,7 @@ static int lpc313x_pcm_prepare(struct snd_pcm_substream *substream)
 
 #else
 			prtd->dmach = dma_request_channel("I2SRX",
-				lpc313x_pcm_dma_irq, substream);
+				lpc31xx_pcm_dma_irq, substream);
 			prtd->dma_cfg_base = DMA_CFG_TX_WORD |
 				DMA_CFG_WR_SLV_NR(0) | DMA_CFG_CIRC_BUF |
 				DMA_CFG_RD_SLV_NR(RX_DMA_CHCFG);
@@ -281,10 +281,10 @@ static int lpc313x_pcm_prepare(struct snd_pcm_substream *substream)
 
 int dma_stop_channel_sg (unsigned int chn);
 
-static int lpc313x_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
+static int lpc31xx_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	struct snd_pcm_runtime *rtd = substream->runtime;
-	struct lpc313x_dma_data *prtd = rtd->private_data;
+	struct lpc31xx_i2sdma_data *prtd = rtd->private_data;
 	int ret = 0;
 
 #if defined (CONFIG_SND_USE_DMA_LINKLIST)
@@ -334,7 +334,7 @@ static int lpc313x_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		/* Add and start audio data position timer */
 		init_timer(&prtd->timer[tch]);
 		prtd->timer[tch].data = (unsigned long) substream;
-		prtd->timer[tch].function = lpc313x_check_dmall;
+		prtd->timer[tch].function = lpc31xx_check_dmall;
 		prtd->timer[tch].expires = jiffies + MINTICKINC;
 		add_timer(&prtd->timer[tch]);
 
@@ -390,7 +390,7 @@ static int lpc313x_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 		break;
 
 	default:
-		pr_warning("lpc313x_pcm_trigger: Unsupported cmd: %d\n",
+		pr_warning("lpc31xx_pcm_trigger: Unsupported cmd: %d\n",
 				cmd);
 		ret = -EINVAL;
 	}
@@ -398,10 +398,10 @@ static int lpc313x_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	return ret;
 }
 
-static snd_pcm_uframes_t lpc313x_pcm_pointer(struct snd_pcm_substream *substream)
+static snd_pcm_uframes_t lpc31xx_pcm_pointer(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct lpc313x_dma_data *prtd = runtime->private_data;
+	struct lpc31xx_i2sdma_data *prtd = runtime->private_data;
 	snd_pcm_uframes_t x;
 
 	/* Return an offset into the DMA buffer for the next data */
@@ -412,13 +412,13 @@ static snd_pcm_uframes_t lpc313x_pcm_pointer(struct snd_pcm_substream *substream
 	return x;
 }
 
-static int lpc313x_pcm_open(struct snd_pcm_substream *substream)
+static int lpc31xx_pcm_open(struct snd_pcm_substream *substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	struct lpc313x_dma_data *prtd;
+	struct lpc31xx_i2sdma_data *prtd;
 	int ret = 0;
 
-	snd_soc_set_runtime_hwparams(substream, &lpc313x_pcm_hardware);
+	snd_soc_set_runtime_hwparams(substream, &lpc31xx_pcm_hardware);
 
 	/* ensure that buffer size is a multiple of period size */
 	ret = snd_pcm_hw_constraint_integer(runtime,
@@ -438,15 +438,15 @@ out:
 	return ret;
 }
 
-static int lpc313x_pcm_close(struct snd_pcm_substream *substream)
+static int lpc31xx_pcm_close(struct snd_pcm_substream *substream)
 {
-	struct lpc313x_dma_data *prtd = substream->runtime->private_data;
+	struct lpc31xx_dma_data *prtd = substream->runtime->private_data;
 
 	kfree(prtd);
 	return 0;
 }
 
-static int lpc313x_pcm_mmap(struct snd_pcm_substream *substream,
+static int lpc31xx_pcm_mmap(struct snd_pcm_substream *substream,
 			    struct vm_area_struct *vma)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
@@ -457,22 +457,22 @@ static int lpc313x_pcm_mmap(struct snd_pcm_substream *substream,
 				     runtime->dma_bytes);
 }
 
-static struct snd_pcm_ops lpc313x_pcm_ops = {
-	.open = lpc313x_pcm_open,
-	.close = lpc313x_pcm_close,
+static struct snd_pcm_ops lpc31xx_pcm_ops = {
+	.open = lpc31xx_pcm_open,
+	.close = lpc31xx_pcm_close,
 	.ioctl = snd_pcm_lib_ioctl,
-	.hw_params = lpc313x_pcm_hw_params,
-	.hw_free = lpc313x_pcm_hw_free,
-	.prepare = lpc313x_pcm_prepare,
-	.trigger = lpc313x_pcm_trigger,
-	.pointer = lpc313x_pcm_pointer,
-	.mmap = lpc313x_pcm_mmap,
+	.hw_params = lpc31xx_pcm_hw_params,
+	.hw_free = lpc31xx_pcm_hw_free,
+	.prepare = lpc31xx_pcm_prepare,
+	.trigger = lpc31xx_pcm_trigger,
+	.pointer = lpc31xx_pcm_pointer,
+	.mmap = lpc31xx_pcm_mmap,
 };
 
 /*
  * ASoC platform driver
  */
-static int lpc313x_pcm_new(struct snd_soc_pcm_runtime *rtd)
+static int lpc31xx_pcm_new(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_card *card = rtd->card->snd_card;
 	struct snd_soc_dai *dai = rtd->cpu_dai;
@@ -480,12 +480,12 @@ static int lpc313x_pcm_new(struct snd_soc_pcm_runtime *rtd)
 	int ret = 0;
 
 	if (!card->dev->dma_mask)
-		card->dev->dma_mask = &lpc313x_pcm_dmamask;
+		card->dev->dma_mask = &lpc31xx_pcm_dmamask;
 	if (!card->dev->coherent_dma_mask)
 		card->dev->coherent_dma_mask = 0xffffffff;
 
 	if (dai->driver->playback.channels_min) {
-		ret = lpc313x_pcm_allocate_dma_buffer(
+		ret = lpc31xx_pcm_allocate_dma_buffer(
 			  pcm, SNDRV_PCM_STREAM_PLAYBACK);
 		if (ret)
 			goto out;
@@ -493,7 +493,7 @@ static int lpc313x_pcm_new(struct snd_soc_pcm_runtime *rtd)
 
 	if (dai->driver->capture.channels_min) {
 		pr_debug("%s: Allocating PCM capture DMA buffer\n", SND_NAME);
-		ret = lpc313x_pcm_allocate_dma_buffer(
+		ret = lpc31xx_pcm_allocate_dma_buffer(
 			  pcm, SNDRV_PCM_STREAM_CAPTURE);
 		if (ret)
 			goto out;
@@ -503,7 +503,7 @@ out:
 	return ret;
 }
 
-static void lpc313x_pcm_free_dma_buffers(struct snd_pcm *pcm)
+static void lpc31xx_pcm_free_dma_buffers(struct snd_pcm *pcm)
 {
 	struct snd_pcm_substream *substream;
 	struct snd_dma_buffer *buf;
@@ -525,48 +525,48 @@ static void lpc313x_pcm_free_dma_buffers(struct snd_pcm *pcm)
 	}
 }
 
-struct snd_soc_platform_driver lpc313x_asoc_platform = {
-	.ops = &lpc313x_pcm_ops,
-	.pcm_new = lpc313x_pcm_new,
-	.pcm_free = lpc313x_pcm_free_dma_buffers,
+struct snd_soc_platform_driver lpc31xx_asoc_platform = {
+	.ops = &lpc31xx_pcm_ops,
+	.pcm_new = lpc31xx_pcm_new,
+	.pcm_free = lpc31xx_pcm_free_dma_buffers,
 };
-EXPORT_SYMBOL_GPL(lpc313x_asoc_platform);
+EXPORT_SYMBOL_GPL(lpc31xx_asoc_platform);
 
 
-static int __devinit lpc313x_asoc_platform_probe(struct platform_device *pdev)
+static int __devinit lpc31xx_asoc_platform_probe(struct platform_device *pdev)
 {
-	return snd_soc_register_platform(&pdev->dev, &lpc313x_asoc_platform);
+	return snd_soc_register_platform(&pdev->dev, &lpc31xx_asoc_platform);
 }
 
-static int __devexit lpc313x_asoc_platform_remove(struct platform_device *pdev)
+static int __devexit lpc31xx_asoc_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_platform(&pdev->dev);
 	return 0;
 }
 
-static struct platform_driver lpc313x_dma_driver = {
+static struct platform_driver lpc31xx_dma_driver = {
 	.driver = {
 		.name = SND_NAME,
 		.owner = THIS_MODULE,
 	},
 
-	.probe = lpc313x_asoc_platform_probe,
-	.remove = __devexit_p(lpc313x_asoc_platform_remove),
+	.probe = lpc31xx_asoc_platform_probe,
+	.remove = __devexit_p(lpc31xx_asoc_platform_remove),
 };
 
-static int __init lpc313x_asoc_init(void)
+static int __init lpc31xx_asoc_init(void)
 {
-	return platform_driver_register(&lpc313x_dma_driver);
+	return platform_driver_register(&lpc31xx_dma_driver);
 }
-module_init(lpc313x_asoc_init);
+module_init(lpc31xx_asoc_init);
 
-static void __exit lpc313x_asoc_exit(void)
+static void __exit lpc31xx_asoc_exit(void)
 {
-	platform_driver_unregister(&lpc313x_dma_driver);
+	platform_driver_unregister(&lpc31xx_dma_driver);
 }
-module_exit(lpc313x_asoc_exit);
+module_exit(lpc31xx_asoc_exit);
 
 MODULE_AUTHOR("Kevin Wells <kevin.wells@nxp.com>");
-MODULE_DESCRIPTION("NXP LPC313X PCM module");
+MODULE_DESCRIPTION("NXP LPC31XX PCM module");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:lpc323x-audio");
