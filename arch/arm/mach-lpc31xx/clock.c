@@ -932,6 +932,24 @@ static struct clk clk_spi_clk_gated = {
 	.id		= CGU_SB_SPI_CLK_GATED_ID,
 };
 
+static struct clk clk_mmc_hclk = {
+	.parent		= &sys_base,
+	.enable		= local_onoff_enable,
+	.enable_reg	= &CGU_SB->clk_pcr[CGU_SB_SD_MMC_HCLK_ID],
+	.enable_mask	= CGU_SB_PCR_RUN,
+	.get_rate	= get_rate,
+	.id		= CGU_SB_SD_MMC_HCLK_ID,
+};
+
+static struct clk clk_mmc_cclk_in = {
+	.parent		= &sys_base,
+	.enable		= local_onoff_enable,
+	.enable_reg	= &CGU_SB->clk_pcr[CGU_SB_SD_MMC_CCLK_IN_ID],
+	.enable_mask	= CGU_SB_PCR_RUN,
+	.get_rate	= get_rate,
+	.id		= CGU_SB_SD_MMC_CCLK_IN_ID,
+};
+
 static DEFINE_MUTEX(clkm_lock);
 
 static inline void clk_lock(void)
@@ -1044,8 +1062,9 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK(NULL, "spi_pclk_gated", clk_spi_pclk_gated)
 	_REGISTER_CLOCK(NULL, "spi_clk", clk_spi_clk)
 	_REGISTER_CLOCK(NULL, "spi_clk_gated", clk_spi_clk_gated)
+	_REGISTER_CLOCK(NULL, "mmc_hclk", clk_mmc_hclk)
+	_REGISTER_CLOCK(NULL, "mmc_cclk_in", clk_mmc_cclk_in)
 };
-
 
 static int __init clk_init(void)
 {
