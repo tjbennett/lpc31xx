@@ -39,9 +39,9 @@
 #include <mach/registers.h>
 #include <mach/hardware.h>
 
-#include "lpc313x-i2s-clocking.h"
-#include "lpc313x-pcm.h"
-#include "lpc313x-i2s.h"
+#include "lpc31xx-i2s-clocking.h"
+#include "lpc31xx-pcm.h"
+#include "lpc31xx-i2s.h"
 
 #define I2S_NAME "lpc313x-i2s"
 
