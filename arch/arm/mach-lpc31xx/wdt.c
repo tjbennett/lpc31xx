@@ -24,6 +24,7 @@
 #include <mach/constants.h>
 #include <mach/irqs.h>
 
+#ifndef CONFIG_OF
 static struct resource watchdog_resources[] = {
 	{
 		.start = WDT_PHYS,
@@ -45,3 +46,4 @@ static int __init wdt_device_init(void)
 }
 
 arch_initcall(wdt_device_init);
+#endif
