@@ -1,7 +1,7 @@
-Bottom: e82ce5e2fed3aa678bd1b9a292c06d7cb849a4f3
-Top:    006e60e7b57cff26d87ff9c921c5d8d0efe10c7c
+Bottom: 612c09a73a18c5697981d9eaa890633101f19387
+Top:    6f2b4c421a186a409e20222aceba0b007de7ba7e
 Author: Jon Smirl <jonsmirl@terra>
-Date:   2012-06-29 12:31:29 -0400
+Date:   2012-07-01 09:01:53 -0400
 
 From 4ff44350b181ef38427ef3552bfb8f638e61de9b Mon Sep 17 00:00:00 2001
 Subject: Remove some of the debugging noise from the .config file

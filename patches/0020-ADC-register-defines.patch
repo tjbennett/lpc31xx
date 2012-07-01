@@ -1,7 +1,7 @@
-Bottom: 7957f504a8073cb28ef5648687e98db833f60abf
-Top:    916ae6fb9fb1904fc6754cb7dd413f29ed070340
+Bottom: c76b355dcea7d1cf1ea82e02e95a95c385e45c11
+Top:    00fe72466ddc003ac794adec8ce522b65275e7f7
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-06-29 12:31:31 -0400
+Date:   2012-07-01 09:01:57 -0400
 
 From 6062de501a4e910188dc3e59d69179a58341ad95 Mon Sep 17 00:00:00 2001
 Subject: ADC register defines

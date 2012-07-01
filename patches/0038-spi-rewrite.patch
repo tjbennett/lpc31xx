@@ -1,7 +1,7 @@
-Bottom: 43021815bcb4288ecae21a21dff6c3a738b7cf59
-Top:    90bc30ec1b68764752659089735b56b988e75e24
+Bottom: 538c0856dfe1309ac9d516730ed5125839f07484
+Top:    39f32a8aae314a3a08263195fcbba666762e461f
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-06-29 12:31:43 -0400
+Date:   2012-07-01 09:02:08 -0400
 
 From c92d80de8eaca951f65fd6262d1d0dd25a150e2d Mon Sep 17 00:00:00 2001
 Subject: spi-rewrite

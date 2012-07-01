@@ -1,7 +1,7 @@
-Bottom: 90fba30484d9daa3230ed847d87b0e0e4193f761
-Top:    3d5bc5087bae4ea13e42d8ae52c81690e9f721be
+Bottom: e8a30d6aed4dd406db57a05c02c12a0fc2f0cf82
+Top:    ec3979346f6ef53e7a7378d752f0b7f396bbb627
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-29 12:31:27 -0400
+Date:   2012-07-01 09:01:51 -0400
 
 From 3e9f1e15f648bc46cfa253101e154a9b5d49d332 Mon Sep 17 00:00:00 2001
 Subject: video driver for ssd1289

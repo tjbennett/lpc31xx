@@ -1,44 +1,44 @@
 Version: 1
-Previous: e90cc9e8c5984577d386d8ee46076f90dc931044
-Head: e6378ac8266b04e98f59c60c371e287d893a5ffa
+Previous: 53c5447ce2624da4e9c7da441bd1df997964837b
+Head: 63abf674ffd881c1fb80f7d44a0f15857f0e9ac4
 Applied:
-  0001-base-patches-minus-8250.patch: 385667d250869690010639e220042687cd4b55df
-  0002-Default-configs-for-lpc31xx-dev-boards.patch: 18d7c432fe0bb54d6622b9d3e1ce33fe8ea59ee0
-  0003-lpc31xx-nand-support.patch: 3486d4609873a8baefa69dd4468530032dd5c228
-  0004-spi-support-lpc31xx.patch: b0838d44da78cb0c40dcc3bec7bd614f80b40488
-  0005-lpc31xx-mmc-support.patch: cde6bae8729aab879d45a8a5cb3acffd66c98d56
-  0006-watchdog-for-lpc31xx.patch: bc4f72f1c2280fbc29ff799c98c5a21c6f4015f6
-  0007-sound-support-for-lpc3xx.patch: 4f52d130df5aada630361a7f152c1053a4888bbf
-  0008-USB-support-for-lpc31xx.patch: ad35ac7544a93dd24df2fb97ffeb812fb7eb809f
-  0009-USB-Gadget-support-for-lpc31xx.patch: 4ac90cea49e5a6569a44afc7abba2ca1bc8f6c1e
-  0010-port-of-old-8250-code.patch: f882815f1db6369d0f2693a5255bfc55743c00c4
-  0011-video-driver-for-ssd1289.patch: b6725497e9b8b92c7c5aca4cb8c098d9630f6396
-  0012-Remove-overlapping-IO-defs.patch: 4cbe25827dce4ae098caaefc249f5827af84037e
-  0013-Make-sure-mmc-stop-command-is-fully-initialized-befo.patch: 166287c135f59f580ae3e16905a76cfb188facb1
-  0014-Remove-some-of-the-debugging-noise-from-the-.config-.patch: de535c5a032e33b593ae1093443c6ca53ee85ba9
-  0015-arm-lpc313x-NAND-Flash-SD-MMC-DMA-fixes.patch: 4daa0e0bf4341e2b9fd86ed49b97d1f2160a5e74
-  0016-arm-lpc313x-UART-DMA-support-fixes.patch: c925709798e1ac684429b07d5769e55de749f7a8
-  0017-arm-lpc313x-NAND-Flash-driver-DMA-buffer-mapping-fix.patch: c29905051b4e25489f85259fb649304bd8b18364
-  0018-sound-lpc313x-lpc315x-audio-analog-die-CODEC-fixes.patch: 5a9134f4dba472076ae13a2188568ac349dc570e
-  0019-Add-a-reset-function.patch: 4a6e5372cded45a8a036a49961f73ac0f2a0e5e0
-  0020-ADC-register-defines.patch: 9c4c65766bee31b37d18e611b606fb9c6bf74e27
-  0021-adc-and-pwm-drivers.patch: 6b2c1c1ae2c3cecadc94d76e129a81ee28718fea
-  0022-device-trees.patch: 526cb2df8052c77bb0dda24e1d57b397ab8a45d5
-  0023-DMA-rework.patch: e0bd36e2897dd1341745e805f705b1bbfbdebd81
-  0024-rewrite-irq-drivers.patch: 73577272da4e92ea96899a5807cf61751e59b191
-  0025-mmc-dma.patch: be581b7dc9539581b2ea720b6a564d54e52d1e3d
-  0026-switch-nand-to-dmaengine.patch: 6a5a712d2cad387bff56e7a9c8dfbfdf3243645f
-  0027-i2s-dma.patch: 8421dcf03567eab1e0002b499fb27fa56ecc41a9
-  0028-v34-compile-fixes.patch: 86299ac41c7f5eab04b4164942283f2860c14e49
-  0029-rename-to-lpc31xx.patch: 45ead1dbedb538e99566f3a7f99db730cc6e2ee5
-  0030-r2.patch: 11acdccb7d8af6fab0a87b6b5dd67cec3e8d5239
-  0031-dt-split.patch: 4be5db7bdddc8175b735f810ece49c1f7d0b7a7f
-  0032-evtr-irq-domain.patch: 4829df42c27d2f48bc07ae6a493631f6f60e51f8
-  0033-intr-domain-irq.patch: 15f81fe620cdbf152e9cf65198179fa46fdbbc47
-  0034-clean-up-watchdog.patch: 69f24822ad3a2acae553e28459c0394da52d0cda
-  0035-clean-out-val315x-code.patch: 9d18b0e0bab609fd8ffa8914ef9193b3a2965d53
-  0036-uart.patch: 97d827c0d442be58061f4db6fbf765715f0b6b5f
-  0037-spi-temp.patch: 2b0fbbe5ed000484f96130a8da12462c0a3fd439
-  0038-spi-rewrite.patch: e6378ac8266b04e98f59c60c371e287d893a5ffa
+  0001-base-patches-minus-8250.patch: e06d7b65cf4de328300cafc674b99961945e7917
+  0002-Default-configs-for-lpc31xx-dev-boards.patch: 8dc733bcdba5f9a034fca4fa5bffd8bbb9eeb78e
+  0003-lpc31xx-nand-support.patch: dfc15aa312adebe46971357a739dc969ee09ea34
+  0004-spi-support-lpc31xx.patch: e04691902079c12b494bcf9aa632bef3f753ad61
+  0005-lpc31xx-mmc-support.patch: 8a1d4aef5edd60c10c780e9e9cd900ce3ff24693
+  0006-watchdog-for-lpc31xx.patch: e2652b75a62217864af7cd99b1f15b67ca7af839
+  0007-sound-support-for-lpc3xx.patch: c0644f236275e29b1e612796586619f4ac856f11
+  0008-USB-support-for-lpc31xx.patch: 5017d8b35f955bed7218d4a0a518126856bbeca9
+  0009-USB-Gadget-support-for-lpc31xx.patch: 19f63c5513015d0bf0a365167ba388378a115282
+  0010-port-of-old-8250-code.patch: 5e030e7850304c3eab23d9a4a1ceb97bc7cfcb38
+  0011-video-driver-for-ssd1289.patch: 7048d245703f5397fbce2a11cce0d2657a363428
+  0012-Remove-overlapping-IO-defs.patch: 3fdc129106b61674f4b73c16620fa5d130986f1c
+  0013-Make-sure-mmc-stop-command-is-fully-initialized-befo.patch: 3d68544665928a497d45c1cbaaef1e2e16ccd070
+  0014-Remove-some-of-the-debugging-noise-from-the-.config-.patch: 9b6cec54fdca75ad595431a1dae1bcc2bd43704e
+  0015-arm-lpc313x-NAND-Flash-SD-MMC-DMA-fixes.patch: dfc7cb3fbda1c8cb084951cf94e4ce34c2649cdd
+  0016-arm-lpc313x-UART-DMA-support-fixes.patch: be64dc12af99250bdd09de264237adac70e2538f
+  0017-arm-lpc313x-NAND-Flash-driver-DMA-buffer-mapping-fix.patch: 5ea18278bfa7a81810bc866a318acee4f8eb76bf
+  0018-sound-lpc313x-lpc315x-audio-analog-die-CODEC-fixes.patch: 7152d0f56d96b7dbf6433bb255ced6efbfc7115e
+  0019-Add-a-reset-function.patch: 7aeb83ff2d35b786079a2756e008dce9ef3b56c1
+  0020-ADC-register-defines.patch: 4e822446f84c2f4cd3c411911ff3943d25aa8bef
+  0021-adc-and-pwm-drivers.patch: bc3fbabdf42fb8bfe1294781bae687481e68e0b5
+  0022-device-trees.patch: 79ab3816d0c85d4b662600622db80cefe0694308
+  0023-DMA-rework.patch: f208265e34e63d40e735e334ad829e73bd87fb7d
+  0024-rewrite-irq-drivers.patch: 0d21a06843d7ef26f16ab395f96ff457b88ff551
+  0025-mmc-dma.patch: 8643ba7aa214f1ab995d13a95b65b54d052a0901
+  0026-switch-nand-to-dmaengine.patch: 73f85aaf6468e761b4be30da8c7e6084eff399b4
+  0027-i2s-dma.patch: 8cb7536b8c99391d7029d86bd61536a25ced16fa
+  0028-v34-compile-fixes.patch: 41906bd1eb77d82c2d1116c2bc1aea7a9373eaed
+  0029-rename-to-lpc31xx.patch: 83a3fef2d108813d1f3225e34820ffb69cb87d16
+  0030-r2.patch: 853e6e9c0a0afcf17615379d363e27481bab994d
+  0031-dt-split.patch: c0426db22127f04681be46efc6d9d55f5f9c3eff
+  0032-evtr-irq-domain.patch: c5519280099a8d903c62e07d1d646c9c8b4c7377
+  0033-intr-domain-irq.patch: 9ccc9b09a85eb14bc42f58fe87b9ec4e995e2159
+  0034-clean-up-watchdog.patch: a1ca16a45f3f802de7105c7061f049421bc0d878
+  0035-clean-out-val315x-code.patch: 4142d347fb4e3494c5c419a72a83116926e6ce6e
+  0036-uart.patch: 262b58485d032dc9bf272d6d299662fab6f9a420
+  0037-spi-temp.patch: c7e7526571713b33c6968c1f6e75dae639a9d9d5
+  0038-spi-rewrite.patch: 63abf674ffd881c1fb80f7d44a0f15857f0e9ac4
 Unapplied:
 Hidden:

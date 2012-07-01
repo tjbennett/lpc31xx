@@ -1,7 +1,7 @@
-Bottom: 664586781716c7288917a78c2258cb7a11128da3
-Top:    082f8f94ddf65cb711e32f6930efffbd2134cd2a
+Bottom: a3dc4b1f1c8d9d715e146c048695096612ff213d
+Top:    d97a0254b7ec206505c433251e05bbdbd2e1837f
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-06-29 12:31:37 -0400
+Date:   2012-07-01 09:02:02 -0400
 
 From 954fe1906bd7d5260bf70194fe86bb3f392bd579 Mon Sep 17 00:00:00 2001
 Subject: v34 compile fixes

@@ -1,7 +1,7 @@
-Bottom: 082f8f94ddf65cb711e32f6930efffbd2134cd2a
-Top:    4c681cff901c2508491f40e2ec34c0899e76f965
+Bottom: d97a0254b7ec206505c433251e05bbdbd2e1837f
+Top:    4d88c39aa27f588d42a95a313c74af46c8b4b056
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-06-29 12:31:38 -0400
+Date:   2012-07-01 09:02:03 -0400
 
 From 5b608e2b60ff3020dac5f5f83e523980f3fc236c Mon Sep 17 00:00:00 2001
 Subject: rename to lpc31xx

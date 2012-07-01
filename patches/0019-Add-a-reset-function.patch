@@ -1,7 +1,7 @@
-Bottom: ddc42979e5cc6d8c55d32abe1dc578c026f94d07
-Top:    7957f504a8073cb28ef5648687e98db833f60abf
+Bottom: f9d60416627e5b32866f7dbd80a56a47042ed977
+Top:    c76b355dcea7d1cf1ea82e02e95a95c385e45c11
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-06-29 12:31:31 -0400
+Date:   2012-07-01 09:01:56 -0400
 
 From a2f49dc662181764987eecd2b11d503f191c255f Mon Sep 17 00:00:00 2001
 Subject: Add a reset function

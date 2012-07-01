@@ -1,7 +1,7 @@
-Bottom: bf5e9afd9eba2573e3772c5c414f45095c5da659
-Top:    dabca4632e001d98f323c5aec88045b654c05273
+Bottom: 5bb1ab167c998de02ae58d9f423c98ba9d13b8ba
+Top:    c3bd8aea4a68b5495ce9afad79b94266f37c879e
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-29 12:31:23 -0400
+Date:   2012-07-01 09:01:46 -0400
 
 From 16df9b49d5c85dd38d0b74022e88846a81812915 Mon Sep 17 00:00:00 2001
 Subject: lpc31xx nand support

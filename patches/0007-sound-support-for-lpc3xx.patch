@@ -1,7 +1,7 @@
-Bottom: c628a1aa25b4d0ae5a12524a4d78e241dea959a2
-Top:    b825838df04c1f4ea20d593e87d640e197f0b4d7
+Bottom: 6ed054031f2bc84c113adade5242b92188653eae
+Top:    28224cec949e4ac301c5dee19e3ff5b69db5c458
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-29 12:31:25 -0400
+Date:   2012-07-01 09:01:49 -0400
 
 From 4150f553442e0a1f9ef13517fcece2ff682ea6b2 Mon Sep 17 00:00:00 2001
 Subject: sound support for lpc3xx

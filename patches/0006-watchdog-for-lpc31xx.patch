@@ -1,7 +1,7 @@
-Bottom: 0da88758ce343ad59d7d7fb89f8bd10cc218e88b
-Top:    c628a1aa25b4d0ae5a12524a4d78e241dea959a2
+Bottom: 197b23cb4f9f685274f42c68dce19a5f5699aa28
+Top:    6ed054031f2bc84c113adade5242b92188653eae
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-06-29 12:31:24 -0400
+Date:   2012-07-01 09:01:48 -0400
 
 From 1beedd1fdd11636993d711c78aeb41e255792080 Mon Sep 17 00:00:00 2001
 Subject: watchdog for lpc31xx
