@@ -1,6 +1,6 @@
 Version: 1
-Previous: 569442e649569f481aa7112e26e5551f8f1a45de
-Head: 9abfd6c6a5fa435fcc98e0fc0a1ec71f75a3080b
+Previous: e1dcdc1c1c6622236c8f623045bd18d31186db27
+Head: 84735cbf0ff39d86ce0294b048e2a029f175cd93
 Applied:
   0001-base-patches-minus-8250.patch: e06d7b65cf4de328300cafc674b99961945e7917
   0002-Default-configs-for-lpc31xx-dev-boards.patch: 8dc733bcdba5f9a034fca4fa5bffd8bbb9eeb78e
@@ -39,7 +39,6 @@ Applied:
   0035-clean-out-val315x-code.patch: 4142d347fb4e3494c5c419a72a83116926e6ce6e
   0036-uart.patch: 262b58485d032dc9bf272d6d299662fab6f9a420
   0037-spi-temp.patch: c7e7526571713b33c6968c1f6e75dae639a9d9d5
-  0038-spi-rewrite.patch: 50de0e8a5e374c37019aa15d14323a1a4934ec3d
-  refresh-temp: 9abfd6c6a5fa435fcc98e0fc0a1ec71f75a3080b
+  0038-spi-rewrite.patch: 84735cbf0ff39d86ce0294b048e2a029f175cd93
 Unapplied:
 Hidden:
