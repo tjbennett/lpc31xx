@@ -376,6 +376,7 @@ static inline void lpc31xx_int_en(struct lpc31xx_spi *espi, u32 ints)
  */
 static void lpc31xx_set_cs_data_bits(struct lpc31xx_spi *espi, uint8_t cs, uint8_t data_width)
 {
+	dev_dbg(&espi->pdev->dev, "clpc31xx_set_cs_data_bits %d\n", data_width);
 	if (espi->current_bits_wd[cs] != data_width)
 	{
 		u32 tmp = spi_readl(SLV_SET2_REG(0));
@@ -596,12 +597,7 @@ static void readwriter(struct lpc31xx_spi *espi)
 	 * unused RX FIFO fill length, regardless of what the TX
 	 * FIFO status flag indicates.
 	 */
-	dev_dbg(&espi->pdev->dev,
-		"%s, rx: %p, rxend: %p, tx: %p, txend: %p bytes %d\n",
-		__func__, espi->rx, espi->rx_end, espi->tx, espi->tx_end, espi->cur_chip->n_bytes);
-
-	dev_dbg(&espi->pdev->dev,
-		"rx_end - rx %d\n", espi->rx_end - espi->rx);
+	//dev_dbg(&espi->pdev->dev, "%s, rx: %p, rxend: %p, tx: %p, txend: %p bytes %d\n", __func__, espi->rx, espi->rx_end, espi->tx, espi->tx_end, espi->cur_chip->n_bytes);
 
 	/* Set the FIFO trip level to the transfer size */
 	//spi_writel(INT_TRSH_REG, (SPI_INT_TSHLD_TX(0) | SPI_INT_TSHLD_RX(espi->cur_chip->n_bytes)));
@@ -611,11 +607,12 @@ static void readwriter(struct lpc31xx_spi *espi)
 	while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
 		switch (espi->read) {
 		case READING_NULL:
+			d_printk("rNL ");
 			spi_readl(FIFO_DATA_REG);
 			break;
 		case READING_U8:
 			*(uint8_t *)(espi->rx) = spi_readl(FIFO_DATA_REG) & 0xFFU;
-			d_printk("%02x ", *(uint8_t *)(espi->rx));
+			d_printk("r%02x ", *(uint8_t *)(espi->rx));
 			break;
 		case READING_U16:
 			*(uint16_t *)(espi->rx) = (uint16_t)spi_readl(FIFO_DATA_REG);;
@@ -629,10 +626,11 @@ static void readwriter(struct lpc31xx_spi *espi)
 	while ((espi->exp_fifo_level < SPI_FIFO_DEPTH) && (espi->tx < espi->tx_end)) {
 		switch (espi->write) {
 		case WRITING_NULL:
+			d_printk("WNL ");
 			spi_writel(FIFO_DATA_REG, -1);
 			break;
 		case WRITING_U8:
-			d_printk("%02x ", *(uint8_t *)(espi->tx));
+			d_printk("W%02x ", *(uint8_t *)(espi->tx));
 			spi_writel(FIFO_DATA_REG, *(uint8_t *) (espi->tx));
 			break;
 		case WRITING_U16:
@@ -645,11 +643,12 @@ static void readwriter(struct lpc31xx_spi *espi)
 		while ((!(spi_readl(STS_REG) & SPI_ST_RX_EMPTY)) && (espi->rx < espi->rx_end)) {
 			switch (espi->read) {
 			case READING_NULL:
+				d_printk("RNL ");
 				spi_readl(FIFO_DATA_REG);
 				break;
 			case READING_U8:
 				*(uint8_t *)(espi->rx) = spi_readl(FIFO_DATA_REG) & 0xFFU;
-				d_printk("%02x ", *(uint8_t *)(espi->rx));
+				d_printk("R%02x ", *(uint8_t *)(espi->rx));
 				break;
 			case READING_U16:
 				*(uint16_t *)(espi->rx) = (uint16_t)spi_readl(FIFO_DATA_REG);;
@@ -680,6 +679,8 @@ static void *next_transfer(struct lpc31xx_spi *espi)
 	struct spi_message *msg = espi->cur_msg;
 	struct spi_transfer *trans = espi->cur_transfer;
 
+	dev_dbg(&espi->pdev->dev, "next_transfer\n");
+
 	/* Move to next transfer */
 	if (trans->transfer_list.next != &msg->transfers) {
 		espi->cur_transfer =
@@ -694,7 +695,7 @@ static void *next_transfer(struct lpc31xx_spi *espi)
  * This DMA functionality is only compiled in if we have
  * access to the generic DMA devices/DMA engine.
  */
-#ifdef CONFIG_DMA_ENGINE_X
+#ifdef CONFIG_DMA_ENGINEX
 static void unmap_free_dma_scatter(struct lpc31xx_spi *espi)
 {
 	/* Unmap and free the SG tables */
@@ -1113,9 +1114,8 @@ static irqreturn_t lpc31xx_interrupt_handler(int irq, void *dev_id)
 	struct lpc31xx_spi *espi = dev_id;
 	struct spi_message *msg = espi->cur_msg;
 	uint16_t irq_status = 0;
-	uint16_t flag = 0;
 
-	dev_dbg(&espi->pdev->dev, "lpc31xx_interrupt_handler\n");
+	//dev_dbg(&espi->pdev->dev, "lpc31xx_interrupt_handler tx %x rx %x\n", espi->tx_end -  espi->tx, espi->rx_end -  espi->rx);
 
 	if (unlikely(!msg)) {
 		dev_err(&espi->pdev->dev,
@@ -1174,19 +1174,22 @@ static irqreturn_t lpc31xx_interrupt_handler(int irq, void *dev_id)
 	}
 
 	readwriter(espi);
+	//dev_dbg(&espi->pdev->dev, "interrupt after tx %x rx %x\n", espi->tx_end -  espi->tx, espi->rx_end -  espi->rx);
 
-	if ((espi->tx == espi->tx_end) && (flag == 0)) {
-		flag = 1;
+	if (espi->tx == espi->tx_end) {
+		//dev_dbg(&espi->pdev->dev, "tx");
 		/* Disable Transmit interrupt, enable receive interrupt */
 		lpc31xx_int_dis(espi, SPI_TX_INT);
-		lpc31xx_int_en(espi, SPI_RX_INT);
 		lpc31xx_int_clr(espi, SPI_ALL_INTS);
+		spi_writel(INT_TRSH_REG, (SPI_INT_TSHLD_TX(0x20) | SPI_INT_TSHLD_RX(min(0x20, espi->rx_end - espi->rx - 1))));
+		lpc31xx_int_en(espi, SPI_RX_INT);
 #ifdef JDS
 		writew((readw(SSP_IMSC(espi->virtbase)) &
 		       ~SSP_IMSC_MASK_TXIM) | SSP_IMSC_MASK_RXIM,
 		       SSP_IMSC(espi->virtbase));
 #endif
 	}
+	//dev_dbg(&espi->pdev->dev, "status %x irq %x", spi_readl(STS_REG), spi_readl(INT_STS_REG));
 
 	/*
 	 * Since all transactions must write as much as shall be read,
@@ -1194,6 +1197,7 @@ static irqreturn_t lpc31xx_interrupt_handler(int irq, void *dev_id)
 	 * At this point, all TX will always be finished.
 	 */
 	if (espi->rx >= espi->rx_end) {
+		//dev_dbg(&espi->pdev->dev, "rx");
 #ifdef JDS
 		writew(DISABLE_ALL_INTERRUPTS,
 		       SSP_IMSC(espi->virtbase));
@@ -1242,6 +1246,7 @@ static int set_up_next_transfer(struct lpc31xx_spi *espi,
 		dev_err(&espi->pdev->dev, "skipping this message\n");
 		return -EIO;
 	}
+	dev_dbg(&espi->pdev->dev, "Transfering %d bytes", espi->cur_transfer->len);
 	espi->tx = (void *)transfer->tx_buf;
 	espi->tx_end = espi->tx + espi->cur_transfer->len;
 	espi->rx = (void *)transfer->rx_buf;
@@ -1334,6 +1339,7 @@ err_config_dma:
 
 static void do_interrupt_dma_transfer(struct lpc31xx_spi *espi)
 {
+	int tmp;
 	/*
 	 * Default is to enable all interrupts except RX -
 	 * this will be enabled once TX is complete
@@ -1341,6 +1347,17 @@ static void do_interrupt_dma_transfer(struct lpc31xx_spi *espi)
 	uint32_t irqflags = SPI_ALL_INTS & ~SPI_RX_INT;
 
 	dev_dbg(&espi->pdev->dev, "do_interrupt_dma_transfer\n");
+
+	/* Setup timing and levels before initial chip select */
+	tmp = spi_readl(SLV_SET2_REG(0)) & ~(SPI_SLV2_SPO | SPI_SLV2_SPH);
+	/* Clock high between transfers */
+#ifdef JDS
+	tmp |= SPI_SLV2_SPO;
+	/* Data captured on 2nd clock edge */
+	tmp |= SPI_SLV2_SPH;
+#endif
+	spi_writel(SLV_SET2_REG(0), tmp);
+
 
 	/* Enable target chip, if not already active */
 	if (!espi->next_msg_cs_active)
@@ -1764,8 +1781,8 @@ static int lpc31xx_setup(struct spi_device *spi)
 	/* Now set controller state based on controller data */
 	chip->xfer_type = chip_info->com_mode;
 #endif
-	//chip->xfer_type = INTERRUPT_TRANSFER;
-	chip->xfer_type = POLLING_TRANSFER;
+	chip->xfer_type = INTERRUPT_TRANSFER;
+	//chip->xfer_type = POLLING_TRANSFER;
 
 	if (bits <= 3) {
 		/* LPC31xx doesn't support less than 4-bits */
