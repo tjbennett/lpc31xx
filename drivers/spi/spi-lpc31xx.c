@@ -308,7 +308,7 @@ struct lpc31xx_spi {
 	int				current_speed_hz[MAX_CHIP_SELECT];
 
 	/* DMA settings */
-#ifdef CONFIG_DMA_ENGINE_X
+#ifdef CONFIG_DMA_ENGINE
 	struct dma_chan			*dma_rx_channel;
 	struct dma_chan			*dma_tx_channel;
 	struct sg_table			sgt_rx;
@@ -695,7 +695,7 @@ static void *next_transfer(struct lpc31xx_spi *espi)
  * This DMA functionality is only compiled in if we have
  * access to the generic DMA devices/DMA engine.
  */
-#ifdef CONFIG_DMA_ENGINEX
+#ifdef CONFIG_DMA_ENGINE
 static void unmap_free_dma_scatter(struct lpc31xx_spi *espi)
 {
 	/* Unmap and free the SG tables */
@@ -902,9 +902,6 @@ static int configure_dma(struct lpc31xx_spi *espi)
 	case READING_U16:
 		rx_conf.src_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		break;
-	case READING_U32:
-		rx_conf.src_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
-		break;
 	}
 
 	switch (espi->write) {
@@ -918,12 +915,9 @@ static int configure_dma(struct lpc31xx_spi *espi)
 	case WRITING_U16:
 		tx_conf.dst_addr_width = DMA_SLAVE_BUSWIDTH_2_BYTES;
 		break;
-	case WRITING_U32:
-		tx_conf.dst_addr_width = DMA_SLAVE_BUSWIDTH_4_BYTES;
-		break;
 	}
 
-	/* SPI pecularity: we need to read and write the same width */
+	/* SPI peculiarity: we need to read and write the same width */
 	if (rx_conf.src_addr_width == DMA_SLAVE_BUSWIDTH_UNDEFINED)
 		rx_conf.src_addr_width = tx_conf.dst_addr_width;
 	if (tx_conf.dst_addr_width == DMA_SLAVE_BUSWIDTH_UNDEFINED)
