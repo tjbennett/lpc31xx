@@ -241,10 +241,6 @@ int __init usbotg_init(void)
 #endif
 	} else {
 #if defined(CONFIG_USB_EHCI_HCD)
-		/* enable VBUS power */
-		lpc313x_vbus_power(1);
-		msleep(2);
-
 		/* register host */
 		printk(KERN_INFO "Registering USB host 0x%08x 0x%08x (%d)\n", USB_DEV_OTGSC, EVRT_RSR(bank), bank);
 		retval = platform_device_register(&lpc313x_ehci_device);
