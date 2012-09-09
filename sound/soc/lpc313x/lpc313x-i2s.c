@@ -37,6 +37,7 @@
 
 #include <mach/board.h>
 #include <mach/registers.h>
+#include <mach/hardware.h>
 
 #include "lpc313x-i2s-clocking.h"
 #include "lpc313x-pcm.h"
