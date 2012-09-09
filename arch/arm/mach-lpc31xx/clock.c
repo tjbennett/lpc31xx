@@ -1062,6 +1062,8 @@ EXPORT_SYMBOL(clk_get_rate);
 static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK("pnx-i2c.0", NULL, clk_i2c0)
 	_REGISTER_CLOCK("pnx-i2c.1", NULL, clk_i2c1)
+	_REGISTER_CLOCK("1300a000.i2c", NULL, clk_i2c0)
+	_REGISTER_CLOCK("1300a400.i2c", NULL, clk_i2c1)
 	_REGISTER_CLOCK(NULL, "nand_s0", clk_nand_s0)
 	_REGISTER_CLOCK(NULL, "nand_ecc", clk_nand_ecc)
 	_REGISTER_CLOCK(NULL, "nand_clk", clk_nand_clk)
@@ -1076,7 +1078,7 @@ static struct clk_lookup lookups[] = {
 	_REGISTER_CLOCK(NULL, "wdog_pclk", clk_wdog_pclk)
 };
 
-static int __init clk_init(void)
+int __init clk_init(void)
 {
 	int i;
 
@@ -1085,5 +1087,4 @@ static int __init clk_init(void)
 
 	return 0;
 }
-core_initcall(clk_init);
 
