@@ -47,6 +47,7 @@
 #include <linux/io.h>
 
 #include <mach/board.h>
+#include <mach/hardware.h>
 #include <mach/registers.h>
 #include "lpc313x-i2s-clocking.h"
 
