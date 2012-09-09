@@ -100,7 +100,7 @@ static struct of_device_id timer_ids[] = {
 static void __init lpc31xx_timer_init(void)
 {
 	struct device_node *node;
-	int ret;
+	int irq;
 
 	node = of_find_matching_node(NULL, timer_ids);
 	if (!node)
@@ -111,8 +111,8 @@ static void __init lpc31xx_timer_init(void)
 		goto node_err;
 
 	/* Get the interrupts property */
-	ret = irq_of_parse_and_map(node, 0);
-	if (!ret) {
+	irq = irq_of_parse_and_map(node, 0);
+	if (!irq) {
 		pr_crit("LPC31xx: Timer -  unable to get IRQ from DT\n");
 		goto ioremap_err;
 	}
@@ -130,7 +130,7 @@ static void __init lpc31xx_timer_init(void)
 	timer_write(TIMER_LOAD, LATCH);
 	timer_write(TIMER_CONTROL, (TM_CTRL_ENABLE | TM_CTRL_PERIODIC));
 	timer_write(TIMER_CLEAR, 0);
-	setup_irq (IRQ_TIMER0, &lpc31xx_timer_irq);
+	setup_irq (irq, &lpc31xx_timer_irq);
 
 	return;
 
