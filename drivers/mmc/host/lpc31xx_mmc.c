@@ -20,6 +20,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+
 #include <linux/blkdev.h>
 #include <linux/clk.h>
 #include <linux/debugfs.h>
@@ -40,6 +41,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
+#include <linux/of_irq.h>
 #include <linux/gpio.h>
 
 #include "lpc31xx_mmc.h"
@@ -49,8 +51,8 @@
 /* for time being use arch specific DMA framework instead of generic framework */
 #include <mach/dma.h>
 
-#define USE_DMA
-#define BURST_DMA
+//#define USE_DMA
+//#define BURST_DMA
 
 #define LPC313x_MCI_DATA_ERROR_FLAGS	(SDMMC_INT_DTO | SDMMC_INT_DCRC | SDMMC_INT_HTO | SDMMC_INT_SBE | SDMMC_INT_EBE)
 #define LPC313x_MCI_CMD_ERROR_FLAGS	(SDMMC_INT_RTO | SDMMC_INT_RCRC | SDMMC_INT_RESP_ERR | SDMMC_INT_HLE)
@@ -138,6 +140,18 @@ struct lpc313x_mci_slot {
 
 	struct timer_list	detect_timer;
 };
+
+/* Register access macros */
+static inline uint32_t mci_readl(struct lpc313x_mci *host, uint32_t reg)
+{
+	return __raw_readl(host->regs + reg);
+}
+
+static inline void mci_writel(struct lpc313x_mci *host, uint32_t reg, uint32_t value)
+{
+	__raw_writel(value, host->regs + reg);
+}
+
 
 #define lpc313x_mci_test_and_clear_pending(host, event)		\
 	test_and_clear_bit(event, &host->pending_events)
@@ -296,7 +310,7 @@ static void lpc313x_mci_set_timeout(struct lpc313x_mci *host,
 	/* the standard response timeout value (Ncr) is 64 clocks.
 	 * Let give 4 additional clocks for response.
 	 */
-	mci_writel(TMOUT, /*0xffffffff); */ (timeout << 8) | (70));
+	mci_writel(host, SDMMC_TMOUT, /*0xffffffff); */ (timeout << 8) | (70));
 }
 
 static u32 lpc313x_mci_prepare_command(struct mmc_host *mmc,
@@ -348,11 +362,11 @@ static void lpc313x_mci_start_command(struct lpc313x_mci *host,
 	dev_vdbg(&host->pdev->dev,
 			"start cmd:%d ARGR=0x%08x CMDR=0x%08x\n",
 			cmd->opcode, cmd->arg, cmd_flags);
-	mci_writel(CMDARG, cmd->arg); // write to CMDARG register
-	mci_writel(CMD, cmd_flags | SDMMC_CMD_START); // write to CMD register
+	mci_writel(host, SDMMC_CMDARG, cmd->arg); // write to CMDARG register
+	mci_writel(host, SDMMC_CMD, cmd_flags | SDMMC_CMD_START); // write to CMD register
 
 	/* wait until CIU accepts the command */
-	while (--tmo && (mci_readl(CMD) & SDMMC_CMD_START))
+	while (--tmo && (mci_readl(host, SDMMC_CMD) & SDMMC_CMD_START))
 		cpu_relax();
 }
 
@@ -543,15 +557,15 @@ static void lpc313x_mci_submit_data(struct lpc313x_mci *host, struct mmc_data *d
 			host->dir_status = LPC313x_MCI_SEND_STATUS;
 
 		//SDMMC_INTMASK |= (SDMMC_INT_RXDR | SDMMC_INT_TXDR);
-		SDMMC_CTRL &= ~SDMMC_CTRL_DMA_ENABLE; // enable dma
+		mci_writel(host, SDMMC_CTRL, mci_readl(host, SDMMC_CTRL) & ~SDMMC_CTRL_DMA_ENABLE); // enable dma
 	}
 
 }
 
-#define mci_send_cmd(cmd,arg) {	\
-    SDMMC_CMDARG = arg;		\
-    SDMMC_CMD = SDMMC_CMD_START | cmd;\
-    while (SDMMC_CMD & SDMMC_CMD_START); \
+#define mci_send_cmd(host, cmd, arg) { \
+    mci_writel(host, SDMMC_CMDARG, arg); \
+    mci_writel(host, SDMMC_CMD, SDMMC_CMD_START | cmd); \
+    while (mci_readl(host, SDMMC_CMD) & SDMMC_CMD_START); \
 }
 
 void lpc313x_mci_setup_bus(struct lpc313x_mci_slot *slot)
@@ -568,24 +582,24 @@ void lpc313x_mci_setup_bus(struct lpc313x_mci_slot *slot)
 		/* store the actual clock for calculations */
 		slot->clock = (host->bus_hz / div) >> 1;
 		/* disable clock */
-		mci_writel(CLKENA, 0);
-		mci_writel(CLKSRC,0);
+		mci_writel(host, SDMMC_CLKENA, 0);
+		mci_writel(host, SDMMC_CLKSRC,0);
 		/* inform CIU */
-		mci_send_cmd( SDMMC_CMD_UPD_CLK | SDMMC_CMD_PRV_DAT_WAIT, 0);
+		mci_send_cmd(host, SDMMC_CMD_UPD_CLK | SDMMC_CMD_PRV_DAT_WAIT, 0);
 		/* set clock to desired speed */
-		mci_writel(CLKDIV, div);
+		mci_writel(host, SDMMC_CLKDIV, div);
 		/* inform CIU */
-		mci_send_cmd( SDMMC_CMD_UPD_CLK | SDMMC_CMD_PRV_DAT_WAIT, 0);
+		mci_send_cmd(host, SDMMC_CMD_UPD_CLK | SDMMC_CMD_PRV_DAT_WAIT, 0);
 		/* enable clock */
-		mci_writel(CLKENA, SDMMC_CLKEN_ENABLE);
+		mci_writel(host, SDMMC_CLKENA, SDMMC_CLKEN_ENABLE);
 		/* inform CIU */
-		 mci_send_cmd( SDMMC_CMD_UPD_CLK | SDMMC_CMD_PRV_DAT_WAIT, 0);
+		 mci_send_cmd(host, SDMMC_CMD_UPD_CLK | SDMMC_CMD_PRV_DAT_WAIT, 0);
 
 		host->current_speed = slot->clock;
 	}
 
 	/* Set the current slot bus width */
-	mci_writel(CTYPE, slot->ctype);
+	mci_writel(host, SDMMC_CTYPE, slot->ctype);
 }
 
 static void lpc313x_mci_select_slot(struct lpc313x_mci_slot *slot, int enable)
@@ -604,8 +618,7 @@ static void lpc313x_mci_set_power(struct lpc313x_mci_slot *slot, int enable)
 	 * jumper.
 	 */
 	if (gpio_is_valid(slot->gpio_power)) {
-		printk("lpc313x_mci_set_power %d\n", slot->gpio_power);
-		gpio_set_value(slot->gpio_power, enable);
+		gpio_set_value(slot->gpio_power, !enable);
 	}
 }
 
@@ -638,8 +651,8 @@ static void lpc313x_mci_start_request(struct lpc313x_mci *host,
 	data = mrq->data;
 	if (data) {
 		lpc313x_mci_set_timeout(host, slot, data);
-		mci_writel(BYTCNT,data->blksz*data->blocks);
-		mci_writel(BLKSIZ,data->blksz);
+		mci_writel(host, SDMMC_BYTCNT,data->blksz*data->blocks);
+		mci_writel(host, SDMMC_BLKSIZ,data->blksz);
 	}
 
 	cmd = mrq->cmd;
@@ -755,22 +768,24 @@ static int lpc313x_mci_get_cd(struct lpc313x_mci_slot *slot)
 
 	if (gpio_is_valid(slot->gpio_cd)) {
 		present = !gpio_get_value(slot->gpio_cd);
-		dev_vdbg(&slot->mmc->class_dev, "card is %spresent\n", present ? "" : "not ");
+		dev_dbg(&slot->mmc->class_dev, "card is %spresent\n", present ? "" : "not ");
 	}
 	return present;
 }
 
-static void lpc313x_mci_enable_sdio_irq(struct mmc_host *host, int enable)
+static void lpc313x_mci_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
+	struct lpc313x_mci_slot	*slot = mmc_priv(mmc);
+	struct lpc313x_mci	*host = slot->host;
 	unsigned int reg;
 
 	if (enable) {
-		reg = mci_readl(INTMASK) | SDMMC_INT_SDIO;
-		mci_writel(INTMASK, reg);
+		reg = mci_readl(host, SDMMC_INTMASK) | SDMMC_INT_SDIO;
+		mci_writel(host, SDMMC_INTMASK, reg);
 	}
 	else {
-		reg = mci_readl(INTMASK) & ~SDMMC_INT_SDIO;
-		mci_writel(INTMASK, reg);
+		reg = mci_readl(host, SDMMC_INTMASK) & ~SDMMC_INT_SDIO;
+		mci_writel(host, SDMMC_INTMASK, reg);
 	}
 }
 
@@ -830,12 +845,12 @@ static void lpc313x_mci_command_complete(struct lpc313x_mci *host,
 		 * core/sd.c expect those bits be in resp[0]. Hence
 		 * reverse the response word order.
 		 */
-		cmd->resp[3] = mci_readl(RESP0);
-		cmd->resp[2] = mci_readl(RESP1);
-		cmd->resp[1] = mci_readl(RESP2);
-		cmd->resp[0] = mci_readl(RESP3);
+		cmd->resp[3] = mci_readl(host, SDMMC_RESP0);
+		cmd->resp[2] = mci_readl(host, SDMMC_RESP1);
+		cmd->resp[1] = mci_readl(host, SDMMC_RESP2);
+		cmd->resp[0] = mci_readl(host, SDMMC_RESP3);
 	    } else {
-	        cmd->resp[0] = mci_readl(RESP0);
+	        cmd->resp[0] = mci_readl(host, SDMMC_RESP0);
 		cmd->resp[1] = 0;
 		cmd->resp[2] = 0;
 		cmd->resp[3] = 0;
@@ -993,7 +1008,7 @@ unlock:
 
 
 
-inline static void lpc313x_mci_push_data(void *buf,int cnt)
+inline static void lpc313x_mci_push_data(struct lpc313x_mci *host, void *buf, int cnt)
 {
     u32* pData = (u32*)buf;
 
@@ -1002,12 +1017,12 @@ inline static void lpc313x_mci_push_data(void *buf,int cnt)
 
     cnt = cnt >> 2;
     while (cnt > 0) {
-        SDMMC_DATA = *pData++ ;
+        mci_writel(host, SDMMC_DATA, *pData++);
         cnt--;
     }
 }
 
-inline static void lpc313x_mci_pull_data(void *buf,int cnt)
+inline static void lpc313x_mci_pull_data(struct lpc313x_mci *host, void *buf,int cnt)
 {
     u32* pData = (u32*)buf;
 
@@ -1015,7 +1030,7 @@ inline static void lpc313x_mci_pull_data(void *buf,int cnt)
 	    printk("error not align 4\n");
     cnt = cnt >> 2;
     while (cnt > 0) {
-        *pData++ = SDMMC_DATA;
+        *pData++ = mci_readl(host, SDMMC_DATA);
         cnt--;
     }
 }
@@ -1030,11 +1045,11 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
 	unsigned int		nbytes = 0,len,old_len,count =0;
 
 	do {
-		len = SDMMC_GET_FCNT(mci_readl(STATUS)) << 2;
+		len = SDMMC_GET_FCNT(mci_readl(host, SDMMC_STATUS)) << 2;
 		if(count == 0)
 			old_len = len;
 		if (likely(offset + len <= sg->length)) {
-			lpc313x_mci_pull_data((void *)(buf + offset),len);
+			lpc313x_mci_pull_data(host, (void *)(buf + offset),len);
 
 			offset += len;
 			nbytes += len;
@@ -1049,7 +1064,7 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
 			}
 		} else {
 			unsigned int remaining = sg->length - offset;
-			lpc313x_mci_pull_data((void *)(buf + offset),remaining);
+			lpc313x_mci_pull_data(host, (void *)(buf + offset),remaining);
 			nbytes += remaining;
 
 			flush_dcache_page(sg_page(sg));
@@ -1058,12 +1073,12 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
 				goto done;
 			offset = len - remaining;
 			buf = sg_virt(sg);
-			lpc313x_mci_pull_data(buf,offset);
+			lpc313x_mci_pull_data(host, buf,offset);
 			nbytes += offset;
 		}
 
-		status = mci_readl(MINTSTS);
-		mci_writel(RINTSTS,SDMMC_INT_RXDR); // clear RXDR interrupt
+		status = mci_readl(host, SDMMC_MINTSTS);
+		mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_RXDR); // clear RXDR interrupt
 		if (status & LPC313x_MCI_DATA_ERROR_FLAGS) {
 			host->data_status = status;
 			data->bytes_xfered += nbytes;
@@ -1074,7 +1089,7 @@ static void lpc313x_mci_read_data_pio(struct lpc313x_mci *host)
 		}
 		count ++;
 	} while (status & SDMMC_INT_RXDR); // if the RXDR is ready let read again
-	len = SDMMC_GET_FCNT(mci_readl(STATUS));
+	len = SDMMC_GET_FCNT(mci_readl(host, SDMMC_STATUS));
 	host->pio_offset = offset;
 	data->bytes_xfered += nbytes;
 	return;
@@ -1096,9 +1111,9 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
 
 	do {
 
-		len = SDMMC_FIFO_SZ - (SDMMC_GET_FCNT(mci_readl(STATUS)) << 2);
+		len = SDMMC_FIFO_SZ - (SDMMC_GET_FCNT(mci_readl(host, SDMMC_STATUS)) << 2);
 		if (likely(offset + len <= sg->length)) {
-			lpc313x_mci_push_data((void *)(buf + offset),len);
+			lpc313x_mci_push_data(host, (void *)(buf + offset),len);
 
 			offset += len;
 			nbytes += len;
@@ -1113,7 +1128,7 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
 		} else {
 			unsigned int remaining = sg->length - offset;
 
-			lpc313x_mci_push_data((void *)(buf + offset), remaining);
+			lpc313x_mci_push_data(host, (void *)(buf + offset), remaining);
 			nbytes += remaining;
 
 			host->sg = sg = sg_next(sg);
@@ -1123,12 +1138,12 @@ static void lpc313x_mci_write_data_pio(struct lpc313x_mci *host)
 
 			offset = len - remaining;
 			buf = sg_virt(sg);
-			lpc313x_mci_push_data((void *)buf, offset);
+			lpc313x_mci_push_data(host, (void *)buf, offset);
 			nbytes += offset;
 		}
 
-		status = mci_readl(MINTSTS);
-		mci_writel(RINTSTS,SDMMC_INT_TXDR); // clear RXDR interrupt
+		status = mci_readl(host, SDMMC_MINTSTS);
+		mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_TXDR); // clear RXDR interrupt
 		if (status & LPC313x_MCI_DATA_ERROR_FLAGS) {
 			host->data_status = status;
 			data->bytes_xfered += nbytes;
@@ -1168,12 +1183,12 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
 
 	spin_lock(&host->lock);
 	do {
-		status = mci_readl(RINTSTS);
-		pending = mci_readl(MINTSTS);// read only mask reg
+		status = mci_readl(host, SDMMC_RINTSTS);
+		pending = mci_readl(host, SDMMC_MINTSTS);// read only mask reg
 		if (!pending)
 			break;
 		if(pending & LPC313x_MCI_CMD_ERROR_FLAGS) {
-		    mci_writel(RINTSTS,LPC313x_MCI_CMD_ERROR_FLAGS);  //  clear interrupt
+		    mci_writel(host, SDMMC_RINTSTS,LPC313x_MCI_CMD_ERROR_FLAGS);  //  clear interrupt
 		    host->cmd_status = status;
 		    smp_wmb();
 		    lpc313x_mci_set_pending(host, EVENT_CMD_COMPLETE);
@@ -1181,7 +1196,7 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
 		}
 
 		if (pending & LPC313x_MCI_DATA_ERROR_FLAGS) { // if there is an error, let report DATA_ERROR
-			mci_writel(RINTSTS,LPC313x_MCI_DATA_ERROR_FLAGS);  // clear interrupt
+			mci_writel(host, SDMMC_RINTSTS,LPC313x_MCI_DATA_ERROR_FLAGS);  // clear interrupt
 			host->data_status = status;
 			smp_wmb();
 			lpc313x_mci_set_pending(host, EVENT_DATA_ERROR);
@@ -1190,7 +1205,7 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
 
 
 		if(pending & SDMMC_INT_DATA_OVER) {
-		    mci_writel(RINTSTS,SDMMC_INT_DATA_OVER);  // clear interrupt
+		    mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_DATA_OVER);  // clear interrupt
 		    if (!host->data_status)
 			host->data_status = status;
 		    smp_wmb();
@@ -1203,25 +1218,25 @@ static irqreturn_t lpc313x_mci_interrupt(int irq, void *dev_id)
 		}
 
 		if (pending & SDMMC_INT_RXDR) {
-		    mci_writel(RINTSTS,SDMMC_INT_RXDR);  //  clear interrupt
+		    mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_RXDR);  //  clear interrupt
 		    if(host->sg)
 			    lpc313x_mci_read_data_pio(host);
 		}
 
 		if (pending & SDMMC_INT_TXDR) {
-		    mci_writel(RINTSTS,SDMMC_INT_TXDR);  //  clear interrupt
+		    mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_TXDR);  //  clear interrupt
 		    if(host->sg) {
 			lpc313x_mci_write_data_pio(host);
 		    }
 		}
 
 		if (pending & SDMMC_INT_CMD_DONE) {
-		    mci_writel(RINTSTS,SDMMC_INT_CMD_DONE);  //  clear interrupt
+		    mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_CMD_DONE);  //  clear interrupt
 		    lpc313x_mci_cmd_interrupt(host, status);
 		}
 
 		if (pending & SDMMC_INT_SDIO) {
-		    mci_writel(RINTSTS,SDMMC_INT_SDIO);  //  clear interrupt
+		    mci_writel(host, SDMMC_RINTSTS,SDMMC_INT_SDIO);  //  clear interrupt
 		    mmc_signal_sdio_irq(host->cur_slot->mmc);
 		}
 	} while (pass_count++ < 5);
@@ -1256,9 +1271,9 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 		return;
 
 	enable_irq(slot->irq);
-	present = !gpio_get_value(slot->gpio_cd);
+	present = lpc313x_mci_get_cd(slot);
 	present_old = test_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
-	dev_vdbg(&slot->mmc->class_dev, "detect change: %d (was %d)\n",
+	dev_dbg(&slot->mmc->class_dev, "detect change: %d (was %d)\n",
 			present, present_old);
 
 	if (present != present_old) {
@@ -1268,9 +1283,13 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 
 		spin_lock(&host->lock);
 
-		/* Power up slot */
 		lpc313x_mci_set_power(slot, present);
-		set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+		if (present) {
+			set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+			set_bit(LPC313x_MMC_CARD_NEED_INIT, &slot->flags);
+		} else {
+			clear_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+		}
 
 
 		/* Clean up queue if present */
@@ -1278,9 +1297,9 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 		if (mrq) {
 			if (mrq == host->mrq) {
 			  	/* reset all blocks */
-			  	mci_writel(CTRL,(SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET | SDMMC_CTRL_DMA_RESET));
+			  	mci_writel(host, SDMMC_CTRL,(SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET | SDMMC_CTRL_DMA_RESET));
 			  	/* wait till resets clear */
-			  	while (mci_readl(CTRL) & (SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET | SDMMC_CTRL_DMA_RESET));
+			  	while (mci_readl(host, SDMMC_CTRL) & (SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET | SDMMC_CTRL_DMA_RESET));
 
 				host->data = NULL;
 				host->cmd = NULL;
@@ -1332,10 +1351,11 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 
 static irqreturn_t lpc313x_mci_detect_interrupt(int irq, void *dev_id)
 {
+	int level;
 	struct lpc313x_mci_slot	*slot = dev_id;
 
-	/* select the opposite level senstivity */
-	int level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_LOW : IRQ_TYPE_LEVEL_HIGH;
+	/* select the opposite level sensitivity */
+	level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_HIGH : IRQ_TYPE_LEVEL_LOW;
 	irq_set_irq_type(slot->irq, level);
 
 	/*
@@ -1376,14 +1396,20 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 		gpio_direction_input(slot->gpio_cd);
 	}
 	slot->gpio_wp = of_get_named_gpio_flags(np, "gpios", 1, &flags);
-	if (gpio_is_valid(slot->gpio_wp))
-		gpio_request(slot->gpio_cd, "mmc wp");
+	if (gpio_is_valid(slot->gpio_wp)) {
+		gpio_request(slot->gpio_wp, "mmc wp");
+		gpio_direction_input(slot->gpio_wp);
+	}
 	slot->gpio_power = of_get_named_gpio_flags(np, "gpios", 2, &flags);
-	if (gpio_is_valid(slot->gpio_power))
-		gpio_request(slot->gpio_cd, "mmc power");
+	if (gpio_is_valid(slot->gpio_power)) {
+		gpio_request(slot->gpio_power, "mmc power");
+		gpio_direction_output(slot->gpio_power, 1);
+	}
 	slot->gpio_select = of_get_named_gpio_flags(np, "gpios", 3, &flags);
-	if (gpio_is_valid(slot->gpio_select))
+	if (gpio_is_valid(slot->gpio_select)) {
 		gpio_request(slot->gpio_select, "mmc select");
+		gpio_direction_input(slot->gpio_select);
+	}
 
 	mmc->ops = &lpc313x_mci_ops;
 	mmc->f_min = DIV_ROUND_UP(host->bus_hz, 510);
@@ -1411,9 +1437,6 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 		mmc->ocr_avail |= mask;
 	}
 
-	/* Start with slot power disabled, will be enabled when card is detected */
-	lpc313x_mci_set_power(slot, 0);
-
 	mmc->caps = MMC_CAP_SDIO_IRQ;
 	width = of_get_property(np, "width", NULL);
 	if (*width == 4)
@@ -1426,10 +1449,29 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 	mmc->max_req_size = mmc->max_blk_size * mmc->max_blk_count;
 	mmc->max_seg_size = mmc->max_req_size;
 
-	slot->irq = of_get_property(np, "interrupts", NULL);
-	/* select the opposite level sensitivity */
-	level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_LOW : IRQ_TYPE_LEVEL_HIGH;
+	/* Create card detect handler thread for the slot */
+	setup_timer(&slot->detect_timer, lpc313x_mci_detect_change,
+			(unsigned long)slot);
 
+	slot->irq = irq_of_parse_and_map(np, 0);
+	/* select the opposite level sensitivity */
+	level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_HIGH : IRQ_TYPE_LEVEL_LOW;
+
+	if(lpc313x_mci_get_cd(slot)) {
+		lpc313x_mci_set_power(slot, 1);
+		set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+		set_bit(LPC313x_MMC_CARD_NEED_INIT, &slot->flags);
+	} else {
+		lpc313x_mci_set_power(slot, 0);
+		clear_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
+	}
+
+	host->slot[host->slot_count++] = slot;
+	mmc_add_host(mmc);
+
+#if defined (CONFIG_DEBUG_FS)
+	lpc313x_mci_init_debugfs(slot);
+#endif
 	/* set card detect irq info */
 	irq_set_irq_type(slot->irq, level);
 	ret = request_irq(slot->irq,
@@ -1439,23 +1481,6 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 			slot);
 	/****temporary for PM testing */
 	enable_irq_wake(slot->irq);
-
-	/* Assume card is present initially */
-	if(!gpio_get_value(slot->gpio_cd))
-		set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
-	else
-		clear_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
-
-	host->slot[host->slot_count++] = slot;
-	mmc_add_host(mmc);
-
-#if defined (CONFIG_DEBUG_FS)
-	lpc313x_mci_init_debugfs(slot);
-#endif
-
-	/* Create card detect handler thread for the slot */
-	setup_timer(&slot->detect_timer, lpc313x_mci_detect_change,
-			(unsigned long)slot);
 
 	return 0;
 err_ocr:
@@ -1569,27 +1594,27 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 	SYS_SDMMC_DELAYMODES = 0x1B;
 
   	/* reset all blocks */
-  	mci_writel(CTRL,(SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET | SDMMC_CTRL_DMA_RESET));
+  	mci_writel(host, SDMMC_CTRL,(SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET | SDMMC_CTRL_DMA_RESET));
   	/* wait till resets clear */
-  	while (mci_readl(CTRL) & (SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET | SDMMC_CTRL_DMA_RESET));
+  	while (mci_readl(host, SDMMC_CTRL) & (SDMMC_CTRL_RESET | SDMMC_CTRL_FIFO_RESET | SDMMC_CTRL_DMA_RESET));
 
 	 /* Clear the interrupts for the host controller */
-	mci_writel(RINTSTS, 0xFFFFFFFF);
-	mci_writel(INTMASK, 0); // disable all mmc interrupt first
+	mci_writel(host, SDMMC_RINTSTS, 0xFFFFFFFF);
+	mci_writel(host, SDMMC_INTMASK, 0); // disable all mmc interrupt first
 
   	/* Put in max timeout */
-  	mci_writel(TMOUT, 0xFFFFFFFF);
+  	mci_writel(host, SDMMC_TMOUT, 0xFFFFFFFF);
 
   	/* FIFO threshold settings  */
 #ifdef BURST_DMA
-	mci_writel(FIFOTH, ((0x1 << 28) | (0xB << 16) | (0xC << 0))); // RXMark = 11, TXMark = 12, DMA Size = 4
+	mci_writel(host, SDMMC_FIFOTH, ((0x1 << 28) | (0xB << 16) | (0xC << 0))); // RXMark = 11, TXMark = 12, DMA Size = 4
 #else
-  	mci_writel(FIFOTH, ((0x2 << 28) | (0x10 << 16) | (0x10 << 0))); // RXMark = 16, TXMark = 16, DMA Size = 8
+  	mci_writel(host, SDMMC_FIFOTH, ((0x2 << 28) | (0x10 << 16) | (0x10 << 0))); // RXMark = 16, TXMark = 16, DMA Size = 8
 #endif
 
 	/* disable clock to CIU */
-	mci_writel(CLKENA,0);
-	mci_writel(CLKSRC,0);
+	mci_writel(host, SDMMC_CLKENA,0);
+	mci_writel(host, SDMMC_CLKSRC,0);
 
 	tasklet_init(&host->tasklet, lpc313x_mci_tasklet_func, (unsigned long)host);
 	ret = request_irq(irq, lpc313x_mci_interrupt, 0, dev_name(&pdev->dev), host);
@@ -1598,6 +1623,11 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, host);
 
+	// enable interrupt for command done, data over, data empty, receive ready and error such as transmit, receive timeout, crc error
+	mci_writel(host, SDMMC_RINTSTS, 0xFFFFFFFF);
+	mci_writel(host, SDMMC_INTMASK,SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER | SDMMC_INT_TXDR | SDMMC_INT_RXDR | LPC313x_MCI_ERROR_FLAGS);
+	mci_writel(host, SDMMC_CTRL,SDMMC_CTRL_INT_ENABLE); // enable mci interrupt
+
 	for_each_child_of_node(np, node) {
 		ret = lpc313x_mci_init_slot(host, node);
 		if (ret) {
@@ -1605,12 +1635,6 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 			goto err_init_slot;
 		}
 	}
-
-	// enable interrupt for command done, data over, data empty, receive ready and error such as transmit, receive timeout, crc error
-	mci_writel(RINTSTS, 0xFFFFFFFF);
-	mci_writel(INTMASK,SDMMC_INT_CMD_DONE | SDMMC_INT_DATA_OVER | SDMMC_INT_TXDR | SDMMC_INT_RXDR | LPC313x_MCI_ERROR_FLAGS);
-	mci_writel(CTRL,SDMMC_CTRL_INT_ENABLE); // enable mci interrupt
-
 
 	dev_info(&pdev->dev, "LPC313x MMC controller at irq %d\n", irq);
 
@@ -1644,8 +1668,8 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
 	struct clk *clk;
 	int i;
 
-	mci_writel(RINTSTS, 0xFFFFFFFF);
-	mci_writel(INTMASK, 0); // disable all mmc interrupt first
+	mci_writel(host, SDMMC_RINTSTS, 0xFFFFFFFF);
+	mci_writel(host, SDMMC_INTMASK, 0); // disable all mmc interrupt first
 
 	platform_set_drvdata(pdev, NULL);
 
@@ -1656,8 +1680,8 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
 	}
 
 	/* disable clock to CIU */
-	mci_writel(CLKENA,0);
-	mci_writel(CLKSRC,0);
+	mci_writel(host, SDMMC_CLKENA,0);
+	mci_writel(host, SDMMC_CLKSRC,0);
 
 	/*  turn off the mci clock here */
 	clk = clk_get(NULL, "mmc_hclk");
@@ -1681,10 +1705,11 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
 static int lpc313x_mci_suspend(struct platform_device *pdev, pm_message_t state)
 {
 #ifdef CONFIG_PM
+	struct lpc313x_mci *host = platform_get_drvdata(pdev);
 	struct clk *clk;
 
 	/* Disable Card clock */
-	mci_writel(CLKENA, 0);
+	mci_writel(host, SDMMC_CLKENA, 0);
 
 	/* Disable IP clocks */
 	clk = clk_get(NULL, "mmc_hclk");
@@ -1700,6 +1725,7 @@ static int lpc313x_mci_suspend(struct platform_device *pdev, pm_message_t state)
 static int lpc313x_mci_resume(struct platform_device *pdev)
 {
 #ifdef CONFIG_PM
+	struct lpc313x_mci *host = platform_get_drvdata(pdev);
 	struct clk *clk;
 	int ret;
 
@@ -1712,7 +1738,7 @@ static int lpc313x_mci_resume(struct platform_device *pdev)
 	clk_put(clk);
 
 	/* Enable Card clock */
-	mci_writel(CLKENA ,SDMMC_CLKEN_ENABLE);
+	mci_writel(host, SDMMC_CLKENA ,SDMMC_CLKEN_ENABLE);
 #endif
 	return 0;
 }
