@@ -358,7 +358,7 @@ config LPC31XX_WATCHDOG
 	  Say Y here if to include support for the watchdog timer
 	  for the NXP's LPC31xx uC SoC.
 	  To compile this driver as a module, choose M here: the
-	  module will be called lpc313x_wdt.
+	  module will be called lpc31xx_wdt.
 
 # AVR32 Architecture
 
