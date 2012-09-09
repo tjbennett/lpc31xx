@@ -1,6 +1,44 @@
 Version: 1
-Previous: None
-Head: 28a33cbc24e4256c143dce96c7d93bf423229f92
+Previous: 15a3bfe5bbc1679ba1206f71a9a164ce89991529
+Head: 71cca502cfc06c042e256389dc90508f3fc3b54c
 Applied:
+  0001-base-patches-minus-8250.patch: 26c69eb95b0f4506b9e21f59736cba2260d37d35
+  0002-Default-configs-for-lpc31xx-dev-boards.patch: c3c30853ac385edb7714b40f2573ec8810516046
+  0003-lpc31xx-nand-support.patch: c1d3cb573dc0adfcdc65a9528009ff4733a56854
+  0004-spi-support-lpc31xx.patch: 0b0f2c76fbbc1d80717d2a6d5f1ed32d02947acf
+  0005-lpc31xx-mmc-support.patch: 5e7f254732ed25dd43faf24f1e31caa4066f9ff3
+  0006-watchdog-for-lpc31xx.patch: 285da5dd789bff148b4fd5db2ebf3a31f1d1420c
+  0007-sound-support-for-lpc3xx.patch: fc2009d0028eb837cc49031ce0e7566c37b2d954
+  0008-USB-support-for-lpc31xx.patch: 326ad447dca306d875f6369636b884f285f0d6b1
+  0009-USB-Gadget-support-for-lpc31xx.patch: 96a25a2ce8384afb5bb166e132d6aafdaedbe99b
+  0010-port-of-old-8250-code.patch: 33e20aaafd9bea5b1b2e84b24868e652f586110f
+  0011-video-driver-for-ssd1289.patch: 91b1586e1d6d1d13de0f09bc4f15d5962f3b7145
+  0012-Remove-overlapping-IO-defs.patch: 062cb81af6cb4189ba61c29bb5d8c7f062ad4e7c
+  0013-Make-sure-mmc-stop-command-is-fully-initialized-befo.patch: d916d7e149dab14b7a45e6fde95d318d58a2cdb5
+  0014-Remove-some-of-the-debugging-noise-from-the-.config-.patch: 93c2c543c42907696279e04ea4cd6fe12af4695d
+  0015-arm-lpc313x-NAND-Flash-SD-MMC-DMA-fixes.patch: 0c7f65f4d1f8db7d0af37de37b9e9cbf6c5dcf94
+  0016-arm-lpc313x-UART-DMA-support-fixes.patch: 47bad393dcba4e3ad1e022b3f643b7892e4bb565
+  0017-arm-lpc313x-NAND-Flash-driver-DMA-buffer-mapping-fix.patch: baf8b3cd490b07a536ffde18a8223867b8b97e01
+  0018-sound-lpc313x-lpc315x-audio-analog-die-CODEC-fixes.patch: bfb21e6b34c51fc28f2f30c4e664654b14ccdd63
+  0019-Add-a-reset-function.patch: 84d5591566b8f746a0a74141b92713f345c65222
+  0020-ADC-register-defines.patch: 196970d42eaf6e3e13de054220aba478e7e4e2a7
+  0021-adc-and-pwm-drivers.patch: ff8d5741e4f86f4839482a325aac6bd2c0368f18
+  0022-device-trees.patch: 6a00cb77d9fd950c590fd376a0f6076c1d5fb8f5
+  0023-DMA-rework.patch: 7aaf1585a26627c8aee3b3bfb9b91e633560415f
+  0024-rewrite-irq-drivers.patch: 451bd598e99cbb3ade02d5d103982a81de284960
+  0025-mmc-dma.patch: ac775ac22e16dd7bafd4cc3657ab2d1c57bce1c4
+  0026-switch-nand-to-dmaengine.patch: dcfa55a48986603529115546cf7a3a83d3ec5f46
+  0027-i2s-dma.patch: db79da914189c594d9b81adfe5ef8ff27f4b9a49
+  0028-v34-compile-fixes.patch: 13185cc00f8314da87191e3805822677bd91f4cb
+  0029-rename-to-lpc31xx.patch: b2a187358ad73167d0ad910c079983c3c47c7ddc
+  0030-r2.patch: 3f576617bf841cf8389d98532012dc621f3c68f3
+  0031-dt-split.patch: 8fe0c06335092be010e6a61b25348e31c6438a79
+  0032-evtr-irq-domain.patch: 99687f5b91bebabd29416019b5c7599f5fb4b8da
+  0033-intr-domain-irq.patch: f1b65070951435214d7c78f2a687014152b916f4
+  0034-clean-up-watchdog.patch: da75b61a0095237ffdc34bce9904b1bb8401f675
+  0035-clean-out-val315x-code.patch: e361853153c61433c4584827983dce1bd053b9aa
+  0036-uart.patch: 0fd1d07399f28f28dba29469e1ca8e2868b3a0de
+  0037-spi-temp.patch: ce226687503d96fd3f8930db7806ea94635cecab
+  0038-spi-rewrite.patch: 71cca502cfc06c042e256389dc90508f3fc3b54c
 Unapplied:
 Hidden:

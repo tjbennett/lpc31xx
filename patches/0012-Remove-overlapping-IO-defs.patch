@@ -1,0 +1,31 @@
+Bottom: 6f5c6e9fcadfdb273093add509cb95f9decd0026
+Top:    46b353927347099f0600fddf56c4f9504dc81c70
+Author: Jon Smirl (none) <jonsmirl@smirl2>
+Date:   2012-09-09 14:57:46 -0400
+
+From a26563209ebf435815e2a89cc381172958cdd353 Mon Sep 17 00:00:00 2001
+
+Subject: Remove overlapping IO defs
+
+
+---
+
+diff --git a/arch/arm/mach-lpc31xx/generic.c b/arch/arm/mach-lpc31xx/generic.c
+index 6729930..8ed8230 100644
+--- a/arch/arm/mach-lpc31xx/generic.c
++++ b/arch/arm/mach-lpc31xx/generic.c
+@@ -146,12 +146,14 @@ static struct map_desc lpc313x_io_desc[] __initdata = {
+ 		.length		= IO_APB4_SIZE,
+ 		.type		= MT_DEVICE
+ 	},
++#if 0
+ 	{
+ 		.virtual	= io_p2v(IO_DMA_REG_PHYS),
+ 		.pfn		= __phys_to_pfn(IO_DMA_REG_PHYS),
+ 		.length		= IO_DMA_REG_SIZE,
+ 		.type		= MT_DEVICE
+ 	},
++#endif
+ 	{
+ 		.virtual	= io_p2v(IO_MPMC_CFG_PHYS),
+ 		.pfn		= __phys_to_pfn(IO_MPMC_CFG_PHYS),
