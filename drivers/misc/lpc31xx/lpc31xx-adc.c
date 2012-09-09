@@ -35,7 +35,7 @@
 #include <mach/hardware.h>
 #include <mach/registers.h>
 
-#include "lpc313x_adc.h"
+#include "lpc31xx-adc.h"
 
 static int Major;		/* Major number assigned to our device driver */
 static int Device_Open = 0;	/* Is device open? */
