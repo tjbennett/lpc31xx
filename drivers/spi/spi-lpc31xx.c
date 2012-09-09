@@ -10,8 +10,7 @@
  * published by the Free Software Foundation.
  */
 
-#define DEBUG
-//#define jds_printk printk
+
 #define jds_printk(format, arg...) ({if (0) printk(format, ##arg);})
 
 #include <linux/io.h>
@@ -464,13 +463,13 @@ static int lpc31xx_spi_setup(struct spi_device *spi)
 		int err;
 
 		err = lpc31xx_spi_calc_divisors(espi, chip, spi->max_speed_hz);
-		jds_printk("spi calc err %d\n", err);
+		jds_printk("JDS - spi calc err %d\n", err);
 		if (err != 0) {
 			spi_set_ctldata(spi, NULL);
 			return err;
 		}
 		chip->rate = spi->max_speed_hz;
-		jds_printk("spi max %d\n", spi->max_speed_hz);
+		jds_printk("JDS - spi max %d\n", spi->max_speed_hz);
 	}
 
 	lpc31xx_spi_cs_control(spi, false);
@@ -940,9 +939,11 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
 	 * fit into the FIFO and can be transferred with a single interrupt.
 	 * So in these cases we will be using PIO and don't bother for DMA.
 	 */
+#if 0
 	if (espi->dma_rx && t->len > SPI_FIFO_DEPTH)
 		lpc31xx_spi_dma_transfer(espi);
 	else
+#endif
 		lpc31xx_spi_pio_transfer(espi);
 
 	/*
@@ -1296,7 +1297,7 @@ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	master->setup = lpc31xx_spi_setup;
-	master->transfer = lpc31xx_spi_transfer;
+	//master->transfer = lpc31xx_spi_transfer;
 	master->cleanup = lpc31xx_spi_cleanup;
 	master->bus_num = pdev->id;
 	master->num_chipselect = SPI_NUM_SLAVES;
@@ -1344,8 +1345,10 @@ static int __devinit lpc31xx_spi_probe(struct platform_device *pdev)
 	}
 	disable_irq(espi->irq);
 
+#if 0
 	if (lpc31xx_spi_setup_dma(espi))
 		dev_warn(&pdev->dev, "DMA setup failed. Falling back to PIO\n");
+#endif
 
 	espi->wq = create_singlethread_workqueue("lpc31xx_spid");
 	if (!espi->wq) {
