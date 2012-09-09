@@ -269,6 +269,13 @@ config SERIAL_8250_DW
 	help
 	  Selecting this option will enable handling of the extra features
 	  present in the Synopsys DesignWare APB UART.
+	  
+config SERIAL_8250_LPC31xx
+	tristate "Support for NXP LPC31xx UART"
+	depends on SERIAL_8250 && ARCH_LPC31XX
+	default y
+	help
+	  Basic OF UART driver for NXP LPC31xx family
 
 config SERIAL_8250_EM
 	tristate "Support for Emma Mobile intergrated serial port"
@@ -278,9 +285,9 @@ config SERIAL_8250_EM
 	  port hardware found on the Emma Mobile line of processors.
 	  If unsure, say N.
 
-config LPC31XX_SERIAL_DMA_SUPPORT
+config SERIAL_8250_LPC31xx_DMA
 	bool "DMA support for the LPC31XX RX/TX functions"
-	depends on SERIAL_8250=y
+	depends on SERIAL_8250=y && SERIAL_8250_LPC31xx
 	help
 	 Enables DMA support for the UART function
 
