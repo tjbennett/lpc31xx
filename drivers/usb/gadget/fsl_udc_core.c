@@ -17,7 +17,9 @@
  * option) any later version.
  */
 
-#undef VERBOSE
+//#define VERBOSE
+//#define VERBOSE_DEBUG
+//#define DEBUG
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -74,6 +76,8 @@ fsl_ep0_desc = {
 };
 
 static void fsl_ep_fifo_flush(struct usb_ep *_ep);
+static int fsl_udc_suspend(struct platform_device *pdev, pm_message_t state);
+static int fsl_udc_resume(struct platform_device *pdev);
 
 #ifdef CONFIG_PPC32
 /*
@@ -534,9 +538,9 @@ static void ep0_setup(struct fsl_udc *udc)
 	/* the intialization of an ep includes: fields in QH, Regs,
 	 * fsl_ep struct */
 	struct_ep_qh_setup(udc, 0, USB_RECV, USB_ENDPOINT_XFER_CONTROL,
-			USB_MAX_CTRL_PAYLOAD, 0, 0);
+			USB_MAX_CTRL_PAYLOAD, 1, 0);
 	struct_ep_qh_setup(udc, 0, USB_SEND, USB_ENDPOINT_XFER_CONTROL,
-			USB_MAX_CTRL_PAYLOAD, 0, 0);
+			USB_MAX_CTRL_PAYLOAD, 1, 0);
 	dr_ep_setup(0, USB_RECV, USB_ENDPOINT_XFER_CONTROL);
 	dr_ep_setup(0, USB_SEND, USB_ENDPOINT_XFER_CONTROL);
 
@@ -563,6 +567,7 @@ static int fsl_ep_enable(struct usb_ep *_ep,
 	unsigned char mult = 0, zlt;
 	int retval = -EINVAL;
 	unsigned long flags = 0;
+	unsigned char dir = 0;
 
 	ep = container_of(_ep, struct fsl_ep, ep);
 
@@ -614,17 +619,20 @@ static int fsl_ep_enable(struct usb_ep *_ep,
 	/* Controller related setup */
 	/* Init EPx Queue Head (Ep Capabilites field in QH
 	 * according to max, zlt, mult) */
-	struct_ep_qh_setup(udc, (unsigned char) ep_index(ep),
-			(unsigned char) ((desc->bEndpointAddress & USB_DIR_IN)
-					?  USB_SEND : USB_RECV),
+	dir = (unsigned char) ((desc->bEndpointAddress & USB_DIR_IN)
+			          ? USB_SEND : USB_RECV);
+	struct_ep_qh_setup(udc, (unsigned char) ep_index(ep), dir,
 			(unsigned char) (desc->bmAttributes
 					& USB_ENDPOINT_XFERTYPE_MASK),
 			max, zlt, mult);
 
+	/* Clear endpoint stall if set */
+	if(dr_ep_get_stall((unsigned char) ep_index(ep), dir)) {
+		dr_ep_change_stall((unsigned char) ep_index(ep), dir, 0);
+	}
+
 	/* Init endpoint ctrl register */
-	dr_ep_setup((unsigned char) ep_index(ep),
-			(unsigned char) ((desc->bEndpointAddress & USB_DIR_IN)
-					? USB_SEND : USB_RECV),
+	dr_ep_setup((unsigned char) ep_index(ep), dir,
 			(unsigned char) (desc->bmAttributes
 					& USB_ENDPOINT_XFERTYPE_MASK));
 
@@ -1446,15 +1454,20 @@ static void setup_received_irq(struct fsl_udc *udc,
 				== (USB_RECIP_ENDPOINT | USB_TYPE_STANDARD)) {
 			int pipe = get_pipe_by_windex(wIndex);
 			struct fsl_ep *ep;
+			unsigned long flags = 0;
 
 			if (wValue != 0 || wLength != 0 || pipe >= udc->max_ep)
 				break;
 			ep = get_ep_by_pipe(udc, pipe);
 
 			spin_unlock(&udc->lock);
-			rc = fsl_ep_set_halt(&ep->ep,
-					(setup->bRequest == USB_REQ_SET_FEATURE)
-						? 1 : 0);
+			spin_lock_irqsave(&ep->udc->lock, flags);
+			dr_ep_change_stall((unsigned char)(ep_index(ep)),
+					(ep_is_in(ep) ? USB_SEND : USB_RECV),
+					((setup->bRequest == USB_REQ_SET_FEATURE)
+					             ? 1 : 0));
+			rc = 0;
+			spin_unlock_irqrestore(&ep->udc->lock, flags);
 			spin_lock(&udc->lock);
 
 		} else if ((setup->bRequestType & (USB_RECIP_MASK
@@ -2478,7 +2491,6 @@ static int __init fsl_udc_probe(struct platform_device *pdev)
 			goto err_kfree;
 		}
 	}
-
 	dr_regs = ioremap(res->start, resource_size(res));
 	if (!dr_regs) {
 		ret = -ENOMEM;
@@ -2518,6 +2530,11 @@ static int __init fsl_udc_probe(struct platform_device *pdev)
 	/* Get max device endpoints */
 	/* DEN is bidirectional ep number, max_ep doubles the number */
 	udc_controller->max_ep = (dccparams & DCCPARAMS_DEN_MASK) * 2;
+
+#ifdef CONFIG_USB_OTG
+	udc_controller->transceiver = otg_get_transceiver();
+	VDBG("udc: otg_get_transceiver returns 0x%p", udc_controller->transceiver);
+#endif
 
 	udc_controller->irq = platform_get_irq(pdev, 0);
 	if (!udc_controller->irq) {
@@ -2644,6 +2661,12 @@ static int __exit fsl_udc_remove(struct platform_device *pdev)
 
 	fsl_udc_clk_release();
 
+#ifdef CONFIG_USB_OTG
+	if (udc_controller->transceiver) {
+		otg_put_transceiver(udc_controller->transceiver);
+		udc_controller->transceiver = 0;
+	}
+#endif
 	/* DR has been stopped in usb_gadget_unregister_driver() */
 	remove_proc_file();
 
