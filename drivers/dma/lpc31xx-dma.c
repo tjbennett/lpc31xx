@@ -30,8 +30,81 @@
 #include <linux/dma-mapping.h>
 
 #include <mach/dma.h>
+#include <mach/clock.h>
 
+typedef u32 uint32_t;
 struct lpc31xx_dma_engine;
+
+/***********************************************************************
+ * DMA register definitions
+ **********************************************************************/
+#define DMACH_SRC_ADDR(ch)    __REG (DMA_PHYS + ((ch) << 5) + 0x00)
+#define DMACH_DST_ADDR(ch)    __REG (DMA_PHYS + ((ch) << 5) + 0x04)
+#define DMACH_LEN(ch)         __REG (DMA_PHYS + ((ch) << 5) + 0x08)
+#define DMACH_CFG(ch)         __REG (DMA_PHYS + ((ch) << 5) + 0x0C)
+#define DMACH_EN(ch)          __REG (DMA_PHYS + ((ch) << 5) + 0x10)
+#define DMACH_TCNT(ch)        __REG (DMA_PHYS + ((ch) << 5) + 0x1C)
+#define DMACH_ALT_EN          __REG (DMA_PHYS + 0x400)
+#define DMACH_IRQ_STATUS      __REG (DMA_PHYS + 0x404)
+#define DMACH_IRQ_MASK        __REG (DMA_PHYS + 0x408)
+#define DMACH_ALT_PHYS(ch)    (DMA_PHYS + 0x200 + ((ch) << 4))
+#define DMACH_SOFT_INT_PHYS   (DMA_PHYS + 0x40C )
+
+/***********************************************************************
+* Channel CONFIGURATION register defines
+***********************************************************************/
+#define DMA_CFG_CIRC_BUF        _BIT(18)
+#define DMA_CFG_CMP_CH_EN       _BIT(17)
+#define DMA_CFG_CMP_CH_NR(n)    _SBF(13, ((n) & 0x7))
+#define DMA_CFG_INV_ENDIAN      _BIT(12)
+#define DMA_CFG_CIRC_BUF        _BIT(18)
+#define DMA_CFG_TX_WORD         _SBF(10, 0x00)
+#define DMA_CFG_TX_HWORD        _SBF(10, 0x01)
+#define DMA_CFG_TX_BYTE         _SBF(10, 0x02)
+#define DMA_CFG_TX_BURST        _SBF(10, 0x03)
+#define DMA_CFG_RD_SLV_NR(n)    _SBF(5, ((n) & 0x1F))
+#define DMA_CFG_WR_SLV_NR(n)    _SBF(0, ((n) & 0x1F))
+
+#define DMA_CFG_GET_CMP_CH_NR(n)    (((n) >> 13) & 0x7)
+#define DMA_CFG_GET_RD_SLV_NR(n)    (((n) >> 5) & 0x1F)
+#define DMA_CFG_GET_WR_SLV_NR(n)    ((n) & 0x1F)
+
+/* bit defines for interrupt status and mask register */
+#define DMA_IRQS_SOFT         _BIT(30)
+#define DMA_IRQS_ABORT        _BIT(31)
+
+/* DMA hardware constants */
+#define DMA_MAX_CHANNELS   12
+#define DMA_MAX_TRANSFERS  0x1FFFFF
+
+/*bit defines for configuration register */
+#define DMA_COMPANION_ENABLE _BIT()
+/* DMA slave number defines */
+#define DMA_SLV_PCM_TX     1
+#define DMA_SLV_PCM_RX     2
+#define DMA_SLV_UART_RX    3
+#define DMA_SLV_UART_TX    4
+#define DMA_SLV_I2C0       5
+#define DMA_SLV_I2C1       6
+#define DMA_SLV_I2STX0_L   7
+#define DMA_SLV_I2STX0_R   8
+#define DMA_SLV_I2STX1_L   9
+#define DMA_SLV_I2STX1_R   10
+#define DMA_SLV_I2SRX0_L   11
+#define DMA_SLV_I2SRX0_R   12
+#define DMA_SLV_I2SRX1_L   13
+#define DMA_SLV_I2SRX1_R   16
+#define DMA_SLV_LCD        17
+#define DMA_SLV_SPI_TX     18
+#define DMA_SLV_SPI_RX     19
+#define DMA_SLV_SDMMC      20
+#define DMA_CLV_INVALID    0xFF
+
+/* DMA transfer types */
+#define DMA_TRANSFER_WORD       0
+#define DMA_TRANSFER_HALF_WORD  1
+#define DMA_TRANSFER_BYTE       2
+#define DMA_TRANSFER_BURST      3
 
 /**
  * struct lpc31xx_dma_desc - LPC31xx specific transaction descriptor
@@ -116,6 +189,7 @@ struct lpc31xx_dma_engine {
 #define INTERRUPT_NEXT_BUFFER 2
 
 	struct lpc31xx_dma_chan	channels[DMA_MAX_CHANNELS];
+	int irq;
 };
 
 static inline struct device *chan2dev(struct lpc31xx_dma_chan *edmac)
@@ -131,8 +205,8 @@ static struct lpc31xx_dma_chan *to_lpc31xx_dma_chan(struct dma_chan *chan)
 static spinlock_t driver_lock; /* to guard state variables */
 
 static unsigned int dma_irq_mask = 0xFFFFFFFF;
-static int sg_higher_channel[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-static int softirqmask[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static int sg_higher_channel[DMA_MAX_CHANNELS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+static int softirqmask[DMA_MAX_CHANNELS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 static int softirqen = 0;
 
 static int dma_channels_requested = 0;
@@ -972,17 +1046,15 @@ static int lpc31xx_dma_slave_config(struct lpc31xx_dma_chan *edmac,
 	}
 
 	switch (width) {
-#if 0
 	case DMA_SLAVE_BUSWIDTH_1_BYTE:
-		ctrl = 0;
+		ctrl = DMA_TRANSFER_BYTE;
 		break;
 	case DMA_SLAVE_BUSWIDTH_2_BYTES:
-		ctrl = M2M_CONTROL_PW_16;
+		ctrl = DMA_TRANSFER_HALF_WORD;
 		break;
 	case DMA_SLAVE_BUSWIDTH_4_BYTES:
-		ctrl = M2M_CONTROL_PW_32;
+		ctrl = DMA_TRANSFER_WORD;
 		break;
-#endif
 	default:
 		return -EINVAL;
 	}
@@ -1073,7 +1145,6 @@ static int __init lpc31xx_dma_probe(struct platform_device *pdev)
 	struct lpc31xx_dma_engine *edma;
 	int ret, i;
 
-	printk("JDS - lpc31xx_dma_probe 1\n");
 	spin_lock_init(&driver_lock);
 
 	edma = kzalloc(sizeof(*edma), GFP_KERNEL);
@@ -1083,7 +1154,7 @@ static int __init lpc31xx_dma_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&edma->dma_dev.channels);
 
 	/* Initialize channel parameters */
-	for (i = 0; i < DMA_MAX_CHANNELS; i++) {
+	for (i = 0; i <= DMA_MAX_CHANNELS; i += 2) {
 		struct lpc31xx_dma_chan *edmac = &edma->channels[i];
 
 		edmac->chan.device = &edma->dma_dev;
@@ -1124,13 +1195,17 @@ static int __init lpc31xx_dma_probe(struct platform_device *pdev)
 		goto err_init;
 	}
 
+	edma->irq = platform_get_irq(pdev, 0);
+	if (edma->irq < 0) {
+		dev_err(&pdev->dev, "failed to get irq resources\n");
+		goto err_init;
+	}
 	dma_irq_mask = 0xFFFFFFFF;
 	DMACH_IRQ_MASK = dma_irq_mask;
-	ret = request_irq (IRQ_DMA, lpc31xx_dma_irq_handler, 0, "DMAC", edma);
+	ret = request_irq (edma->irq, lpc31xx_dma_irq_handler, 0, "DMAC", edma);
 	if (ret)
 		printk (KERN_ERR "request_irq() returned error %d\n", ret);
 
-	printk("JDS - lpc31xx_dma_probe 2\n");
 	return 0;
 
 err_init:
@@ -1144,6 +1219,7 @@ static int __exit lpc31xx_dma_remove(struct platform_device *pdev)
 	struct lpc31xx_dma_engine *edma = platform_get_drvdata(pdev);
 
 	dma_async_device_unregister(&edma->dma_dev);
+	free_irq(edma->irq, edma);
 	kfree(edma);
 	return 0;
 }
@@ -1169,7 +1245,6 @@ static struct platform_driver lpc31xx_dma_driver = {
 
 static int __init lpc31xx_dma_module_init(void)
 {
-	printk("JDS - lpc31xx_dma_module_init\n");
 	return platform_driver_probe(&lpc31xx_dma_driver, lpc31xx_dma_probe);
 }
 subsys_initcall(lpc31xx_dma_module_init);
