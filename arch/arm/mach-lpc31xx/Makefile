@@ -4,8 +4,12 @@
 
 # Object file lists.
 
-obj-y += irq.o evtr.o time.o generic.o dma.o usb.o clock.o sram.o
+obj-y += irq.o evtr.o time.o generic.o usb.o clock.o sram.o
 obj-$(CONFIG_OF) += dt.o
+ifeq ($(CONFIG_DMA_ENGINE),n)
+obj-y += dma.o
+endif
+
 
 
 # Specific board support
