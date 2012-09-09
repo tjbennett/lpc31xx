@@ -106,9 +106,9 @@
 		dm9000@20020000 {
 			compatible = "davicom,dm9000";
 			reg = <0x20020000 0x100 0x20030000 0x100>;
-			/* interrupt-parent = <&evtr>; 
-			interrupts = <4 4>; */
-			interrupts = <34>;
+			/* interrupts = <34>; */
+			interrupt-parent = <&evtr>;
+			interrupts = <4 4>;
 			gpios = <
 				&gpio_ebi_i2stx_0 2 0 /* main irq, map gpio to irq */
 				0  /* WOL irq, map gpio to irq */
