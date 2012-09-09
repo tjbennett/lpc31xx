@@ -52,6 +52,8 @@ void __init lpc31xx_init_early(void)
 static const char *lpc31xx_dt_match[] __initconst = {
 	"ncp,lpc3130",
 	"nxp,lpc3131",
+	"nxp,lpc3141",
+	"nxp,lpc3142",
 	"nxp,lpc3152",
 	"nxp,lpc3153",
 	NULL,
@@ -64,5 +66,5 @@ DT_MACHINE_START(EA313X, "NXP LPC31xx (Device Tree Support)")
 	.timer		= &lpc31xx_timer,
 	.init_machine	= lpc31xx_dt_init,
 	.dt_compat	= lpc31xx_dt_match,
-	.restart	= arch_reset,
+	.restart	= lpc31xx_arch_reset,
 MACHINE_END

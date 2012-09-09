@@ -27,26 +27,4 @@ static inline void arch_idle(void)
 	cpu_do_idle ();
 }
 
-static inline void arch_reset(char mode, const char *cmd)
-{
-	printk("arch_reset: attempting watchdog reset\n");
-
-	/* enable WDT clock */
-	cgu_clk_en_dis(CGU_SB_WDOG_PCLK_ID, 1);
-
-	/* Disable watchdog */
-	WDT_TCR = 0;
-	WDT_MCR = WDT_MCR_STOP_MR1 | WDT_MCR_INT_MR1;
-
-	/*  If TC and MR1 are equal a reset is generated. */
-	WDT_PR  = 0x00000002;
-	WDT_TC  = 0x00000FF0;
-	WDT_MR0 = 0x0000F000;
-	WDT_MR1 = 0x00001000;
-	WDT_EMR = WDT_EMR_CTRL1(0x3);
-	/* Enable watchdog timer; assert reset at timer timeout */
-	WDT_TCR = WDT_TCR_CNT_EN;
-	cpu_reset (0);/* loop forever and wait for reset to happen */
-
-	/*NOTREACHED*/
-}
+extern void lpc31xx_arch_reset(char mode, const char *cmd);
