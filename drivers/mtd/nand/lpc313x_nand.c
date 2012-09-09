@@ -59,7 +59,7 @@
  * */
 #define USE_DMA
 
-/* Maximum number of DMA descritpors in SG table
+/* Maximum number of DMA descriptors in SG table
  * */
 #define NAND_DMA_MAX_DESC 4
 
@@ -140,7 +140,7 @@ static const u32 nand_buff_phys_addr[2] = {
  */
 
 /*
- * Autoplacement pattern for 512+16 bytes small block NAND FLASH
+ * Auto-placement pattern for 512+16 bytes small block NAND FLASH
  */
 static struct nand_ecclayout nand_hw_eccoob_16 = {
 	.eccbytes	= 12,
@@ -153,7 +153,7 @@ static struct nand_ecclayout nand_hw_eccoob_16 = {
 };
 
 /*
- * Autoplacement pattern for 2048+64 bytes large block NAND FLASH
+ * Auto-placement pattern for 2048+64 bytes large block NAND FLASH
  */
 static struct nand_ecclayout nand_hw_eccoob_64 = {
 	.eccbytes	= 48,
@@ -173,7 +173,7 @@ static struct nand_ecclayout nand_hw_eccoob_64 = {
 
 #ifdef HUGE_BLOCK_SUPPORT
 /*
- * Autoplacement pattern for 4096+128 bytes large block NAND FLASH
+ * Auto-placement pattern for 4096+128 bytes large block NAND FLASH
  */
 static struct nand_ecclayout nand_hw_eccoob_128 = {
 	.eccbytes	= 96,
