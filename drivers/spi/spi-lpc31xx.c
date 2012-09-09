@@ -982,7 +982,7 @@ static void lpc31xx_spi_process_transfer(struct lpc31xx_spi *espi,
 /*
  * Flush the TX and RX FIFOs
  */
-static int lpc313x_fifo_flush(struct lpc31xx_spi *espi)
+static int lpc31xx_fifo_flush(struct lpc31xx_spi *espi)
 {
 	unsigned long timeout;
 	volatile uint32_t tmp;
@@ -1031,7 +1031,7 @@ static void lpc31xx_spi_process_message(struct lpc31xx_spi *espi,
 		msg->status = err;
 		return;
 	}
-	err = lpc313x_fifo_flush(espi);
+	err = lpc31xx_fifo_flush(espi);
 	if (err)
 		return;
 	/*
@@ -1234,12 +1234,12 @@ static void lpc31xx_spi_prep(struct lpc31xx_spi *espi)
 {
 	uint32_t tmp;
 
-	jds_printk("JDS - lpc313x_spi_prep\n");
+	jds_printk("JDS - lpc31xx_spi_prep\n");
 	/* Reset SPI block */
 	lpc31xx_spi_write(espi, SPI_CONFIG_REG, SPI_CFG_SW_RESET);
 
 	/* Clear FIFOs */
-	lpc313x_fifo_flush(espi);
+	lpc31xx_fifo_flush(espi);
 
 	/* Clear latched interrupts */
 	lpc31xx_int_dis(espi, SPI_ALL_INTS);
@@ -1510,7 +1510,7 @@ static int lpc31xx_spi_resume(struct platform_device *pdev)
 {
 #ifdef CONFIG_PM
 	//struct spi_master *master = spi_master_get(platform_get_drvdata(pdev));
-	//struct lpc313xspi *spidat = spi_master_get_devdata(master);
+	//struct lpc31xxspi *spidat = spi_master_get_devdata(master);
 
 	/* Switch on the clocks */
 	lpc31xx_spi_clks_enable();
@@ -1519,11 +1519,11 @@ static int lpc31xx_spi_resume(struct platform_device *pdev)
 }
 
 #if defined(CONFIG_OF)
-static const struct of_device_id lpc313x_spi_of_match[] = {
+static const struct of_device_id lpc31xx_spi_of_match[] = {
 	{ .compatible = "nxp,lpc31xx-spi" },
 	{},
 };
-MODULE_DEVICE_TABLE(of, lpc313x_spi_of_match);
+MODULE_DEVICE_TABLE(of, lpc31xx_spi_of_match);
 #endif
 
 static struct platform_driver lpc31xx_spi_driver = {
@@ -1532,10 +1532,10 @@ static struct platform_driver lpc31xx_spi_driver = {
 	.suspend	= lpc31xx_spi_suspend,
 	.resume		= lpc31xx_spi_resume,
 	.driver		= {
-		.name	= "spi_lpc313x",
+		.name	= "spi_lpc31xx",
 		.owner	= THIS_MODULE,
 #ifdef CONFIG_OF
-		.of_match_table = lpc313x_spi_of_match,
+		.of_match_table = lpc31xx_spi_of_match,
 #endif
 	},
 };

@@ -1,9 +1,9 @@
-/* linux/arch/arm/mach-lpc313x/include/mach/gpio.h
+/* linux/arch/arm/mach-lpc31xx/include/mach/gpio.h
  *  
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors
  *
- * GPIO defines & routines for LPC313x and LPC315x SoCs.
+ * GPIO defines & routines for LPC31xx SoCs.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,8 +20,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-#ifndef _LPC313X_GPIO_H
-#define _LPC313X_GPIO_H
+#ifndef _LPC31XX_GPIO_H
+#define _LPC31XX_GPIO_H
 
 #include <linux/irqflags.h>
 #include <mach/hardware.h>
@@ -146,7 +146,7 @@
 
                 
 #if 0
-static inline int lpc313x_gpio_ip_driven(unsigned gpio)
+static inline int lpc31xx_gpio_ip_driven(unsigned gpio)
 {
 	unsigned long flags;
 	int port = (gpio & GPIO_PORT_MASK);
@@ -171,28 +171,28 @@ static inline int lpc313x_gpio_ip_driven(unsigned gpio)
                
 /*-------------------------------------------------------------------------*/
 
-/* Wrappers for "new style" GPIO calls. These calls LPC313x specific versions
+/* Wrappers for "new style" GPIO calls. These calls LPC31xx specific versions
  * to allow future extension of GPIO logic.
 */
 static inline  int gpio_direction_input(unsigned gpio)
 {
-	return lpc313x_gpio_direction_input(gpio);
+	return lpc31xx_gpio_direction_input(gpio);
 }
 
 static inline int gpio_direction_output(unsigned gpio, int value)
 {
-	lpc313x_gpio_set_value(gpio, value);
+	lpc31xx_gpio_set_value(gpio, value);
 	return 0;
 }
 
 static inline int gpio_get_value(unsigned gpio)
 {
-	return lpc313x_gpio_get_value(gpio);
+	return lpc31xx_gpio_get_value(gpio);
 }
 
 static inline void gpio_set_value(unsigned gpio, int value)
 {
-	lpc313x_gpio_set_value(gpio, value);
+	lpc31xx_gpio_set_value(gpio, value);
 }
 static inline int gpio_request(unsigned gpio, const char *label)
 {
@@ -204,10 +204,10 @@ static inline int gpio_request(unsigned gpio, const char *label)
  **/
 static inline void gpio_free( unsigned gpio)
 {
-	lpc313x_gpio_ip_driven(gpio);
+	lpc31xx_gpio_ip_driven(gpio);
 }
 int gpio_is_valid(unsigned pin);
 #endif
 
 
-#endif /*_LPC313X_GPIO_H*/
+#endif /*_LPC31XX_GPIO_H*/

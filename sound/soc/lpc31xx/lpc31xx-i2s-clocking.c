@@ -1,5 +1,5 @@
 /*
- * sound/soc/lpc313x/lpc313x-i2s-clocking.c
+ * sound/soc/lpc31xx/lpc31xx-i2s-clocking.c
  *
  * Author: Kevin Wells <kevin.wells@nxp.com>
  *
@@ -193,7 +193,7 @@ static const u32 fsdiv =
 #endif
 #endif
 
-#if defined(CONFIG_SND_LPC313X_SOC)
+#if defined(CONFIG_SND_LPC31XX_SOC)
 static const u32 fsdiv =
 #if defined (CONFIG_SND_CODEC_FS256)
 	256;
@@ -208,7 +208,7 @@ static const u32 fsdiv =
 #endif
 #endif
 
-static u32 lpc313x_set_best_rate(u32 freq)
+static u32 lpc31xx_set_best_rate(u32 freq)
 {
 	CGU_FDIV_SETUP_T clk_div;
 	u32 diff;
@@ -252,7 +252,7 @@ static u32 lpc313x_set_best_rate(u32 freq)
  * Sets up the audio PLL to generate a frequency as close as possible to
  * the target clkrate frequency
  */
-static u32 lpc313x_set_codec_freq(u32 freq)
+static u32 lpc31xx_set_codec_freq(u32 freq)
 {
 	if (freq == 0)
 	{
@@ -266,7 +266,7 @@ static u32 lpc313x_set_codec_freq(u32 freq)
 		cgu_clk_en_dis(CGU_SB_CLK_256FS_ID, 0);
 		cgu_clk_en_dis(CGU_SB_I2S_EDGE_DETECT_CLK_ID, 0);
 
-		freq = lpc313x_set_best_rate(freq);
+		freq = lpc31xx_set_best_rate(freq);
 		if (freq > 0)
 		{
 #if !defined (CONFIG_SND_CODEC_NO_FS256_NEEDED)
@@ -285,7 +285,7 @@ static u32 lpc313x_set_codec_freq(u32 freq)
 /*
  * Start or stop a channel's clocks
  */
-static void lpc313x_ch_clk_disen(enum i2s_supp_clks chclk, int en)
+static void lpc31xx_ch_clk_disen(enum i2s_supp_clks chclk, int en)
 {
 	int i = 0;
 	P_CGU_CLOCK_ID_T pclks = (P_CGU_CLOCK_ID_T) clkarray[chclk];
@@ -301,20 +301,20 @@ static void lpc313x_ch_clk_disen(enum i2s_supp_clks chclk, int en)
  * Sets up the channel bit clock to generate a rate as close as possible
  * to the target clkrate frequency
  */
-static u32 lpc313x_set_ch_freq(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq)
+static u32 lpc31xx_set_ch_freq(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq)
 {
 	CGU_FDIV_SETUP_T ch_div;
 
 	if (ws_freq == 0)
 	{
 		/* Turn channel clock off */
-		lpc313x_ch_clk_disen(chclk, 0);
+		lpc31xx_ch_clk_disen(chclk, 0);
 		bit_freq = 0;
 	}
 	else
 	{
 		/* Stop channel clocks for the change */
-		lpc313x_ch_clk_disen(chclk, 0);
+		lpc31xx_ch_clk_disen(chclk, 0);
 
 		ch_div.stretch = 1;
 		ch_div.n = 1;
@@ -334,7 +334,7 @@ static u32 lpc313x_set_ch_freq(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_fr
 		}
 
 		/* Enable channel clock */
-		lpc313x_ch_clk_disen(chclk, 1);
+		lpc31xx_ch_clk_disen(chclk, 1);
 	}
 
 	return ws_freq;
@@ -345,13 +345,13 @@ static u32 lpc313x_set_ch_freq(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_fr
  * the actual programmed clock rate. The programmed rate is generated on
  * the FS256 pin has a rate of (256 * clkrate).
  */
-u32 lpc313x_main_clk_rate(u32 freq)
+u32 lpc31xx_main_clk_rate(u32 freq)
 {
 	u32 ret = 0;
 	/* Compute and set proper divider */
-	ret = lpc313x_set_codec_freq(freq);
+	ret = lpc31xx_set_codec_freq(freq);
 #if defined (CONFIG_SND_DEBUG_VERBOSE)
-	pr_info("LPC313x ASOC main clock : %d (%d)\n",
+	pr_info("LPC31xx ASOC main clock : %d (%d)\n",
 		i2s_clk_state.target_codec_rate,
 		i2s_clk_state.real_fs_codec_rate);
 #endif
@@ -363,9 +363,9 @@ u32 lpc313x_main_clk_rate(u32 freq)
  * to the channel's WS and BCLK signals. Returns the actual programmed
  * WS clock rate.
  */
-u32 lpc313x_chan_clk_enable(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq)
+u32 lpc31xx_chan_clk_enable(enum i2s_supp_clks chclk, u32 ws_freq, u32 bit_freq)
 {
 	/* Compute and set proper divider */
-	return lpc313x_set_ch_freq(chclk, ws_freq, bit_freq);
+	return lpc31xx_set_ch_freq(chclk, ws_freq, bit_freq);
 }
 
