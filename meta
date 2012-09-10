@@ -1,6 +1,6 @@
 Version: 1
-Previous: 80005dde73b7129be738416a28c57bf22e6da8a1
-Head: 844338c957b827543e0c2b1bb93fbf9699962793
+Previous: c5ed5c6679cf35c4399b84e0c42706b4a37612e8
+Head: 616a3f17958972023b4f6211aee6070984862173
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
@@ -17,8 +17,8 @@ Applied:
   0013-Make-sure-mmc-stop-command-is-fully-initialized-befo.patch: 17067b4544fe86b154cdbbe80cb0bc81f3dc925d
   0014-Remove-some-of-the-debugging-noise-from-the-.config-.patch: c2e7887e001955a6d734a4a9b9cfc56be6a18e5b
   0015-arm-lpc313x-NAND-Flash-SD-MMC-DMA-fixes.patch: 844338c957b827543e0c2b1bb93fbf9699962793
+  0016-arm-lpc313x-UART-DMA-support-fixes.patch: 616a3f17958972023b4f6211aee6070984862173
 Unapplied:
-  0016-arm-lpc313x-UART-DMA-support-fixes.patch: 47bad393dcba4e3ad1e022b3f643b7892e4bb565
   0017-arm-lpc313x-NAND-Flash-driver-DMA-buffer-mapping-fix.patch: baf8b3cd490b07a536ffde18a8223867b8b97e01
   0018-sound-lpc313x-lpc315x-audio-analog-die-CODEC-fixes.patch: bfb21e6b34c51fc28f2f30c4e664654b14ccdd63
   0019-Add-a-reset-function.patch: 84d5591566b8f746a0a74141b92713f345c65222

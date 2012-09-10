@@ -1,5 +1,5 @@
-Bottom: a3a847e23f54ba6e9470e52c42dcbf65880dd887
-Top:    e0254d77d0628ef33c717009ad8d5237b712ebd5
+Bottom: 73126cf0ef55e9485f2780d7a5002a3eb0f9574f
+Top:    ad98b332614841a1c410efdb8f2b521900b88f8f
 Author: Bangaragiri G <bangaragiri.g@nxp.com>
 Date:   2012-09-09 14:57:49 -0400
 
@@ -68,7 +68,7 @@ index 8ed8230..4980a58 100644
  	up.iotype = UPIO_MEM;
  	up.type	= PORT_NXP16750;
 diff --git a/drivers/tty/serial/8250/8250.c b/drivers/tty/serial/8250/8250.c
-index 6a6184e..9232842 100644
+index 5e84ff1..f088a3b 100644
 --- a/drivers/tty/serial/8250/8250.c
 +++ b/drivers/tty/serial/8250/8250.c
 @@ -39,7 +39,7 @@
@@ -80,7 +80,7 @@ index 6a6184e..9232842 100644
   *
   *
   *  TX side modifications
-@@ -1352,7 +1352,7 @@ static void lpc31xx_dma_lock(struct uart_8250_port *up)
+@@ -1360,7 +1360,7 @@ static void lpc31xx_dma_lock(struct uart_8250_port *up)
  
  static void lpc31xx_dma_unlock(struct uart_8250_port *up)
  {
@@ -89,7 +89,7 @@ index 6a6184e..9232842 100644
  }
  
  static void lpc31xx_uart_tx_dma_start(struct uart_8250_port *up);
-@@ -1406,7 +1406,7 @@ static void serial8250_dma_rx_timer_check(unsigned long data)
+@@ -1414,7 +1414,7 @@ static void serial8250_dma_rx_timer_check(unsigned long data)
  	struct uart_8250_port *up = (struct uart_8250_port *) data;
  
  	/* Emulate RX timeout when DMA buffer is not full */
@@ -98,7 +98,7 @@ index 6a6184e..9232842 100644
  		tasklet_schedule(&up->dma_rx.tasklet);
  	else
  		mod_timer(&up->dma_rx.timer, jiffies +
-@@ -1514,9 +1514,6 @@ static void lpc31xx_dma_rx_tasklet_func(unsigned long data)
+@@ -1522,9 +1522,6 @@ static void lpc31xx_dma_rx_tasklet_func(unsigned long data)
  			ch = serial_inp(up, UART_RX);
  	}
  	else {
@@ -108,7 +108,7 @@ index 6a6184e..9232842 100644
  		for (i = 0; i < (count - 1); i++) {
  			up->port.icount.rx++;
  			if (uart_handle_sysrq_char(&up->port, buf[i]))
-@@ -2079,6 +2076,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
+@@ -2087,6 +2084,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
  			lpc31xx_dma_rx_interrupt, up);
  		if (up->dma_rx.dmach < 0)
  		{
@@ -116,7 +116,7 @@ index 6a6184e..9232842 100644
  			printk(KERN_ERR "serial: error getting RX DMA channel.\n");
  			return -EBUSY;
  		}
-@@ -2086,16 +2084,15 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
+@@ -2094,16 +2092,15 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
  		/* dma_map_single() can be used for the TX buffer, but the RX
  		  buffer needs it's own buffer */
  		up->dma_rx.dma_buff_v = dma_alloc_coherent(NULL, UART_DMABUF_RX_SIZE,
@@ -136,7 +136,7 @@ index 6a6184e..9232842 100644
  
  		tasklet_init(&up->dma_tx.tasklet, lpc31xx_dma_tx_tasklet_func,
  				(unsigned long) up);
-@@ -2109,11 +2106,20 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
+@@ -2117,11 +2114,20 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
  					       UART_XMIT_SIZE,
  					       DMA_TO_DEVICE);
  
@@ -161,7 +161,7 @@ index 6a6184e..9232842 100644
  #endif
  		irq_flags |= up->port.irqflags;
  		ret = request_irq(up->port.irq, serial8250_interrupt,
-@@ -2146,9 +2152,14 @@ static void serial_unlink_irq_chain(struct uart_8250_port *up)
+@@ -2154,9 +2160,14 @@ static void serial_unlink_irq_chain(struct uart_8250_port *up)
  	   always point to that channel. This logic isn't quite right,
  	   but its ok for a single UART */
  
@@ -178,7 +178,7 @@ index 6a6184e..9232842 100644
  	dma_stop_channel(up->dma_tx.dmach);
  	dma_stop_channel(up->dma_rx.dmach);
  	dma_release_channel(up->dma_tx.dmach);
-@@ -2157,7 +2168,7 @@ static void serial_unlink_irq_chain(struct uart_8250_port *up)
+@@ -2165,7 +2176,7 @@ static void serial_unlink_irq_chain(struct uart_8250_port *up)
  	dma_unmap_single(up->port.dev, up->dma_tx.dma_buff_p, UART_XMIT_SIZE,
  		DMA_TO_DEVICE);
  
@@ -187,7 +187,7 @@ index 6a6184e..9232842 100644
  		(void *) up->dma_rx.dma_buff_v,
  		up->dma_rx.dma_buff_p);
  #endif
-@@ -2530,11 +2541,6 @@ static int serial8250_startup(struct uart_port *port)
+@@ -2538,11 +2549,6 @@ static int serial8250_startup(struct uart_port *port)
  		mod_timer(&up->timer, jiffies +
  			uart_poll_timeout(port) + HZ / 5);
  	}
@@ -199,7 +199,7 @@ index 6a6184e..9232842 100644
  #endif
  
  	/*
-@@ -2551,6 +2557,13 @@ static int serial8250_startup(struct uart_port *port)
+@@ -2559,6 +2565,13 @@ static int serial8250_startup(struct uart_port *port)
  			return retval;
  	}
  
