@@ -1,6 +1,6 @@
 Version: 1
-Previous: df9519ae4276b467d5bf9b990bf54b2075a1101d
-Head: fe3c0586e62d2a95c6bc2e84bffb4b22a8a53b8b
+Previous: 6dbf475c14cb9e24375684fe48b199cc065e7c87
+Head: 7aeaf7afc58776e110b35676cb3890e0cf39874f
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
@@ -12,6 +12,7 @@ Applied:
   0008-USB-support-for-lpc31xx.patch: 4cd22d48f26fd54fee9ff00b439dd81f5d887187
   0009-USB-Gadget-support-for-lpc31xx.patch: d82528ce190f7e6a6c013b239346343d4f6f5142
   0010-port-of-old-8250-code.patch: fe3c0586e62d2a95c6bc2e84bffb4b22a8a53b8b
+  refresh-temp: 7aeaf7afc58776e110b35676cb3890e0cf39874f
 Unapplied:
   0011-video-driver-for-ssd1289.patch: 91b1586e1d6d1d13de0f09bc4f15d5962f3b7145
   0012-Remove-overlapping-IO-defs.patch: 062cb81af6cb4189ba61c29bb5d8c7f062ad4e7c
