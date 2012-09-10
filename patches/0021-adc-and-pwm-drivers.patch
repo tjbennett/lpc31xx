@@ -1,5 +1,5 @@
-Bottom: 7212636b639a813205f9ef8b6f7fd2bc0db1206a
-Top:    e72916494c6221403513a35e716c5dc70503e8e9
+Bottom: 5c817f8fa24df8a36ee094171890b30c3ed38f63
+Top:    dad087a3b474fede94f826ec75e037e9f7c20595
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-09-09 14:57:52 -0400
 
@@ -11,7 +11,7 @@ Subject: adc and pwm drivers
 ---
 
 diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
-index 2661f6e..288253e 100644
+index 98a442d..4ab9be7 100644
 --- a/drivers/misc/Kconfig
 +++ b/drivers/misc/Kconfig
 @@ -517,4 +517,5 @@ source "drivers/misc/lis3lv02d/Kconfig"
@@ -21,10 +21,10 @@ index 2661f6e..288253e 100644
 +source "drivers/misc/lpc31xx/Kconfig"
  endmenu
 diff --git a/drivers/misc/Makefile b/drivers/misc/Makefile
-index 456972f..62782a0 100644
+index b88df7a..5d3a916 100644
 --- a/drivers/misc/Makefile
 +++ b/drivers/misc/Makefile
-@@ -48,6 +48,7 @@ obj-y				+= ti-st/
+@@ -47,6 +47,7 @@ obj-y				+= ti-st/
  obj-$(CONFIG_AB8500_PWM)	+= ab8500-pwm.o
  obj-y				+= lis3lv02d/
  obj-y				+= carma/
