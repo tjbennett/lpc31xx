@@ -1,14 +1,14 @@
 Version: 1
-Previous: 23996d83ffac42a095b585c0cb8de29319685cc8
-Head: d70b6adec72ed8db781471416a13ae2cc5b445e7
+Previous: c2726a23904e99fbfce3046d83a83df904a717fc
+Head: 214948279729bcc186ff194f4b5baad3ddd59c15
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
   0003-lpc31xx-nand-support.patch: 54b621f24a02b9fe07977de5cd74cbb95e1442e6
   0004-spi-support-lpc31xx.patch: d1c7833030c3f9b5afd1d4cbd6bdb6f30b3357df
   0005-lpc31xx-mmc-support.patch: d70b6adec72ed8db781471416a13ae2cc5b445e7
+  0006-watchdog-for-lpc31xx.patch: 214948279729bcc186ff194f4b5baad3ddd59c15
 Unapplied:
-  0006-watchdog-for-lpc31xx.patch: 285da5dd789bff148b4fd5db2ebf3a31f1d1420c
   0007-sound-support-for-lpc3xx.patch: fc2009d0028eb837cc49031ce0e7566c37b2d954
   0008-USB-support-for-lpc31xx.patch: 326ad447dca306d875f6369636b884f285f0d6b1
   0009-USB-Gadget-support-for-lpc31xx.patch: 96a25a2ce8384afb5bb166e132d6aafdaedbe99b
