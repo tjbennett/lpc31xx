@@ -413,6 +413,7 @@ set_dma_cfg(struct net_device *dev)
 {
 	struct net_local *lp = netdev_priv(dev);
 
+<<<<<<< current
 	if (lp->use_dma) {
 		if ((lp->isa_config & ANY_ISA_DMA) == 0) {
 			cs89_dbg(3, err, "set_dma_cfg(): no DMA\n");
@@ -425,6 +426,28 @@ set_dma_cfg(struct net_device *dev)
 			lp->curr_rx_cfg |= AUTO_RX_DMA;	/* not that we support it... */
 			cs89_dbg(3, info, "set_dma_cfg(): AUTO_RX_DMA\n");
 		}
+=======
+#if defined(CONFIG_MACH_VAL3153)
+	/* truely reset the chip */
+	writeword(ioaddr, ADD_PORT, 0x0114);
+	writeword(ioaddr, DATA_PORT, 0x0040);
+#endif
+
+	/* if they give us an odd I/O address, then do ONE write to
+           the address port, to get it back to address zero, where we
+           expect to find the EISA signature word. An IO with a base of 0x3
+	   will skip the test for the ADD_PORT. */
+	if (ioaddr & 1) {
+		if (net_debug > 1)
+			printk(KERN_INFO "%s: odd ioaddr 0x%lx\n", dev->name, ioaddr);
+	        if ((ioaddr & 2) != 2)
+	        	if ((readword(ioaddr & ~3, ADD_PORT) & ADD_MASK) != ADD_SIG) {
+				printk(KERN_ERR "%s: bad signature 0x%x\n",
+					dev->name, readword(ioaddr & ~3, ADD_PORT));
+		        	retval = -ENODEV;
+				goto out2;
+			}
+>>>>>>> patched
 	}
 }
 
@@ -467,8 +490,332 @@ dma_rx(struct net_device *dev)
 	length = bp[2] + (bp[3] << 8);
 	bp += 4;
 
+<<<<<<< current
 	cs89_dbg(5, debug, "%s: receiving DMA packet at %lx, status %x, length %x\n",
 		 dev->name, (unsigned long)bp, status, length);
+=======
+	/* Check the chip type and revision in order to set the correct send command
+	CS8920 revision C and CS8900 revision F can use the faster send. */
+	lp->send_cmd = TX_AFTER_381;
+	if (lp->chip_type == CS8900 && lp->chip_revision >= 'F')
+		lp->send_cmd = TX_NOW;
+	if (lp->chip_type != CS8900 && lp->chip_revision >= 'C')
+		lp->send_cmd = TX_NOW;
+
+	if (net_debug  &&  version_printed++ == 0)
+		printk(version);
+
+	printk(KERN_INFO "%s: cs89%c0%s rev %c found at %#3lx ",
+	       dev->name,
+	       lp->chip_type==CS8900?'0':'2',
+	       lp->chip_type==CS8920M?"M":"",
+	       lp->chip_revision,
+	       dev->base_addr);
+
+	reset_chip(dev);
+
+        /* Here we read the current configuration of the chip. If there
+	   is no Extended EEPROM then the idea is to not disturb the chip
+	   configuration, it should have been correctly setup by automatic
+	   EEPROM read on reset. So, if the chip says it read the EEPROM
+	   the driver will always do *something* instead of complain that
+	   adapter_cnf is 0. */
+
+/* quick hack for VAL3153 boards to reuse the mac address set by boot loader */
+#if !defined(CONFIG_MACH_VAL3153)
+        if ((readreg(dev, PP_SelfST) & (EEPROM_OK | EEPROM_PRESENT)) ==
+	      (EEPROM_OK|EEPROM_PRESENT)) 
+#endif
+	{
+	        /* Load the MAC. */
+		for (i=0; i < ETH_ALEN/2; i++) {
+	                unsigned int Addr;
+			Addr = readreg(dev, PP_IA+i*2);
+		        dev->dev_addr[i*2] = Addr & 0xFF;
+		        dev->dev_addr[i*2+1] = Addr >> 8;
+		}
+
+	   	/* Load the Adapter Configuration.
+		   Note:  Barring any more specific information from some
+		   other source (ie EEPROM+Schematics), we would not know
+		   how to operate a 10Base2 interface on the AUI port.
+		   However, since we  do read the status of HCB1 and use
+		   settings that always result in calls to control_dc_dc(dev,0)
+		   a BNC interface should work if the enable pin
+		   (dc/dc converter) is on HCB1. It will be called AUI
+		   however. */
+
+		lp->adapter_cnf = 0;
+		i = readreg(dev, PP_LineCTL);
+		/* Preserve the setting of the HCB1 pin. */
+		if ((i & (HCB1 | HCB1_ENBL)) ==  (HCB1 | HCB1_ENBL))
+			lp->adapter_cnf |= A_CNF_DC_DC_POLARITY;
+		/* Save the sqelch bit */
+		if ((i & LOW_RX_SQUELCH) == LOW_RX_SQUELCH)
+			lp->adapter_cnf |= A_CNF_EXTND_10B_2 | A_CNF_LOW_RX_SQUELCH;
+		/* Check if the card is in 10Base-t only mode */
+		if ((i & (AUI_ONLY | AUTO_AUI_10BASET)) == 0)
+			lp->adapter_cnf |=  A_CNF_10B_T | A_CNF_MEDIA_10B_T;
+		/* Check if the card is in AUI only mode */
+		if ((i & (AUI_ONLY | AUTO_AUI_10BASET)) == AUI_ONLY)
+			lp->adapter_cnf |=  A_CNF_AUI | A_CNF_MEDIA_AUI;
+		/* Check if the card is in Auto mode. */
+		if ((i & (AUI_ONLY | AUTO_AUI_10BASET)) == AUTO_AUI_10BASET)
+			lp->adapter_cnf |=  A_CNF_AUI | A_CNF_10B_T |
+			A_CNF_MEDIA_AUI | A_CNF_MEDIA_10B_T | A_CNF_MEDIA_AUTO;
+
+		if (net_debug > 1)
+			printk(KERN_INFO "%s: PP_LineCTL=0x%x, adapter_cnf=0x%x\n",
+					dev->name, i, lp->adapter_cnf);
+
+		/* IRQ. Other chips already probe, see below. */
+		if (lp->chip_type == CS8900)
+			lp->isa_config = readreg(dev, PP_CS8900_ISAINT) & INT_NO_MASK;
+
+		printk( "[Cirrus EEPROM] ");
+	}
+
+        printk("\n");
+
+	/* First check to see if an EEPROM is attached. */
+
+	if ((readreg(dev, PP_SelfST) & EEPROM_PRESENT) == 0)
+		printk(KERN_WARNING "cs89x0: No EEPROM, relying on command line....\n");
+	else if (get_eeprom_data(dev, START_EEPROM_DATA,CHKSUM_LEN,eeprom_buff) < 0) {
+		printk(KERN_WARNING "\ncs89x0: EEPROM read failed, relying on command line.\n");
+        } else if (get_eeprom_cksum(START_EEPROM_DATA,CHKSUM_LEN,eeprom_buff) < 0) {
+		/* Check if the chip was able to read its own configuration starting
+		   at 0 in the EEPROM*/
+		if ((readreg(dev, PP_SelfST) & (EEPROM_OK | EEPROM_PRESENT)) !=
+		    (EEPROM_OK|EEPROM_PRESENT))
+                	printk(KERN_WARNING "cs89x0: Extended EEPROM checksum bad and no Cirrus EEPROM, relying on command line\n");
+
+        } else {
+		/* This reads an extended EEPROM that is not documented
+		   in the CS8900 datasheet. */
+
+                /* get transmission control word  but keep the autonegotiation bits */
+                if (!lp->auto_neg_cnf) lp->auto_neg_cnf = eeprom_buff[AUTO_NEG_CNF_OFFSET/2];
+                /* Store adapter configuration */
+                if (!lp->adapter_cnf) lp->adapter_cnf = eeprom_buff[ADAPTER_CNF_OFFSET/2];
+                /* Store ISA configuration */
+                lp->isa_config = eeprom_buff[ISA_CNF_OFFSET/2];
+                dev->mem_start = eeprom_buff[PACKET_PAGE_OFFSET/2] << 8;
+
+                /* eeprom_buff has 32-bit ints, so we can't just memcpy it */
+                /* store the initial memory base address */
+                for (i = 0; i < ETH_ALEN/2; i++) {
+                        dev->dev_addr[i*2] = eeprom_buff[i];
+                        dev->dev_addr[i*2+1] = eeprom_buff[i] >> 8;
+                }
+		if (net_debug > 1)
+			printk(KERN_DEBUG "%s: new adapter_cnf: 0x%x\n",
+				dev->name, lp->adapter_cnf);
+        }
+
+        /* allow them to force multiple transceivers.  If they force multiple, autosense */
+        {
+		int count = 0;
+		if (lp->force & FORCE_RJ45)	{lp->adapter_cnf |= A_CNF_10B_T; count++; }
+		if (lp->force & FORCE_AUI) 	{lp->adapter_cnf |= A_CNF_AUI; count++; }
+		if (lp->force & FORCE_BNC)	{lp->adapter_cnf |= A_CNF_10B_2; count++; }
+		if (count > 1)			{lp->adapter_cnf |= A_CNF_MEDIA_AUTO; }
+		else if (lp->force & FORCE_RJ45){lp->adapter_cnf |= A_CNF_MEDIA_10B_T; }
+		else if (lp->force & FORCE_AUI)	{lp->adapter_cnf |= A_CNF_MEDIA_AUI; }
+		else if (lp->force & FORCE_BNC)	{lp->adapter_cnf |= A_CNF_MEDIA_10B_2; }
+        }
+
+	if (net_debug > 1)
+		printk(KERN_DEBUG "%s: after force 0x%x, adapter_cnf=0x%x\n",
+			dev->name, lp->force, lp->adapter_cnf);
+
+        /* FIXME: We don't let you set dc-dc polarity or low RX squelch from the command line: add it here */
+
+        /* FIXME: We don't let you set the IMM bit from the command line: add it to lp->auto_neg_cnf here */
+
+        /* FIXME: we don't set the Ethernet address on the command line.  Use
+           ifconfig IFACE hw ether AABBCCDDEEFF */
+
+	printk(KERN_INFO "cs89x0 media %s%s%s",
+	       (lp->adapter_cnf & A_CNF_10B_T)?"RJ-45,":"",
+	       (lp->adapter_cnf & A_CNF_AUI)?"AUI,":"",
+	       (lp->adapter_cnf & A_CNF_10B_2)?"BNC,":"");
+
+	lp->irq_map = 0xffff;
+
+	/* If this is a CS8900 then no pnp soft */
+	if (lp->chip_type != CS8900 &&
+	    /* Check if the ISA IRQ has been set  */
+		(i = readreg(dev, PP_CS8920_ISAINT) & 0xff,
+		 (i != 0 && i < CS8920_NO_INTS))) {
+		if (!dev->irq)
+			dev->irq = i;
+	} else {
+		i = lp->isa_config & INT_NO_MASK;
+#ifndef CONFIG_CS89x0_PLATFORM
+		if (lp->chip_type == CS8900) {
+#ifdef CS89x0_NONISA_IRQ
+		        i = cs8900_irq_map[0];
+#else
+			/* Translate the IRQ using the IRQ mapping table. */
+			if (i >= ARRAY_SIZE(cs8900_irq_map))
+				printk("\ncs89x0: invalid ISA interrupt number %d\n", i);
+			else
+				i = cs8900_irq_map[i];
+
+			lp->irq_map = CS8900_IRQ_MAP; /* fixed IRQ map for CS8900 */
+		} else {
+			int irq_map_buff[IRQ_MAP_LEN/2];
+
+			if (get_eeprom_data(dev, IRQ_MAP_EEPROM_DATA,
+					    IRQ_MAP_LEN/2,
+					    irq_map_buff) >= 0) {
+				if ((irq_map_buff[0] & 0xff) == PNP_IRQ_FRMT)
+					lp->irq_map = (irq_map_buff[0]>>8) | (irq_map_buff[1] << 8);
+			}
+#endif
+		}
+#endif
+		if (!dev->irq)
+			dev->irq = i;
+	}
+
+	printk(" IRQ %d", dev->irq);
+
+#if ALLOW_DMA
+	if (lp->use_dma) {
+		get_dma_channel(dev);
+		printk(", DMA %d", dev->dma);
+	}
+	else
+#endif
+	{
+		printk(", programmed I/O");
+	}
+
+	/* print the ethernet address. */
+	printk(", MAC %pM", dev->dev_addr);
+
+	dev->netdev_ops	= &net_ops;
+	dev->watchdog_timeo = HZ;
+
+	printk("\n");
+	if (net_debug)
+		printk("cs89x0_probe1() successful\n");
+
+	retval = register_netdev(dev);
+	if (retval)
+		goto out3;
+	return 0;
+out3:
+	writeword(dev->base_addr, ADD_PORT, PP_ChipID);
+out2:
+	release_region(ioaddr & ~3, NETCARD_IO_EXTENT);
+out1:
+	return retval;
+}
+
+
+/*********************************
+ * This page contains DMA routines
+**********************************/
+
+#if ALLOW_DMA
+
+#define dma_page_eq(ptr1, ptr2) ((long)(ptr1)>>17 == (long)(ptr2)>>17)
+
+static void
+get_dma_channel(struct net_device *dev)
+{
+	struct net_local *lp = netdev_priv(dev);
+
+	if (lp->dma) {
+		dev->dma = lp->dma;
+		lp->isa_config |= ISA_RxDMA;
+	} else {
+		if ((lp->isa_config & ANY_ISA_DMA) == 0)
+			return;
+		dev->dma = lp->isa_config & DMA_NO_MASK;
+		if (lp->chip_type == CS8900)
+			dev->dma += 5;
+		if (dev->dma < 5 || dev->dma > 7) {
+			lp->isa_config &= ~ANY_ISA_DMA;
+			return;
+		}
+	}
+}
+
+static void
+write_dma(struct net_device *dev, int chip_type, int dma)
+{
+	struct net_local *lp = netdev_priv(dev);
+	if ((lp->isa_config & ANY_ISA_DMA) == 0)
+		return;
+	if (chip_type == CS8900) {
+		writereg(dev, PP_CS8900_ISADMA, dma-5);
+	} else {
+		writereg(dev, PP_CS8920_ISADMA, dma);
+	}
+}
+
+static void
+set_dma_cfg(struct net_device *dev)
+{
+	struct net_local *lp = netdev_priv(dev);
+
+	if (lp->use_dma) {
+		if ((lp->isa_config & ANY_ISA_DMA) == 0) {
+			if (net_debug > 3)
+				printk("set_dma_cfg(): no DMA\n");
+			return;
+		}
+		if (lp->isa_config & ISA_RxDMA) {
+			lp->curr_rx_cfg |= RX_DMA_ONLY;
+			if (net_debug > 3)
+				printk("set_dma_cfg(): RX_DMA_ONLY\n");
+		} else {
+			lp->curr_rx_cfg |= AUTO_RX_DMA;	/* not that we support it... */
+			if (net_debug > 3)
+				printk("set_dma_cfg(): AUTO_RX_DMA\n");
+		}
+	}
+}
+
+static int
+dma_bufcfg(struct net_device *dev)
+{
+	struct net_local *lp = netdev_priv(dev);
+	if (lp->use_dma)
+		return (lp->isa_config & ANY_ISA_DMA)? RX_DMA_ENBL : 0;
+	else
+		return 0;
+}
+
+static int
+dma_busctl(struct net_device *dev)
+{
+	int retval = 0;
+	struct net_local *lp = netdev_priv(dev);
+	if (lp->use_dma) {
+		if (lp->isa_config & ANY_ISA_DMA)
+			retval |= RESET_RX_DMA; /* Reset the DMA pointer */
+		if (lp->isa_config & DMA_BURST)
+			retval |= DMA_BURST_MODE; /* Does ISA config specify DMA burst ? */
+		if (lp->dmasize == 64)
+			retval |= RX_DMA_SIZE_64K; /* did they ask for 64K? */
+		retval |= MEMORY_ON;	/* we need memory enabled to use DMA. */
+	}
+	return retval;
+}
+
+static void
+dma_rx(struct net_device *dev)
+{
+	struct net_local *lp = netdev_priv(dev);
+	struct sk_buff *skb;
+	int status, length;
+	unsigned char *bp = lp->rx_dma_ptr;
+>>>>>>> patched
 
 	if ((status & RX_OK) == 0) {
 		count_rx_errors(status, dev);
