@@ -1,6 +1,6 @@
 Version: 1
-Previous: 59693d20ccdf653e14d8cf08957c2593b1873b7c
-Head: 46c2c21b0c60a587df9d11c9091fb6f1ea9b555b
+Previous: c3cc605410b5f2c163de02be56a9b8f864f2e271
+Head: 79043f1beded9f46bdb03fa03ecd04acd57e25ad
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
@@ -32,8 +32,8 @@ Applied:
   0028-v34-compile-fixes.patch: 43ac1ed828f7ff13ec5d24ce4997f1e88afe7b99
   0029-rename-to-lpc31xx.patch: ff6d13aa6f8a9d870dcb477bce1ed0c84ab1910e
   0030-r2.patch: 46c2c21b0c60a587df9d11c9091fb6f1ea9b555b
+  0031-dt-split.patch: 79043f1beded9f46bdb03fa03ecd04acd57e25ad
 Unapplied:
-  0031-dt-split.patch: 8fe0c06335092be010e6a61b25348e31c6438a79
   0032-evtr-irq-domain.patch: 99687f5b91bebabd29416019b5c7599f5fb4b8da
   0033-intr-domain-irq.patch: f1b65070951435214d7c78f2a687014152b916f4
   0034-clean-up-watchdog.patch: da75b61a0095237ffdc34bce9904b1bb8401f675
