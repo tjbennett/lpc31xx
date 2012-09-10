@@ -1,6 +1,6 @@
 Version: 1
-Previous: a8dea5f71bc363ef9326f8448151138b46165c21
-Head: 17067b4544fe86b154cdbbe80cb0bc81f3dc925d
+Previous: e7d65548583bc361171580aed1b3d348e788ead2
+Head: c2e7887e001955a6d734a4a9b9cfc56be6a18e5b
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
@@ -15,8 +15,8 @@ Applied:
   0011-video-driver-for-ssd1289.patch: 8411469c2369ec77140e40637bcf61a3eedc5e9a
   0012-Remove-overlapping-IO-defs.patch: 861c57bdc6959ca465d01d95bc714ecd604e958e
   0013-Make-sure-mmc-stop-command-is-fully-initialized-befo.patch: 17067b4544fe86b154cdbbe80cb0bc81f3dc925d
+  0014-Remove-some-of-the-debugging-noise-from-the-.config-.patch: c2e7887e001955a6d734a4a9b9cfc56be6a18e5b
 Unapplied:
-  0014-Remove-some-of-the-debugging-noise-from-the-.config-.patch: 93c2c543c42907696279e04ea4cd6fe12af4695d
   0015-arm-lpc313x-NAND-Flash-SD-MMC-DMA-fixes.patch: 0c7f65f4d1f8db7d0af37de37b9e9cbf6c5dcf94
   0016-arm-lpc313x-UART-DMA-support-fixes.patch: 47bad393dcba4e3ad1e022b3f643b7892e4bb565
   0017-arm-lpc313x-NAND-Flash-driver-DMA-buffer-mapping-fix.patch: baf8b3cd490b07a536ffde18a8223867b8b97e01
