@@ -1,9 +1,9 @@
 Version: 1
-Previous: daffb7b0b49afb6362ca5cc42322ce1183c225f8
-Head: 55d512e245bc7699a8800e23df1a24195dd08217
+Previous: d71356dbde5b3306629ac2cbe23e0b2df7633605
+Head: bb1197263b24d00b701de0c6af3346d30c422ebe
 Applied:
+  0001-base-patches-minus-8250.patch: bb1197263b24d00b701de0c6af3346d30c422ebe
 Unapplied:
-  0001-base-patches-minus-8250.patch: 26c69eb95b0f4506b9e21f59736cba2260d37d35
   0002-Default-configs-for-lpc31xx-dev-boards.patch: c3c30853ac385edb7714b40f2573ec8810516046
   0003-lpc31xx-nand-support.patch: c1d3cb573dc0adfcdc65a9528009ff4733a56854
   0004-spi-support-lpc31xx.patch: 0b0f2c76fbbc1d80717d2a6d5f1ed32d02947acf
