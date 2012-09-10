@@ -1,6 +1,6 @@
 Version: 1
-Previous: fe6a3792748c9b3bc6e85eb18d30ebddd2ffcc6c
-Head: de544b2914a43d3dd8ddcd9f850216e31a006547
+Previous: 23dfb22c2275dda85ec937daaf523ef6564371ea
+Head: a32f2c488ee8aecad33aee8f82a0038769409452
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
@@ -20,8 +20,8 @@ Applied:
   0016-arm-lpc313x-UART-DMA-support-fixes.patch: 616a3f17958972023b4f6211aee6070984862173
   0017-arm-lpc313x-NAND-Flash-driver-DMA-buffer-mapping-fix.patch: c9c274912d4474532b5f19b1419674d99cec9555
   0018-sound-lpc313x-lpc315x-audio-analog-die-CODEC-fixes.patch: de544b2914a43d3dd8ddcd9f850216e31a006547
+  0019-Add-a-reset-function.patch: a32f2c488ee8aecad33aee8f82a0038769409452
 Unapplied:
-  0019-Add-a-reset-function.patch: 84d5591566b8f746a0a74141b92713f345c65222
   0020-ADC-register-defines.patch: 196970d42eaf6e3e13de054220aba478e7e4e2a7
   0021-adc-and-pwm-drivers.patch: ff8d5741e4f86f4839482a325aac6bd2c0368f18
   0022-device-trees.patch: 6a00cb77d9fd950c590fd376a0f6076c1d5fb8f5
