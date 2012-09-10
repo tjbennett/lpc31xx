@@ -1,5 +1,5 @@
-Bottom: 45223308b48ce8a0a1f59d88f5595726978487b6
-Top:    bd4dc77413f4a1852c3bb77fdf7514332e894e52
+Bottom: 7e3191c9e62c7921b9a236126101c634767b30b4
+Top:    f789cfbd873598e50c0153dedb7ad1764d514c24
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-09-09 14:57:58 -0400
 
@@ -11,10 +11,10 @@ Subject: r2
 ---
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index ce84b30..c445b03 100644
+index c84ca1d..b622351 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
-@@ -989,7 +989,7 @@ config ARCH_LPC31XX
+@@ -1029,7 +1029,7 @@ config ARCH_LPC31XX
  	select ARCH_REQUIRE_GPIOLIB
  	select ARCH_USES_GETTIMEOFFSET
  	help
@@ -4339,7 +4339,7 @@ index f1e9ce9..cbc9a90 100644
  #define MCI_SLOT 0
  
 diff --git a/drivers/mtd/nand/Kconfig b/drivers/mtd/nand/Kconfig
-index a43b3d1..8eb7161 100644
+index 3106ebe..ee8d697 100644
 --- a/drivers/mtd/nand/Kconfig
 +++ b/drivers/mtd/nand/Kconfig
 @@ -568,11 +568,11 @@ config MTD_NAND_SH_FLCTL
@@ -5313,10 +5313,10 @@ index bd2680a..f7090b5 100644
  MODULE_LICENSE("GPL v2");
  
 diff --git a/drivers/spi/Kconfig b/drivers/spi/Kconfig
-index ff3e482..c83e75e 100644
+index 3311da6..dc9e100 100644
 --- a/drivers/spi/Kconfig
 +++ b/drivers/spi/Kconfig
-@@ -403,11 +403,11 @@ config SPI_NUC900
+@@ -419,11 +419,11 @@ config SPI_NUC900
  	help
  	  SPI driver for Nuvoton NUC900 series ARM SoCs
  
@@ -5332,10 +5332,10 @@ index ff3e482..c83e75e 100644
  #
  # Add new SPI master controllers in alphabetical order above this line
 diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
-index 6bf1c3d..a454b19 100644
+index 258948c..15e780a 100644
 --- a/drivers/spi/Makefile
 +++ b/drivers/spi/Makefile
-@@ -32,7 +32,7 @@ obj-$(CONFIG_SPI_FSL_SPI)		+= spi-fsl-spi.o
+@@ -33,7 +33,7 @@ obj-$(CONFIG_SPI_FSL_SPI)		+= spi-fsl-spi.o
  obj-$(CONFIG_SPI_GPIO)			+= spi-gpio.o
  obj-$(CONFIG_SPI_IMX)			+= spi-imx.o
  obj-$(CONFIG_SPI_LM70_LLP)		+= spi-lm70llp.o
@@ -5575,10 +5575,10 @@ index 6a0e669..aa76b7e5 100644
   *  Author:	Durgesh Pattamatta
   *  Copyright (C) 2009 NXP semiconductors
 diff --git a/drivers/watchdog/Kconfig b/drivers/watchdog/Kconfig
-index a8bff0b..55a7800 100644
+index d48198f..20482bf 100644
 --- a/drivers/watchdog/Kconfig
 +++ b/drivers/watchdog/Kconfig
-@@ -358,7 +358,7 @@ config LPC31XX_WATCHDOG
+@@ -359,7 +359,7 @@ config LPC31XX_WATCHDOG
  	  Say Y here if to include support for the watchdog timer
  	  for the NXP's LPC31xx uC SoC.
  	  To compile this driver as a module, choose M here: the
