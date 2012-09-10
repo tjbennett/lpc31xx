@@ -1,6 +1,6 @@
 Version: 1
-Previous: 76f52673fd0222c4241d2e2520b0442c846e88b0
-Head: 7105980fb8b01ce6ba793ad15194f6b281ea38b9
+Previous: f6e55a3196b127ada96192f9ac2b4adfd5256222
+Head: 9f27b7dd04469b2f43660ddb63cfa1aa28e3e393
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
@@ -9,6 +9,7 @@ Applied:
   0005-lpc31xx-mmc-support.patch: d70b6adec72ed8db781471416a13ae2cc5b445e7
   0006-watchdog-for-lpc31xx.patch: 214948279729bcc186ff194f4b5baad3ddd59c15
   0007-sound-support-for-lpc3xx.patch: 7105980fb8b01ce6ba793ad15194f6b281ea38b9
+  refresh-temp: 9f27b7dd04469b2f43660ddb63cfa1aa28e3e393
 Unapplied:
   0008-USB-support-for-lpc31xx.patch: 326ad447dca306d875f6369636b884f285f0d6b1
   0009-USB-Gadget-support-for-lpc31xx.patch: 96a25a2ce8384afb5bb166e132d6aafdaedbe99b
