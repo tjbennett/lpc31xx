@@ -1,12 +1,12 @@
 Version: 1
-Previous: 9e5154ae5a9e251a09d94918dec4d755fda018e8
-Head: 54b621f24a02b9fe07977de5cd74cbb95e1442e6
+Previous: e7f301fb552ac1c867311e3eca9f135907b646fa
+Head: d1c7833030c3f9b5afd1d4cbd6bdb6f30b3357df
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
   0003-lpc31xx-nand-support.patch: 54b621f24a02b9fe07977de5cd74cbb95e1442e6
+  0004-spi-support-lpc31xx.patch: d1c7833030c3f9b5afd1d4cbd6bdb6f30b3357df
 Unapplied:
-  0004-spi-support-lpc31xx.patch: 0b0f2c76fbbc1d80717d2a6d5f1ed32d02947acf
   0005-lpc31xx-mmc-support.patch: 5e7f254732ed25dd43faf24f1e31caa4066f9ff3
   0006-watchdog-for-lpc31xx.patch: 285da5dd789bff148b4fd5db2ebf3a31f1d1420c
   0007-sound-support-for-lpc3xx.patch: fc2009d0028eb837cc49031ce0e7566c37b2d954
