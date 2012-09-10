@@ -1,5 +1,5 @@
-Bottom: 687301039508ff7f4e3cb55bacf022d5cba7ba8e
-Top:    45223308b48ce8a0a1f59d88f5595726978487b6
+Bottom: ed4ed3f0b0db485b42aaa11aae3d3726ae50719a
+Top:    7e3191c9e62c7921b9a236126101c634767b30b4
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-09-09 14:57:57 -0400
 
@@ -2292,10 +2292,10 @@ similarity index 100%
 rename from drivers/mtd/nand/lpc313x_nand.c
 rename to drivers/mtd/nand/lpc31xx_nand.c
 diff --git a/drivers/spi/Makefile b/drivers/spi/Makefile
-index b116562..6bf1c3d 100644
+index ebf173a..258948c 100644
 --- a/drivers/spi/Makefile
 +++ b/drivers/spi/Makefile
-@@ -32,7 +32,7 @@ obj-$(CONFIG_SPI_FSL_SPI)		+= spi-fsl-spi.o
+@@ -33,7 +33,7 @@ obj-$(CONFIG_SPI_FSL_SPI)		+= spi-fsl-spi.o
  obj-$(CONFIG_SPI_GPIO)			+= spi-gpio.o
  obj-$(CONFIG_SPI_IMX)			+= spi-imx.o
  obj-$(CONFIG_SPI_LM70_LLP)		+= spi-lm70llp.o
@@ -2309,10 +2309,10 @@ similarity index 100%
 rename from drivers/spi/spi-lpc313x.c
 rename to drivers/spi/spi-lpc31xx.c
 diff --git a/sound/soc/Kconfig b/sound/soc/Kconfig
-index 3424025..525e8ff 100644
+index 19a4282..93c0a76 100644
 --- a/sound/soc/Kconfig
 +++ b/sound/soc/Kconfig
-@@ -48,7 +48,7 @@ source "sound/soc/sh/Kconfig"
+@@ -49,7 +49,7 @@ source "sound/soc/sh/Kconfig"
  source "sound/soc/tegra/Kconfig"
  source "sound/soc/txx9/Kconfig"
  source "sound/soc/ux500/Kconfig"
@@ -2322,10 +2322,10 @@ index 3424025..525e8ff 100644
  # Supported codecs
  source "sound/soc/codecs/Kconfig"
 diff --git a/sound/soc/Makefile b/sound/soc/Makefile
-index fc3df78..be4a8b2 100644
+index abf8101..2980191 100644
 --- a/sound/soc/Makefile
 +++ b/sound/soc/Makefile
-@@ -26,5 +26,5 @@ obj-$(CONFIG_SND_SOC)	+= sh/
+@@ -27,5 +27,5 @@ obj-$(CONFIG_SND_SOC)	+= sh/
  obj-$(CONFIG_SND_SOC)	+= tegra/
  obj-$(CONFIG_SND_SOC)	+= txx9/
  obj-$(CONFIG_SND_SOC)	+= ux500/

@@ -1,6 +1,6 @@
 Version: 1
-Previous: ee9c8e3c546886fae46040719ecc3fd36f76a655
-Head: 43ac1ed828f7ff13ec5d24ce4997f1e88afe7b99
+Previous: f7b58693dea7d1d657db2a98f730e723f755cb9f
+Head: ff6d13aa6f8a9d870dcb477bce1ed0c84ab1910e
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
@@ -30,8 +30,8 @@ Applied:
   0026-switch-nand-to-dmaengine.patch: 7871d80af0a0ec730b569ba815ca5f2be2d0c5e9
   0027-i2s-dma.patch: 0dea41182337ed1b8af13c3c6bf25ff6044143d3
   0028-v34-compile-fixes.patch: 43ac1ed828f7ff13ec5d24ce4997f1e88afe7b99
+  0029-rename-to-lpc31xx.patch: ff6d13aa6f8a9d870dcb477bce1ed0c84ab1910e
 Unapplied:
-  0029-rename-to-lpc31xx.patch: b2a187358ad73167d0ad910c079983c3c47c7ddc
   0030-r2.patch: 3f576617bf841cf8389d98532012dc621f3c68f3
   0031-dt-split.patch: 8fe0c06335092be010e6a61b25348e31c6438a79
   0032-evtr-irq-domain.patch: 99687f5b91bebabd29416019b5c7599f5fb4b8da
