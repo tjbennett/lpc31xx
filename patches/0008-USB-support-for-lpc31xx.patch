@@ -1,5 +1,5 @@
-Bottom: c6e903618b92fc1c63f8aa47b2900fa08a80e6d2
-Top:    3661e0f39be02d9c757df19449b80ce7f32884d7
+Bottom: 093d34eed0accda66e9cf9b4df40db0104655bb8
+Top:    2aa7dea4ea78d71239c765b0350c9ed2a9a9d5d8
 Author: Jon Smirl (none) <jonsmirl@terra>
 Date:   2012-09-09 14:57:44 -0400
 
@@ -87,7 +87,7 @@ index 37ff9f0..57699b7 100644
  		printk(KERN_INFO "Registering USB host 0x%08x 0x%08x (%d)\n", USB_DEV_OTGSC, EVRT_RSR(bank), bank);
  		retval = platform_device_register(&lpc313x_ehci_device);
 diff --git a/drivers/usb/Kconfig b/drivers/usb/Kconfig
-index a7773a3..e4a26e6 100644
+index 7065df6..4ff654d 100644
 --- a/drivers/usb/Kconfig
 +++ b/drivers/usb/Kconfig
 @@ -43,6 +43,7 @@ config USB_ARCH_HAS_EHCI
@@ -99,10 +99,10 @@ index a7773a3..e4a26e6 100644
  	default y if MICROBLAZE
  	default y if SPARC_LEON
 diff --git a/drivers/usb/core/hub.c b/drivers/usb/core/hub.c
-index 8fb4849..ec2eb8a 100644
+index 128a804..6c3bba6 100644
 --- a/drivers/usb/core/hub.c
 +++ b/drivers/usb/core/hub.c
-@@ -1556,7 +1556,7 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
+@@ -1559,7 +1559,7 @@ static int hub_probe(struct usb_interface *intf, const struct usb_device_id *id)
  
  #ifdef	CONFIG_USB_OTG_BLACKLIST_HUB
  	if (hdev->parent) {
@@ -111,7 +111,7 @@ index 8fb4849..ec2eb8a 100644
  		return -ENODEV;
  	}
  #endif
-@@ -1964,7 +1964,7 @@ static void announce_device(struct usb_device *udev)
+@@ -1969,7 +1969,7 @@ static void announce_device(struct usb_device *udev)
  static inline void announce_device(struct usb_device *udev) { }
  #endif
  
@@ -120,7 +120,7 @@ index 8fb4849..ec2eb8a 100644
  #include "otg_whitelist.h"
  #endif
  
-@@ -2038,8 +2038,16 @@ static int usb_enumerate_device_otg(struct usb_device *udev)
+@@ -2043,8 +2043,16 @@ static int usb_enumerate_device_otg(struct usb_device *udev)
  		err = -ENOTSUPP;
  		goto fail;
  	}
@@ -185,7 +185,7 @@ index e8cdce5..45ae696 100644
  	/* NOTE: can't use usb_match_id() since interface caches
  	 * aren't set up yet. this is cut/paste from that code.
 diff --git a/drivers/usb/host/Kconfig b/drivers/usb/host/Kconfig
-index 83e58df..e2c7a8e 100644
+index 075d2ec..79d477f 100644
 --- a/drivers/usb/host/Kconfig
 +++ b/drivers/usb/host/Kconfig
 @@ -63,6 +63,21 @@ config USB_EHCI_HCD
@@ -242,10 +242,10 @@ index 9e0a89c..03936eb 100644
  obj-$(CONFIG_USB_HCD_SSB)	+= ssb-hcd.o
 +
 diff --git a/drivers/usb/host/ehci-hcd.c b/drivers/usb/host/ehci-hcd.c
-index 800be38..c0207cb 100644
+index b05c686..79b5a35 100644
 --- a/drivers/usb/host/ehci-hcd.c
 +++ b/drivers/usb/host/ehci-hcd.c
-@@ -1369,6 +1369,11 @@ MODULE_LICENSE ("GPL");
+@@ -1314,6 +1314,11 @@ MODULE_LICENSE ("GPL");
  #define PLATFORM_DRIVER		ehci_grlib_driver
  #endif
  

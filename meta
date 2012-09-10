@@ -1,6 +1,6 @@
 Version: 1
-Previous: d5a5d0bd1754923e7fb30daf8acfc741369ff53d
-Head: 6be4260b86672ab9149f6ac75921b898929da37f
+Previous: 454b408241ffe74578cebc7532c0ee8463b48c01
+Head: 4cd22d48f26fd54fee9ff00b439dd81f5d887187
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
@@ -9,8 +9,8 @@ Applied:
   0005-lpc31xx-mmc-support.patch: d70b6adec72ed8db781471416a13ae2cc5b445e7
   0006-watchdog-for-lpc31xx.patch: 214948279729bcc186ff194f4b5baad3ddd59c15
   0007-sound-support-for-lpc3xx.patch: 6be4260b86672ab9149f6ac75921b898929da37f
+  0008-USB-support-for-lpc31xx.patch: 4cd22d48f26fd54fee9ff00b439dd81f5d887187
 Unapplied:
-  0008-USB-support-for-lpc31xx.patch: 326ad447dca306d875f6369636b884f285f0d6b1
   0009-USB-Gadget-support-for-lpc31xx.patch: 96a25a2ce8384afb5bb166e132d6aafdaedbe99b
   0010-port-of-old-8250-code.patch: 33e20aaafd9bea5b1b2e84b24868e652f586110f
   0011-video-driver-for-ssd1289.patch: 91b1586e1d6d1d13de0f09bc4f15d5962f3b7145
