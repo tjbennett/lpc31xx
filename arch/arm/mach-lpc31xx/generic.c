@@ -213,6 +213,8 @@ void __init lpc313x_init(void)
 	/* Disable ring oscillators used by Random number generators */
 	SYS_RNG_OSC_CFG = 0;
 
+#if 0
+	/* fix me */
 	/* Mux I2S signals based on selected channel */
 #if defined (CONFIG_SND_I2S_TX0_MASTER)
 	/* I2S TX0 WS, DATA */
@@ -237,7 +239,7 @@ void __init lpc313x_init(void)
 #endif
 	/* AUDIO CODEC CLOCK (256FS) */
 	GPIO_DRV_IP(IOCONF_I2STX_1, 0x8);
-
+#endif
 	lpc313x_uart_init();
 
 	return platform_add_devices(devices, ARRAY_SIZE(devices));
