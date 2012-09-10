@@ -1,6 +1,6 @@
 Version: 1
-Previous: 80250f0fc85a7156ad5f4b37bccbd205a5618339
-Head: f38c8febfe80254615640a7c7defa74409154e59
+Previous: aa99934b7e9a9d325f558a38fc384f952d4fe5a5
+Head: c28b764258b48189e635030d4c96e04e438943cc
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
@@ -36,8 +36,8 @@ Applied:
   0032-evtr-irq-domain.patch: 7aecd016e7ee31a50a5077191c348ef4169e951a
   0033-intr-domain-irq.patch: 047119c43170905f733659a4794c2bdfb829f0ec
   0034-clean-up-watchdog.patch: f38c8febfe80254615640a7c7defa74409154e59
+  0035-clean-out-val315x-code.patch: c28b764258b48189e635030d4c96e04e438943cc
 Unapplied:
-  0035-clean-out-val315x-code.patch: e361853153c61433c4584827983dce1bd053b9aa
   0036-uart.patch: 0fd1d07399f28f28dba29469e1ca8e2868b3a0de
   0037-spi-temp.patch: ce226687503d96fd3f8930db7806ea94635cecab
   0038-spi-rewrite.patch: 71cca502cfc06c042e256389dc90508f3fc3b54c

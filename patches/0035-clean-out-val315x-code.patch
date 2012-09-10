@@ -1,5 +1,5 @@
-Bottom: 929fc17fd497e65e6792ad80cbbf641a307f20b4
-Top:    de2c38b62555b0ba68a902714b1548d4780b2c46
+Bottom: 3b78f6037da2dddaf0ba88d9e7260e15f74791a2
+Top:    6eb2f122ea989cdc0f41c65da1f42debe5175e53
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-09-09 14:58:01 -0400
 
@@ -1226,7 +1226,7 @@ index 0dd758c..ffeeba6 100644
  		mask = mmc_vddrange_to_ocrmask(be32_to_cpu(voltage_ranges[j]),
  					       be32_to_cpu(voltage_ranges[j + 1]));
 diff --git a/drivers/net/ethernet/cirrus/cs89x0.c b/drivers/net/ethernet/cirrus/cs89x0.c
-index 64aba60..17c7ddc 100644
+index 962a55d..78842bd 100644
 --- a/drivers/net/ethernet/cirrus/cs89x0.c
 +++ b/drivers/net/ethernet/cirrus/cs89x0.c
 @@ -208,6 +208,59 @@ static int __init media_fn(char *str)
