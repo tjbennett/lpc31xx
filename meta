@@ -1,6 +1,6 @@
 Version: 1
-Previous: 459d9d07286bf27ef8a650c614e96aeb376b06ae
-Head: 7298cdf4007a212630c2a6dac7a9b6d958456ba0
+Previous: 4b41885e2a46c52120c8ce25ab74f690086e75fe
+Head: 7871d80af0a0ec730b569ba815ca5f2be2d0c5e9
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
@@ -27,8 +27,8 @@ Applied:
   0023-DMA-rework.patch: 203931a396ada66dd9ed7ed1f80ceb4af8fbf8c4
   0024-rewrite-irq-drivers.patch: 233b6bfa47cb47a43f2ee8092a0544a75122a87c
   0025-mmc-dma.patch: 7298cdf4007a212630c2a6dac7a9b6d958456ba0
+  0026-switch-nand-to-dmaengine.patch: 7871d80af0a0ec730b569ba815ca5f2be2d0c5e9
 Unapplied:
-  0026-switch-nand-to-dmaengine.patch: dcfa55a48986603529115546cf7a3a83d3ec5f46
   0027-i2s-dma.patch: db79da914189c594d9b81adfe5ef8ff27f4b9a49
   0028-v34-compile-fixes.patch: 13185cc00f8314da87191e3805822677bd91f4cb
   0029-rename-to-lpc31xx.patch: b2a187358ad73167d0ad910c079983c3c47c7ddc
