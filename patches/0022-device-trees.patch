@@ -1,5 +1,5 @@
-Bottom: e72916494c6221403513a35e716c5dc70503e8e9
-Top:    07bf07666c0a5b4935f16be2693bb564a41df812
+Bottom: dad087a3b474fede94f826ec75e037e9f7c20595
+Top:    8344775b52e0325022529cb5e9332eb6644adf50
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-09-09 14:57:52 -0400
 
@@ -1992,10 +1992,10 @@ index 0cf5d37..160e8cc 100644
  arch_initcall(wdt_device_init);
 +#endif
 diff --git a/drivers/gpio/Makefile b/drivers/gpio/Makefile
-index 0f55662..d0b0a36 100644
+index 153cace..d71a804 100644
 --- a/drivers/gpio/Makefile
 +++ b/drivers/gpio/Makefile
-@@ -24,6 +24,7 @@ obj-$(CONFIG_GPIO_IT8761E)	+= gpio-it8761e.o
+@@ -26,6 +26,7 @@ obj-$(CONFIG_GPIO_IT8761E)	+= gpio-it8761e.o
  obj-$(CONFIG_GPIO_JANZ_TTL)	+= gpio-janz-ttl.o
  obj-$(CONFIG_ARCH_KS8695)	+= gpio-ks8695.o
  obj-$(CONFIG_GPIO_LANGWELL)	+= gpio-langwell.o
@@ -2319,10 +2319,10 @@ index f02028e..5d43429 100644
  	.probe		= ads7846_probe,
  	.remove		= __devexit_p(ads7846_remove),
 diff --git a/drivers/leds/leds-pca9532.c b/drivers/leds/leds-pca9532.c
-index ceccab4..611f6ff 100644
+index cee8a5b..9a5ed95 100644
 --- a/drivers/leds/leds-pca9532.c
 +++ b/drivers/leds/leds-pca9532.c
-@@ -444,6 +444,34 @@ exit:
+@@ -444,14 +444,46 @@ exit:
  	return err;
  }
  
@@ -2357,9 +2357,8 @@ index ceccab4..611f6ff 100644
  static int pca9532_probe(struct i2c_client *client,
  	const struct i2c_device_id *id)
  {
-@@ -451,8 +479,12 @@ static int pca9532_probe(struct i2c_client *client,
+ 	struct pca9532_data *data = i2c_get_clientdata(client);
  	struct pca9532_platform_data *pca9532_pdata = client->dev.platform_data;
- 	int err;
  
 +#ifdef CONFIG_OF
 +	pca9532_pdata = &of_gpios;
