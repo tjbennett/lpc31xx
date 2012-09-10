@@ -1,5 +1,5 @@
-Bottom: 853b0a3ec9427b1ed05733f5cc8400232654f1f4
-Top:    60c440189f4ad49e04132dfb9022ca8fcecf6641
+Bottom: 7ad01aca57ab1226b78bbcaceb749bc406e98896
+Top:    d27dc16cf77ce4ff7237e2b582c0a2ec2f5cadb5
 Author: Jon Smirl <jonsmirl@gmail.com>
 Date:   2012-09-09 14:57:54 -0400
 
@@ -1763,7 +1763,7 @@ index 41831c8..d2e4ad5 100644
  static void dm9000_dumpblk(void __iomem *reg, int count)
  {
 diff --git a/drivers/of/irq.c b/drivers/of/irq.c
-index 9cf0060..bdded99 100644
+index ff8ab7b..a01ea24 100644
 --- a/drivers/of/irq.c
 +++ b/drivers/of/irq.c
 @@ -336,6 +336,7 @@ EXPORT_SYMBOL_GPL(of_irq_map_one);

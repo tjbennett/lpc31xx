@@ -1,6 +1,6 @@
 Version: 1
-Previous: 85f81fa1ad979e818a33a70af770ce16e1795b23
-Head: 203931a396ada66dd9ed7ed1f80ceb4af8fbf8c4
+Previous: ba508087e6465de82339ee683914cce965a429ce
+Head: 233b6bfa47cb47a43f2ee8092a0544a75122a87c
 Applied:
   0001-base-patches-minus-8250.patch: ad860bb2d3ba9e7f592f96864b90f30a8c2edc05
   0002-Default-configs-for-lpc31xx-dev-boards.patch: d39d6a3a0ecf52dcb42f4be55accf0b149c9a065
@@ -25,8 +25,8 @@ Applied:
   0021-adc-and-pwm-drivers.patch: 6854abe8b0cad48120ca8bf5ccf83160e391cd26
   0022-device-trees.patch: bbc86f69ae88d81e9fc9b2dd4321e1c5741b995d
   0023-DMA-rework.patch: 203931a396ada66dd9ed7ed1f80ceb4af8fbf8c4
+  0024-rewrite-irq-drivers.patch: 233b6bfa47cb47a43f2ee8092a0544a75122a87c
 Unapplied:
-  0024-rewrite-irq-drivers.patch: 451bd598e99cbb3ade02d5d103982a81de284960
   0025-mmc-dma.patch: ac775ac22e16dd7bafd4cc3657ab2d1c57bce1c4
   0026-switch-nand-to-dmaengine.patch: dcfa55a48986603529115546cf7a3a83d3ec5f46
   0027-i2s-dma.patch: db79da914189c594d9b81adfe5ef8ff27f4b9a49
