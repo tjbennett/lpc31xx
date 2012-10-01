@@ -13,7 +13,7 @@
 
 #include <linux/serial_8250.h>
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 struct LPC31XX_DMA {
 	dma_addr_t		dma_buff_p;
 	void			*dma_buff_v;
@@ -50,7 +50,11 @@ struct uart_8250_port {
 #define MSR_SAVE_FLAGS UART_MSR_ANY_DELTA
 	unsigned char		msr_saved_flags;
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+	/* 8250 specific callbacks */
+	int			(*dl_read)(struct uart_8250_port *);
+	void			(*dl_write)(struct uart_8250_port *, int);
+
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	struct LPC31XX_DMA dma_rx;
 	struct LPC31XX_DMA dma_tx;
 	int buff_half_offs;
@@ -112,6 +116,18 @@ static inline int serial_in(struct uart_8250_port *up, int offset)
 static inline void serial_out(struct uart_8250_port *up, int offset, int value)
 {
 	up->port.serial_out(&up->port, offset, value);
+}
+
+void serial8250_clear_and_reinit_fifos(struct uart_8250_port *p);
+
+static inline int serial_dl_read(struct uart_8250_port *up)
+{
+	return up->dl_read(up);
+}
+
+static inline void serial_dl_write(struct uart_8250_port *up, int value)
+{
+	up->dl_write(up, value);
 }
 
 #if defined(__alpha__) && !defined(CONFIG_PCI)

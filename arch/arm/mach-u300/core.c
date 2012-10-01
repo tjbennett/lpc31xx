@@ -30,6 +30,7 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinconf-generic.h>
 #include <linux/dma-mapping.h>
+#include <linux/platform_data/clk-u300.h>
 
 #include <asm/types.h>
 #include <asm/setup.h>
@@ -44,7 +45,6 @@
 #include <mach/dma_channels.h>
 #include <mach/gpio-u300.h>
 
-#include "clock.h"
 #include "spi.h"
 #include "i2c.h"
 #include "u300-gpio.h"
@@ -1658,17 +1658,27 @@ void __init u300_init_irq(void)
 	int i;
 
 	/* initialize clocking early, we want to clock the INTCON */
-	u300_clock_init();
+	u300_clk_init(U300_SYSCON_VBASE);
+
+	/* Bootstrap EMIF and SEMI clocks */
+	clk = clk_get_sys("pl172", NULL);
+	BUG_ON(IS_ERR(clk));
+	clk_prepare_enable(clk);
+	clk = clk_get_sys("semi", NULL);
+	BUG_ON(IS_ERR(clk));
+	clk_prepare_enable(clk);
 
 	/* Clock the interrupt controller */
 	clk = clk_get_sys("intcon", NULL);
 	BUG_ON(IS_ERR(clk));
-	clk_enable(clk);
+	clk_prepare_enable(clk);
 
 	for (i = 0; i < U300_VIC_IRQS_END; i++)
 		set_bit(i, (unsigned long *) &mask[0]);
-	vic_init((void __iomem *) U300_INTCON0_VBASE, 0, mask[0], mask[0]);
-	vic_init((void __iomem *) U300_INTCON1_VBASE, 32, mask[1], mask[1]);
+	vic_init((void __iomem *) U300_INTCON0_VBASE, IRQ_U300_INTCON0_START,
+		 mask[0], mask[0]);
+	vic_init((void __iomem *) U300_INTCON1_VBASE, IRQ_U300_INTCON1_START,
+		 mask[1], mask[1]);
 }
 
 
@@ -1809,13 +1819,6 @@ void __init u300_init_devices(void)
 	/* Check what platform we run and print some status information */
 	u300_init_check_chip();
 
-	/* Set system to run at PLL208, max performance, a known state. */
-	val = readw(U300_SYSCON_VBASE + U300_SYSCON_CCR);
-	val &= ~U300_SYSCON_CCR_CLKING_PERFORMANCE_MASK;
-	writew(val, U300_SYSCON_VBASE + U300_SYSCON_CCR);
-	/* Wait for the PLL208 to lock if not locked in yet */
-	while (!(readw(U300_SYSCON_VBASE + U300_SYSCON_CSR) &
-		 U300_SYSCON_CSR_PLL208_LOCK_IND));
 	/* Initialize SPI device with some board specifics */
 	u300_spi_init(&pl022_device);
 

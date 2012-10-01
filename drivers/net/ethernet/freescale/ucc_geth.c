@@ -116,10 +116,10 @@ static struct ucc_geth_info ugeth_primary_info = {
 	.maxGroupAddrInHash = 4,
 	.maxIndAddrInHash = 4,
 	.prel = 7,
-	.maxFrameLength = 1518,
+	.maxFrameLength = 1518+16, /* Add extra bytes for VLANs etc. */
 	.minFrameLength = 64,
-	.maxD1Length = 1520,
-	.maxD2Length = 1520,
+	.maxD1Length = 1520+16, /* Add extra bytes for VLANs etc. */
+	.maxD2Length = 1520+16, /* Add extra bytes for VLANs etc. */
 	.vlantype = 0x8100,
 	.ecamptr = ((uint32_t) NULL),
 	.eventRegMask = UCCE_OTHER,
@@ -185,7 +185,7 @@ static void mem_disp(u8 *addr, int size)
 	for (; (u32) i < (u32) addr + size4Aling; i += 4)
 		printk("%08x ", *((u32 *) (i)));
 	for (; (u32) i < (u32) addr + size; i++)
-		printk("%02x", *((u8 *) (i)));
+		printk("%02x", *((i)));
 	if (notAlign == 1)
 		printk("\r\n");
 }

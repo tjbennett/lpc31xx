@@ -54,7 +54,7 @@ void ar9003_paprd_enable(struct ath_hw *ah, bool val)
 
 	if (val) {
 		ah->paprd_table_write_done = true;
-		ath9k_hw_apply_txpower(ah, chan);
+		ath9k_hw_apply_txpower(ah, chan, false);
 	}
 
 	REG_RMW_FIELD(ah, AR_PHY_PAPRD_CTRL0_B0,
@@ -211,7 +211,7 @@ static int ar9003_paprd_setup_single_table(struct ath_hw *ah)
 		      AR_PHY_PAPRD_TRAINER_CNTL3_CF_PAPRD_NUM_CORR_STAGES, 7);
 	REG_RMW_FIELD(ah, AR_PHY_PAPRD_TRAINER_CNTL3,
 		      AR_PHY_PAPRD_TRAINER_CNTL3_CF_PAPRD_MIN_LOOPBACK_DEL, 1);
-	if (AR_SREV_9485(ah) || AR_SREV_9462(ah))
+	if (AR_SREV_9485(ah) || AR_SREV_9462(ah) || AR_SREV_9550(ah))
 		REG_RMW_FIELD(ah, AR_PHY_PAPRD_TRAINER_CNTL3,
 			      AR_PHY_PAPRD_TRAINER_CNTL3_CF_PAPRD_QUICK_DROP,
 			      -3);

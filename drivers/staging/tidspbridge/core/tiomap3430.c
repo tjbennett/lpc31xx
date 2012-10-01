@@ -79,10 +79,6 @@
 #define OMAP343X_CONTROL_IVA2_BOOTADDR (OMAP2_CONTROL_GENERAL + 0x0190)
 #define OMAP343X_CONTROL_IVA2_BOOTMOD (OMAP2_CONTROL_GENERAL + 0x0194)
 
-#define OMAP343X_CTRL_REGADDR(reg) \
-	OMAP2_L4_IO_ADDRESS(OMAP343X_CTRL_BASE + (reg))
-
-
 /* Forward Declarations: */
 static int bridge_brd_monitor(struct bridge_dev_context *dev_ctxt);
 static int bridge_brd_read(struct bridge_dev_context *dev_ctxt,
@@ -418,19 +414,27 @@ static int bridge_brd_start(struct bridge_dev_context *dev_ctxt,
 
 		/* Assert RST1 i.e only the RST only for DSP megacell */
 		if (!status) {
+			/*
+			 * XXX: ioremapping  MUST be removed once ctrl
+			 * function is made available.
+			 */
+			void __iomem *ctrl = ioremap(OMAP343X_CTRL_BASE, SZ_4K);
+			if (!ctrl)
+				return -ENOMEM;
+
 			(*pdata->dsp_prm_rmw_bits)(OMAP3430_RST1_IVA2_MASK,
 					OMAP3430_RST1_IVA2_MASK, OMAP3430_IVA2_MOD,
 					OMAP2_RM_RSTCTRL);
 			/* Mask address with 1K for compatibility */
 			__raw_writel(dsp_addr & OMAP3_IVA2_BOOTADDR_MASK,
-					OMAP343X_CTRL_REGADDR(
-					OMAP343X_CONTROL_IVA2_BOOTADDR));
+					ctrl + OMAP343X_CONTROL_IVA2_BOOTADDR);
 			/*
 			 * Set bootmode to self loop if dsp_debug flag is true
 			 */
 			__raw_writel((dsp_debug) ? OMAP3_IVA2_BOOTMOD_IDLE : 0,
-					OMAP343X_CTRL_REGADDR(
-					OMAP343X_CONTROL_IVA2_BOOTMOD));
+					ctrl + OMAP343X_CONTROL_IVA2_BOOTMOD);
+
+			iounmap(ctrl);
 		}
 	}
 	if (!status) {
@@ -1543,20 +1547,27 @@ EXIT_LOOP:
 static u32 user_va2_pa(struct mm_struct *mm, u32 address)
 {
 	pgd_t *pgd;
+	pud_t *pud;
 	pmd_t *pmd;
 	pte_t *ptep, pte;
 
 	pgd = pgd_offset(mm, address);
-	if (!(pgd_none(*pgd) || pgd_bad(*pgd))) {
-		pmd = pmd_offset(pgd, address);
-		if (!(pmd_none(*pmd) || pmd_bad(*pmd))) {
-			ptep = pte_offset_map(pmd, address);
-			if (ptep) {
-				pte = *ptep;
-				if (pte_present(pte))
-					return pte & PAGE_MASK;
-			}
-		}
+	if (pgd_none(*pgd) || pgd_bad(*pgd))
+		return 0;
+
+	pud = pud_offset(pgd, address);
+	if (pud_none(*pud) || pud_bad(*pud))
+		return 0;
+
+	pmd = pmd_offset(pud, address);
+	if (pmd_none(*pmd) || pmd_bad(*pmd))
+		return 0;
+
+	ptep = pte_offset_map(pmd, address);
+	if (ptep) {
+		pte = *ptep;
+		if (pte_present(pte))
+			return pte & PAGE_MASK;
 	}
 
 	return 0;

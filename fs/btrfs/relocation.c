@@ -1239,10 +1239,11 @@ static int __must_check __add_reloc_root(struct btrfs_root *root)
 			      node->bytenr, &node->rb_node);
 	spin_unlock(&rc->reloc_root_tree.lock);
 	if (rb_node) {
-		kfree(node);
 		btrfs_panic(root->fs_info, -EEXIST, "Duplicate root found "
 			    "for start=%llu while inserting into relocation "
-			    "tree\n");
+			    "tree\n", node->bytenr);
+		kfree(node);
+		return -EEXIST;
 	}
 
 	list_add_tail(&root->root_list, &rc->reloc_roots);
@@ -1279,7 +1280,9 @@ static int __update_reloc_root(struct btrfs_root *root, int del)
 		if (rb_node)
 			backref_tree_panic(rb_node, -EEXIST, node->bytenr);
 	} else {
+		spin_lock(&root->fs_info->trans_lock);
 		list_del_init(&root->root_list);
+		spin_unlock(&root->fs_info->trans_lock);
 		kfree(node);
 	}
 	return 0;
@@ -3811,7 +3814,7 @@ restart:
 
 		ret = btrfs_block_rsv_check(rc->extent_root, rc->block_rsv, 5);
 		if (ret < 0) {
-			if (ret != -EAGAIN) {
+			if (ret != -ENOSPC) {
 				err = ret;
 				WARN_ON(1);
 				break;

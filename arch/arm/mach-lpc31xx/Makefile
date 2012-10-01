@@ -4,13 +4,15 @@
 
 # Object file lists.
 
-obj-y += irq.o evtr.o time.o generic.o dma.o usb.o clock.o sram.o
+obj-y += irq.o evtr.o time.o generic.o usb.o clock.o sram.o
 obj-$(CONFIG_OF) += dt.o
+ifeq ($(CONFIG_DMA_ENGINE),n)
+obj-y += dma.o
+endif
+
 
 
 # Specific board support
-obj-$(CONFIG_MACH_EA313X) += board-ea313x.o
-obj-$(CONFIG_MACH_EA3152) += board-ea313x.o
 obj-$(CONFIG_LPC3152_AD) += psu.o
 
 # Power Management

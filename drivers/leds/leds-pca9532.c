@@ -477,7 +477,6 @@ static int pca9532_probe(struct i2c_client *client,
 {
 	struct pca9532_data *data = i2c_get_clientdata(client);
 	struct pca9532_platform_data *pca9532_pdata = client->dev.platform_data;
-	int err;
 
 #ifdef CONFIG_OF
 	pca9532_pdata = &of_gpios;
@@ -490,7 +489,7 @@ static int pca9532_probe(struct i2c_client *client,
 		I2C_FUNC_SMBUS_BYTE_DATA))
 		return -EIO;
 
-	data = kzalloc(sizeof(*data), GFP_KERNEL);
+	data = devm_kzalloc(&client->dev, sizeof(*data), GFP_KERNEL);
 	if (!data)
 		return -ENOMEM;
 
@@ -501,11 +500,7 @@ static int pca9532_probe(struct i2c_client *client,
 	data->client = client;
 	mutex_init(&data->update_lock);
 
-	err = pca9532_configure(client, data, pca9532_pdata);
-	if (err)
-		kfree(data);
-
-	return err;
+	return pca9532_configure(client, data, pca9532_pdata);
 }
 
 static int pca9532_remove(struct i2c_client *client)
@@ -517,7 +512,6 @@ static int pca9532_remove(struct i2c_client *client)
 	if (err)
 		return err;
 
-	kfree(data);
 	return 0;
 }
 

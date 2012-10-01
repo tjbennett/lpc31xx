@@ -359,7 +359,7 @@ static void __init mpc85xx_mds_setup_arch(void)
 	mpc85xx_mds_qe_init();
 
 #ifdef CONFIG_SWIOTLB
-	if (memblock_end_of_DRAM() > max) {
+	if ((memblock_end_of_DRAM() - 1) > max) {
 		ppc_swiotlb_enable = 1;
 		set_pci_dma_ops(&swiotlb_dma_ops);
 		ppc_md.pci_dma_dev_setup = pci_dma_dev_setup_swiotlb;
@@ -399,12 +399,6 @@ static int __init board_fixups(void)
 machine_arch_initcall(mpc8568_mds, board_fixups);
 machine_arch_initcall(mpc8569_mds, board_fixups);
 
-static struct of_device_id mpc85xx_ids[] = {
-	{ .compatible = "fsl,mpc8548-guts", },
-	{ .compatible = "gpio-leds", },
-	{},
-};
-
 static int __init mpc85xx_publish_devices(void)
 {
 	if (machine_is(mpc8568_mds))
@@ -412,10 +406,7 @@ static int __init mpc85xx_publish_devices(void)
 	if (machine_is(mpc8569_mds))
 		simple_gpiochip_init("fsl,mpc8569mds-bcsr-gpio");
 
-	mpc85xx_common_publish_devices();
-	of_platform_bus_probe(NULL, mpc85xx_ids, NULL);
-
-	return 0;
+	return mpc85xx_common_publish_devices();
 }
 
 machine_device_initcall(mpc8568_mds, mpc85xx_publish_devices);

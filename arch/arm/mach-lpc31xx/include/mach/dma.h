@@ -24,7 +24,30 @@
 #ifndef __ASM_ARCH_DMA_H
 #define __ASM_ARCH_DMA_H
 
+#ifdef CONFIG_DMA_ENGINE
+
+
 #include <linux/dmaengine.h>
+
+
+/**
+ * struct lpc31xx_dma_data - configuration data for the LPC31xx dmaengine
+ * @port: peripheral which is requesting the channel
+ * @direction: TX/RX channel
+ * @name: optional name for the channel, this is displayed in /proc/interrupts
+ *
+ * This information is passed as private channel parameter in a filter
+ * function. Note that this is only needed for slave/cyclic channels.  For
+ * memcpy channels %NULL data should be passed.
+ */
+struct lpc31xx_dma_data {
+	int port;
+	enum dma_transfer_direction	direction;
+	const char *name;
+};
+
+#else
+
 #include <mach/constants.h>
 
 /***********************************************************************
@@ -67,7 +90,7 @@
 
 /* DMA hardware constants */
 #define DMA_MAX_CHANNELS   12
-#define DMA_MAX_TRANSFERS  2047
+#define DMA_MAX_TRANSFERS  0x1FFFFF 
 
 /*bit defines for configuration register */
 #define DMA_COMPANION_ENABLE _BIT()
@@ -130,7 +153,7 @@ typedef union __dma_config_t{
 		unsigned int circular_buffer:1;
 		unsigned int rsrvd1:12;
 	} s;
-	u32 value;
+	uint32_t value;
 } dma_config_t;
 
 /*
@@ -139,14 +162,14 @@ typedef union __dma_config_t{
 typedef struct dma_setup
 {
 	/* source address for transfer*/
-	u32 src_address;
+	uint32_t src_address;
 	/* source address for transfer*/
-	u32 dest_address;
+	uint32_t dest_address;
 	/* toatl transfer length*/
-	u32 trans_length;
+	uint32_t trans_length;
 	/* channel configuration */
 	//dma_config_t cfg;
-	u32 cfg;
+	uint32_t cfg;
 } dma_setup_t;
 
 /*
@@ -155,7 +178,7 @@ typedef struct dma_setup
 typedef struct dma_sg_ll
 {
 	dma_setup_t setup;
-	u32 next_entry;
+	uint32_t next_entry;
 } dma_sg_ll_t;
 
 
@@ -268,7 +291,7 @@ int dma_read_counter (unsigned int, unsigned int *);
  *
  * Returns: 0 on success, otherwise failure
  */
-int dma_write_counter (unsigned int, u32);
+int dma_write_counter (unsigned int, uint32_t);
 
 /*
  * Read current channel state
@@ -368,7 +391,7 @@ int dma_prepare_sg_list(int, dma_sg_ll_t *);
  *
  * Returns: 0 on success, otherwise failure
  */
-int dma_prog_sg_channel(int, u32 );
+int dma_prog_sg_channel(int, uint32_t );
 
 /*
  * Release SDMA SG channel
@@ -391,22 +414,6 @@ int dma_release_sg_channel (unsigned int);
 int dma_channel_enabled(unsigned int);
 
 
-/**
- * struct lpc31xx_dma_data - configuration data for the LPC31xx dmaengine
- * @port: peripheral which is requesting the channel
- * @direction: TX/RX channel
- * @name: optional name for the channel, this is displayed in /proc/interrupts
- *
- * This information is passed as private channel parameter in a filter
- * function. Note that this is only needed for slave/cyclic channels.  For
- * memcpy channels %NULL data should be passed.
- */
-struct lpc31xx_dma_data {
-	int port;
-	enum dma_transfer_direction	direction;
-	const char *name;
-};
-
-
+#endif
 
 #endif				/* _ASM_ARCH_DMA_H */

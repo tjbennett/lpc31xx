@@ -48,18 +48,37 @@ struct sas_task *sas_alloc_task(gfp_t flags)
 		INIT_LIST_HEAD(&task->list);
 		spin_lock_init(&task->task_state_lock);
 		task->task_state_flags = SAS_TASK_STATE_PENDING;
-		init_timer(&task->timer);
-		init_completion(&task->completion);
 	}
 
 	return task;
 }
 EXPORT_SYMBOL_GPL(sas_alloc_task);
 
+struct sas_task *sas_alloc_slow_task(gfp_t flags)
+{
+	struct sas_task *task = sas_alloc_task(flags);
+	struct sas_task_slow *slow = kmalloc(sizeof(*slow), flags);
+
+	if (!task || !slow) {
+		if (task)
+			kmem_cache_free(sas_task_cache, task);
+		kfree(slow);
+		return NULL;
+	}
+
+	task->slow_task = slow;
+	init_timer(&slow->timer);
+	init_completion(&slow->completion);
+
+	return task;
+}
+EXPORT_SYMBOL_GPL(sas_alloc_slow_task);
+
 void sas_free_task(struct sas_task *task)
 {
 	if (task) {
 		BUG_ON(!list_empty(&task->list));
+		kfree(task->slow_task);
 		kmem_cache_free(sas_task_cache, task);
 	}
 }
@@ -94,8 +113,7 @@ void sas_hash_addr(u8 *hashed, const u8 *sas_addr)
 
 void sas_hae_reset(struct work_struct *work)
 {
-	struct sas_ha_event *ev =
-		container_of(work, struct sas_ha_event, work);
+	struct sas_ha_event *ev = to_sas_ha_event(work);
 	struct sas_ha_struct *ha = ev->ha;
 
 	clear_bit(HAE_RESET, &ha->pending);
@@ -115,9 +133,11 @@ int sas_register_ha(struct sas_ha_struct *sas_ha)
 		sas_ha->lldd_queue_size = 128; /* Sanity */
 
 	set_bit(SAS_HA_REGISTERED, &sas_ha->state);
-	spin_lock_init(&sas_ha->state_lock);
+	spin_lock_init(&sas_ha->lock);
 	mutex_init(&sas_ha->drain_mutex);
+	init_waitqueue_head(&sas_ha->eh_wait_q);
 	INIT_LIST_HEAD(&sas_ha->defer_q);
+	INIT_LIST_HEAD(&sas_ha->eh_dev_q);
 
 	error = sas_register_phys(sas_ha);
 	if (error) {
@@ -164,9 +184,9 @@ int sas_unregister_ha(struct sas_ha_struct *sas_ha)
 	 * events to be queued, and flush any in-progress drainers
 	 */
 	mutex_lock(&sas_ha->drain_mutex);
-	spin_lock_irq(&sas_ha->state_lock);
+	spin_lock_irq(&sas_ha->lock);
 	clear_bit(SAS_HA_REGISTERED, &sas_ha->state);
-	spin_unlock_irq(&sas_ha->state_lock);
+	spin_unlock_irq(&sas_ha->lock);
 	__sas_drain_work(sas_ha);
 	mutex_unlock(&sas_ha->drain_mutex);
 
@@ -369,14 +389,14 @@ static void sas_phy_release(struct sas_phy *phy)
 
 static void phy_reset_work(struct work_struct *work)
 {
-	struct sas_phy_data *d = container_of(work, typeof(*d), reset_work);
+	struct sas_phy_data *d = container_of(work, typeof(*d), reset_work.work);
 
 	d->reset_result = transport_sas_phy_reset(d->phy, d->hard_reset);
 }
 
 static void phy_enable_work(struct work_struct *work)
 {
-	struct sas_phy_data *d = container_of(work, typeof(*d), enable_work);
+	struct sas_phy_data *d = container_of(work, typeof(*d), enable_work.work);
 
 	d->enable_result = sas_phy_enable(d->phy, d->enable);
 }
@@ -389,8 +409,8 @@ static int sas_phy_setup(struct sas_phy *phy)
 		return -ENOMEM;
 
 	mutex_init(&d->event_lock);
-	INIT_WORK(&d->reset_work, phy_reset_work);
-	INIT_WORK(&d->enable_work, phy_enable_work);
+	INIT_SAS_WORK(&d->reset_work, phy_reset_work);
+	INIT_SAS_WORK(&d->enable_work, phy_enable_work);
 	d->phy = phy;
 	phy->hostdata = d;
 
@@ -412,9 +432,9 @@ static int queue_phy_reset(struct sas_phy *phy, int hard_reset)
 	d->reset_result = 0;
 	d->hard_reset = hard_reset;
 
-	spin_lock_irq(&ha->state_lock);
+	spin_lock_irq(&ha->lock);
 	sas_queue_work(ha, &d->reset_work);
-	spin_unlock_irq(&ha->state_lock);
+	spin_unlock_irq(&ha->lock);
 
 	rc = sas_drain_work(ha);
 	if (rc == 0)
@@ -439,9 +459,9 @@ static int queue_phy_enable(struct sas_phy *phy, int enable)
 	d->enable_result = 0;
 	d->enable = enable;
 
-	spin_lock_irq(&ha->state_lock);
+	spin_lock_irq(&ha->lock);
 	sas_queue_work(ha, &d->enable_work);
-	spin_unlock_irq(&ha->state_lock);
+	spin_unlock_irq(&ha->lock);
 
 	rc = sas_drain_work(ha);
 	if (rc == 0)

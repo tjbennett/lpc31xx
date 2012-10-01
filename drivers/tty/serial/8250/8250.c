@@ -193,7 +193,7 @@ static unsigned long probe_rsa[PORT_RSA_MAX];
 static unsigned int probe_rsa_count;
 #endif /* CONFIG_SERIAL_8250_RSA  */
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 static DEFINE_MUTEX(dma_mutex);
 #undef UART_FCR_ENABLE_FIFO
 #define UART_FCR_ENABLE_FIFO (0x9 | (1 << 6)) /* FIFO enable + DMA */
@@ -367,6 +367,14 @@ static const struct serial8250_config uart_config[] = {
 		.fcr		= UART_FCR_ENABLE_FIFO | UART_FCR_R_TRIG_10,
 		.flags		= UART_CAP_FIFO | UART_CAP_AFE | UART_CAP_EFR,
 	},
+	[PORT_LPC3220] = {
+		.name		= "LPC3220",
+		.fifo_size	= 64,
+		.tx_loadsz	= 32,
+		.fcr		= UART_FCR_DMA_SELECT | UART_FCR_ENABLE_FIFO |
+				  UART_FCR_R_TRIG_00 | UART_FCR_T_TRIG_00,
+		.flags		= UART_CAP_FIFO,
+	},
 	[PORT_NXP16750] = {
 		.name		= "NXP16750",
 		.fifo_size	= 64,
@@ -376,7 +384,20 @@ static const struct serial8250_config uart_config[] = {
 	},
 };
 
-#if defined(CONFIG_MIPS_ALCHEMY)
+/* Uart divisor latch read */
+static int default_serial_dl_read(struct uart_8250_port *up)
+{
+	return serial_in(up, UART_DLL) | serial_in(up, UART_DLM) << 8;
+}
+
+/* Uart divisor latch write */
+static void default_serial_dl_write(struct uart_8250_port *up, int value)
+{
+	serial_out(up, UART_DLL, value & 0xff);
+	serial_out(up, UART_DLM, value >> 8 & 0xff);
+}
+
+#ifdef CONFIG_MIPS_ALCHEMY
 
 /* Au1x00 UART hardware has a weird register layout */
 static const u8 au_io_in_map[] = {
@@ -397,22 +418,32 @@ static const u8 au_io_out_map[] = {
 	[UART_MCR] = 6,
 };
 
-/* sane hardware needs no mapping */
-static inline int map_8250_in_reg(struct uart_port *p, int offset)
+static unsigned int au_serial_in(struct uart_port *p, int offset)
 {
-	if (p->iotype != UPIO_AU)
-		return offset;
-	return au_io_in_map[offset];
+	offset = au_io_in_map[offset] << p->regshift;
+	return __raw_readl(p->membase + offset);
 }
 
-static inline int map_8250_out_reg(struct uart_port *p, int offset)
+static void au_serial_out(struct uart_port *p, int offset, int value)
 {
-	if (p->iotype != UPIO_AU)
-		return offset;
-	return au_io_out_map[offset];
+	offset = au_io_out_map[offset] << p->regshift;
+	__raw_writel(value, p->membase + offset);
 }
 
-#elif defined(CONFIG_SERIAL_8250_RM9K)
+/* Au1x00 haven't got a standard divisor latch */
+static int au_serial_dl_read(struct uart_8250_port *up)
+{
+	return __raw_readl(up->port.membase + 0x28);
+}
+
+static void au_serial_dl_write(struct uart_8250_port *up, int value)
+{
+	__raw_writel(value, up->port.membase + 0x28);
+}
+
+#endif
+
+#ifdef CONFIG_SERIAL_8250_RM9K
 
 static const u8
 	regmap_in[8] = {
@@ -436,87 +467,79 @@ static const u8
 		[UART_SCR]	= 0x2c
 	};
 
-static inline int map_8250_in_reg(struct uart_port *p, int offset)
+static unsigned int rm9k_serial_in(struct uart_port *p, int offset)
 {
-	if (p->iotype != UPIO_RM9000)
-		return offset;
-	return regmap_in[offset];
+	offset = regmap_in[offset] << p->regshift;
+	return readl(p->membase + offset);
 }
 
-static inline int map_8250_out_reg(struct uart_port *p, int offset)
+static void rm9k_serial_out(struct uart_port *p, int offset, int value)
 {
-	if (p->iotype != UPIO_RM9000)
-		return offset;
-	return regmap_out[offset];
+	offset = regmap_out[offset] << p->regshift;
+	writel(value, p->membase + offset);
 }
 
-#else
+static int rm9k_serial_dl_read(struct uart_8250_port *up)
+{
+	return ((__raw_readl(up->port.membase + 0x10) << 8) |
+		(__raw_readl(up->port.membase + 0x08) & 0xff)) & 0xffff;
+}
 
-/* sane hardware needs no mapping */
-#define map_8250_in_reg(up, offset) (offset)
-#define map_8250_out_reg(up, offset) (offset)
+static void rm9k_serial_dl_write(struct uart_8250_port *up, int value)
+{
+	__raw_writel(value, up->port.membase + 0x08);
+	__raw_writel(value >> 8, up->port.membase + 0x10);
+}
 
 #endif
 
 static unsigned int hub6_serial_in(struct uart_port *p, int offset)
 {
-	offset = map_8250_in_reg(p, offset) << p->regshift;
+	offset = offset << p->regshift;
 	outb(p->hub6 - 1 + offset, p->iobase);
 	return inb(p->iobase + 1);
 }
 
 static void hub6_serial_out(struct uart_port *p, int offset, int value)
 {
-	offset = map_8250_out_reg(p, offset) << p->regshift;
+	offset = offset << p->regshift;
 	outb(p->hub6 - 1 + offset, p->iobase);
 	outb(value, p->iobase + 1);
 }
 
 static unsigned int mem_serial_in(struct uart_port *p, int offset)
 {
-	offset = map_8250_in_reg(p, offset) << p->regshift;
+	offset = offset << p->regshift;
 	return readb(p->membase + offset);
 }
 
 static void mem_serial_out(struct uart_port *p, int offset, int value)
 {
-	offset = map_8250_out_reg(p, offset) << p->regshift;
+	offset = offset << p->regshift;
 	writeb(value, p->membase + offset);
 }
 
 static void mem32_serial_out(struct uart_port *p, int offset, int value)
 {
-	offset = map_8250_out_reg(p, offset) << p->regshift;
+	offset = offset << p->regshift;
 	writel(value, p->membase + offset);
 }
 
 static unsigned int mem32_serial_in(struct uart_port *p, int offset)
 {
-	offset = map_8250_in_reg(p, offset) << p->regshift;
+	offset = offset << p->regshift;
 	return readl(p->membase + offset);
-}
-
-static unsigned int au_serial_in(struct uart_port *p, int offset)
-{
-	offset = map_8250_in_reg(p, offset) << p->regshift;
-	return __raw_readl(p->membase + offset);
-}
-
-static void au_serial_out(struct uart_port *p, int offset, int value)
-{
-	offset = map_8250_out_reg(p, offset) << p->regshift;
-	__raw_writel(value, p->membase + offset);
 }
 
 static unsigned int io_serial_in(struct uart_port *p, int offset)
 {
-	offset = map_8250_in_reg(p, offset) << p->regshift;
+	offset = offset << p->regshift;
 	return inb(p->iobase + offset);
 }
 
 static void io_serial_out(struct uart_port *p, int offset, int value)
 {
-	offset = map_8250_out_reg(p, offset) << p->regshift;
+	offset = offset << p->regshift;
 	outb(value, p->iobase + offset);
 }
 
@@ -526,6 +549,10 @@ static void set_io_from_upio(struct uart_port *p)
 {
 	struct uart_8250_port *up =
 		container_of(p, struct uart_8250_port, port);
+
+	up->dl_read = default_serial_dl_read;
+	up->dl_write = default_serial_dl_write;
+
 	switch (p->iotype) {
 	case UPIO_HUB6:
 		p->serial_in = hub6_serial_in;
@@ -537,16 +564,28 @@ static void set_io_from_upio(struct uart_port *p)
 		p->serial_out = mem_serial_out;
 		break;
 
-	case UPIO_RM9000:
 	case UPIO_MEM32:
 		p->serial_in = mem32_serial_in;
 		p->serial_out = mem32_serial_out;
 		break;
 
+#ifdef CONFIG_SERIAL_8250_RM9K
+	case UPIO_RM9000:
+		p->serial_in = rm9k_serial_in;
+		p->serial_out = rm9k_serial_out;
+		up->dl_read = rm9k_serial_dl_read;
+		up->dl_write = rm9k_serial_dl_write;
+		break;
+#endif
+
+#ifdef CONFIG_MIPS_ALCHEMY
 	case UPIO_AU:
 		p->serial_in = au_serial_in;
 		p->serial_out = au_serial_out;
+		up->dl_read = au_serial_dl_read;
+		up->dl_write = au_serial_dl_write;
 		break;
+#endif
 
 	default:
 		p->serial_in = io_serial_in;
@@ -572,59 +611,6 @@ serial_port_out_sync(struct uart_port *p, int offset, int value)
 		p->serial_out(p, offset, value);
 	}
 }
-
-/* Uart divisor latch read */
-static inline int _serial_dl_read(struct uart_8250_port *up)
-{
-	return serial_in(up, UART_DLL) | serial_in(up, UART_DLM) << 8;
-}
-
-/* Uart divisor latch write */
-static inline void _serial_dl_write(struct uart_8250_port *up, int value)
-{
-	serial_out(up, UART_DLL, value & 0xff);
-	serial_out(up, UART_DLM, value >> 8 & 0xff);
-}
-
-#if defined(CONFIG_MIPS_ALCHEMY)
-/* Au1x00 haven't got a standard divisor latch */
-static int serial_dl_read(struct uart_8250_port *up)
-{
-	if (up->port.iotype == UPIO_AU)
-		return __raw_readl(up->port.membase + 0x28);
-	else
-		return _serial_dl_read(up);
-}
-
-static void serial_dl_write(struct uart_8250_port *up, int value)
-{
-	if (up->port.iotype == UPIO_AU)
-		__raw_writel(value, up->port.membase + 0x28);
-	else
-		_serial_dl_write(up, value);
-}
-#elif defined(CONFIG_SERIAL_8250_RM9K)
-static int serial_dl_read(struct uart_8250_port *up)
-{
-	return	(up->port.iotype == UPIO_RM9000) ?
-		(((__raw_readl(up->port.membase + 0x10) << 8) |
-		(__raw_readl(up->port.membase + 0x08) & 0xff)) & 0xffff) :
-		_serial_dl_read(up);
-}
-
-static void serial_dl_write(struct uart_8250_port *up, int value)
-{
-	if (up->port.iotype == UPIO_RM9000) {
-		__raw_writel(value, up->port.membase + 0x08);
-		__raw_writel(value >> 8, up->port.membase + 0x10);
-	} else {
-		_serial_dl_write(up, value);
-	}
-}
-#else
-#define serial_dl_read(up) _serial_dl_read(up)
-#define serial_dl_write(up, value) _serial_dl_write(up, value)
-#endif
 
 /*
  * For the 16C950
@@ -659,6 +645,16 @@ static void serial8250_clear_fifos(struct uart_8250_port *p)
 		serial_out(p, UART_FCR, 0);
 	}
 }
+
+void serial8250_clear_and_reinit_fifos(struct uart_8250_port *p)
+{
+	unsigned char fcr;
+
+	serial8250_clear_fifos(p);
+	fcr = uart_config[p->port.type].fcr;
+	serial_out(p, UART_FCR, fcr);
+}
+EXPORT_SYMBOL_GPL(serial8250_clear_and_reinit_fifos);
 
 /*
  * IER sleep support.  UARTs which have EFRs need the "extended
@@ -1356,280 +1352,6 @@ static void autoconfig_irq(struct uart_8250_port *up)
 	port->irq = (irq > 0) ? irq : 0;
 }
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
-static void lpc31xx_dma_lock(struct uart_8250_port *up)
-{
-	mutex_lock(&dma_mutex);
-}
-
-static void lpc31xx_dma_unlock(struct uart_8250_port *up)
-{
-	mutex_unlock(&dma_mutex);
-}
-
-static void lpc31xx_uart_tx_dma_start(struct uart_8250_port *up);
-static void lpc31xx_dma_tx_tasklet_func(unsigned long data)
-{
-	struct uart_8250_port *up = (struct uart_8250_port *) data;
-	struct circ_buf *xmit = &up->port.state->xmit;
-
-	if (dma_channel_enabled(up->dma_tx.dmach))
-		return;
-
-	lpc31xx_dma_lock(up);
-
-	dma_stop_channel(up->dma_tx.dmach);
-
-	xmit->tail = (xmit->tail + up->dma_tx.count) & (UART_XMIT_SIZE - 1);
-	up->port.icount.tx += up->dma_tx.count;
-
-	lpc31xx_uart_tx_dma_start(up);
-
-	lpc31xx_dma_unlock(up);
-}
-
-static int lpc31xx_get_readl_rx_dma_count(struct uart_8250_port *up)
-{
-	int count;
-
-	/* The DMA hardware returns the number of bytes currently
-	   transferred by the hardware. It will return 0 when the
-	   channel has stopped (full DMA transfer) or when nothing
-	   has been transferred. To tell the difference between
-	   empty 0 and full 0, we need to examine the DMA enable
-	   status. */
-
-	/* A race condition can exist where the DMA TCNT returns a
-	   value right as the DMA is stopping. In this case, the
-	   DMA is enabled during the check with a non-0 count
-	   value. To get around this issue, the DMA count value
-	   need to be verified again after disabling the DMA
-	   channel. If it is 0, then the DMA completed and the
-	   count is different. */
-	dma_read_counter(up->dma_rx.dmach, &count);
-	if ((!count) && (!dma_channel_enabled(up->dma_rx.dmach)))
-		count = UART_XMIT_SIZE;
-
-	return count;
-}
-
-static void serial8250_dma_rx_timer_check(unsigned long data)
-{
-	struct uart_8250_port *up = (struct uart_8250_port *) data;
-
-	/* Emulate RX timeout when DMA buffer is not full */
-	if ((lpc31xx_get_readl_rx_dma_count(up)) && (up->dma_rx.active))
-		tasklet_schedule(&up->dma_rx.tasklet);
-	else
-		mod_timer(&up->dma_rx.timer, jiffies +
-			msecs_to_jiffies(LPC31XX_UART_RX_TIMEOUT));
-}
-
-void lcp31xx_dma_rx_setup(struct uart_8250_port *up)
-{
-	dma_setup_t dmarx;
-
-	up->buff_half_offs = UART_XMIT_SIZE - up->buff_half_offs;
-	dmarx.trans_length = UART_XMIT_SIZE - 1;
-	dmarx.src_address = (u32) up->port.mapbase;
-	dmarx.dest_address = (u32) up->dma_rx.dma_buff_p;
-	dmarx.dest_address += up->buff_half_offs;
-	dmarx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(DMA_SLV_UART_RX) |
-		DMA_CFG_WR_SLV_NR(0);
-
-	dma_prog_channel(up->dma_rx.dmach, &dmarx);
-	dma_start_channel(up->dma_rx.dmach);
-}
-
-/*
- * DMA RX tasklet
- */
-unsigned int serial8250_modem_status(struct uart_8250_port *up);
-static void lpc31xx_dma_rx_tasklet_func(unsigned long data)
-{
-	unsigned int status, lsr;
-	int count, count2, i, maxcount = 64, breakflush = 0;
-	char ch, flag = TTY_NORMAL, *buf;
-	struct uart_8250_port *up = (struct uart_8250_port *) data;
-	int buffhalf = up->buff_half_offs;
-	u32 pbuf;
-
-	spin_lock(&up->port.lock);
-
-	/*
-	 * Per char stats don't work with DMA, so the status flags
-	 * don't apply to a specific character. We'll take a best
-	 * guess that the accumulated status only applies to the
-	 * last character in the DMA buffer.
-	 */
-	status = serial_inp(up, UART_LSR);
-	lsr = status | up->lsr_saved_flags;
-	up->lsr_saved_flags = 0;
-
-	if (unlikely(lsr & UART_LSR_BRK_ERROR_BITS)) {
-		/*
-		 * For statistics only
-		 */
-		if (lsr & UART_LSR_BI) {
-			lsr &= ~(UART_LSR_FE | UART_LSR_PE);
-			up->port.icount.brk++;
-			breakflush = 1;
-			/*
-			 * Breaks are trouble! Toss everything if
-			 * one occurs.
-			 */
-			uart_handle_break(&up->port);
-		} else if (lsr & UART_LSR_PE)
-			up->port.icount.parity++;
-		else if (lsr & UART_LSR_FE)
-			up->port.icount.frame++;
-		if (lsr & UART_LSR_OE)
-			up->port.icount.overrun++;
-
-		/*
-		 * Mask off conditions which should be ignored.
-		 */
-		lsr &= up->port.read_status_mask;
-
-		if (lsr & UART_LSR_BI) {
-			DEBUG_INTR("handling break....");
-			flag = TTY_BREAK;
-		} else if (lsr & UART_LSR_PE)
-			flag = TTY_PARITY;
-		else if (lsr & UART_LSR_FE)
-			flag = TTY_FRAME;
-	}
-
-	/* Disable DMA and get current DMA bytes transferred */
-	count = lpc31xx_get_readl_rx_dma_count(up);
-	dma_stop_channel(up->dma_rx.dmach);
-	count2 = lpc31xx_get_readl_rx_dma_count(up);
-	if (count != count2) {
-		if (count2 == 0)
-			count = UART_XMIT_SIZE;
-		else
-			count = count2;
-	}
-	dma_write_counter(up->dma_rx.dmach, 0);
-
-	/* Setup DMA again using unused buffer half */
-	lcp31xx_dma_rx_setup(up);
-	pbuf = (u32) up->dma_rx.dma_buff_p;
-	pbuf += buffhalf;
-	buf = (char *) up->dma_rx.dma_buff_v;
-	buf += buffhalf;
-
-	if (breakflush) {
-		/* Flush RX FIFO */
-		while ((serial_inp(up, UART_LSR) & UART_LSR_DR) &&
-			(maxcount-- > 0))
-			ch = serial_inp(up, UART_RX);
-	}
-	else {
-		for (i = 0; i < (count - 1); i++) {
-			up->port.icount.rx++;
-			if (uart_handle_sysrq_char(&up->port, buf[i]))
-				continue;
-
-			uart_insert_char(&up->port, lsr, UART_LSR_OE, buf[i], TTY_NORMAL);
-		}
-
-		up->port.icount.rx++;
-		if (!uart_handle_sysrq_char(&up->port, buf[i]))
-			uart_insert_char(&up->port, lsr, UART_LSR_OE, buf[i], flag);
-	}
-
-	serial8250_modem_status(up);
-
-	spin_unlock(&up->port.lock);
-	tty_flip_buffer_push(up->port.state->port.tty);
-	spin_lock(&up->port.lock);
-
-	mod_timer(&up->dma_rx.timer, jiffies +
-		msecs_to_jiffies(LPC31XX_UART_RX_TIMEOUT));
-
-	/* Clear any pending RX error status and re-enable TX status interrupt */
-	status = serial_inp(up, UART_LSR);
-	serial_outp(up, UART_IER, up->ier);
-
-	spin_unlock(&up->port.lock);
-}
-
-/*
- * DMA UART TX completion interrupt - this interrupt is more of a spotholder
- * as it is disabled and will never fire.
- */
-static void lpc31xx_dma_tx_interrupt(int ch, dma_irq_type_t dtype, void *handle)
-{
-	struct uart_8250_port *up = handle;
-
-	printk(KERN_INFO "serial DMA TX interrupt unexpected\n");
-	tasklet_schedule(&up->dma_tx.tasklet);
-}
-
-/*
- * DMA UART RX completion interrupt - fires when the DMA RX transfer
- * is complete.
- */
-static void lpc31xx_dma_rx_interrupt(int ch, dma_irq_type_t dtype, void *handle)
-{
-	struct uart_8250_port *up = handle;
-
-	tasklet_schedule(&up->dma_rx.tasklet);
-}
-
-static void lpc31xx_uart_tx_dma_start(struct uart_8250_port *up)
-{
-	struct circ_buf *xmit = &up->port.state->xmit;
-	dma_setup_t dmatx;
-
-	/* Start a DMA transfer, DMA is idle if this is called and
-	   TX is enabled. */
-	if (up->port.x_char) {
-		serial_outp(up, UART_TX, up->port.x_char);
-		up->port.icount.tx++;
-		up->port.x_char = 0;
-		return;
-	}
-
-	if (!uart_circ_empty(xmit) && !uart_tx_stopped(&up->port)) {
-		dma_sync_single_for_device(up->port.dev,
-					   up->dma_tx.dma_buff_p,
-					   UART_XMIT_SIZE,
-					   DMA_TO_DEVICE);
-
-		up->dma_tx.count = CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE);
-		if (up->dma_tx.count > 64)
-			up->dma_tx.count = 64;
-
-		/* Note TX buffer is loaned to the DMA so the TX bytes can't
-		   be released until the DMA transfer is complete. */
-		dmatx.trans_length = up->dma_tx.count - 1;
-		dmatx.src_address = (u32) up->dma_tx.dma_buff_p;
-		dmatx.src_address += xmit->tail;
-		dmatx.dest_address = (u32) up->port.mapbase;
-		dmatx.cfg = DMA_CFG_TX_BYTE | DMA_CFG_RD_SLV_NR(0) |
-			DMA_CFG_WR_SLV_NR(DMA_SLV_UART_TX);
-
-		dma_prog_channel(up->dma_tx.dmach, &dmatx);
-		up->dma_tx.active = 1;
-		dma_start_channel(up->dma_tx.dmach);
-
-		/* Enable TX interrupt on TX FIFO empty */
-		up->ier |= UART_IER_THRI;
-	}
-	else {
-		up->dma_tx.active = 0;
-		up->ier &= ~UART_IER_THRI;
-	}
-
-	serial_out(up, UART_IER, up->ier);
-
-	if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
-		uart_write_wakeup(&up->port);
-}
-#endif
-
 static inline void __stop_tx(struct uart_8250_port *p)
 {
 	if (p->ier & UART_IER_THRI) {
@@ -1643,7 +1365,7 @@ static void serial8250_stop_tx(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	dma_stop_channel(up->dma_tx.dmach);
 #endif
 
@@ -1663,7 +1385,7 @@ static void serial8250_start_tx(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	lpc31xx_dma_lock(up);
  
 	/*
@@ -1715,7 +1437,7 @@ static void serial8250_enable_ms(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	dma_stop_channel(up->dma_rx.dmach);
 
 #else
@@ -1726,27 +1448,6 @@ static void serial8250_enable_ms(struct uart_port *port)
 	up->ier |= UART_IER_MSI;
 	serial_port_out(port, UART_IER, up->ier);
 #endif
-}
-
-/*
- * Clear the Tegra rx fifo after a break
- *
- * FIXME: This needs to become a port specific callback once we have a
- * framework for this
- */
-static void clear_rx_fifo(struct uart_8250_port *up)
-{
-	unsigned int status, tmout = 10000;
-	do {
-		status = serial_in(up, UART_LSR);
-		if (status & (UART_LSR_FIFOE | UART_LSR_BRK_ERROR_BITS))
-			status = serial_in(up, UART_RX);
-		else
-			break;
-		if (--tmout == 0)
-			break;
-		udelay(1);
-	} while (1);
 }
 
 /*
@@ -1783,19 +1484,9 @@ serial8250_rx_chars(struct uart_8250_port *up, unsigned char lsr)
 		up->lsr_saved_flags = 0;
 
 		if (unlikely(lsr & UART_LSR_BRK_ERROR_BITS)) {
-			/*
-			 * For statistics only
-			 */
 			if (lsr & UART_LSR_BI) {
 				lsr &= ~(UART_LSR_FE | UART_LSR_PE);
 				port->icount.brk++;
-				/*
-				 * If tegra port then clear the rx fifo to
-				 * accept another break/character.
-				 */
-				if (port->type == PORT_TEGRA)
-					clear_rx_fifo(up);
-
 				/*
 				 * We do the SysRQ and SAK checking
 				 * here because otherwise the break
@@ -1957,7 +1648,7 @@ static int serial8250_default_handle_irq(struct uart_port *port)
  */
 static irqreturn_t serial8250_interrupt(int irq, void *dev_id)
 {
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	struct irq_info *i = dev_id;
 	struct uart_8250_port *up;
 	unsigned int iir, status;
@@ -2064,7 +1755,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
 	struct hlist_node *n;
 	struct irq_info *i;
 	int ret, irq_flags = up->port.flags & UPF_SHARE_IRQ ? IRQF_SHARED : 0;
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	dma_addr_t dma_handle;
 	struct circ_buf *xmit = &up->port.state->xmit;
 #endif
@@ -2102,7 +1793,7 @@ static int serial_link_irq_chain(struct uart_8250_port *up)
 		INIT_LIST_HEAD(&up->list);
 		i->head = &up->list;
 		spin_unlock_irq(&i->lock);
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 		/* NOTE: The 31XX has only 1 UART channel, so the list head will
 		   always point to that channel. This logic isn't quite right,
 		   but its ok for a single UART */
@@ -2190,7 +1881,7 @@ static void serial_unlink_irq_chain(struct uart_8250_port *up)
 			break;
 	}
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	/* NOTE: The 31XX has only 1 UART channel, so the list head will
 	   always point to that channel. This logic isn't quite right,
 	   but its ok for a single UART */
@@ -2240,7 +1931,7 @@ static void serial8250_timeout(unsigned long data)
 	mod_timer(&up->timer, jiffies + uart_poll_timeout(&up->port));
 }
 
-#ifndef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifndef CONFIG_SERIAL_8250_LPC31xx_DMA
 static void serial8250_backup_timeout(unsigned long data)
 {
 	struct uart_8250_port *up = (struct uart_8250_port *)data;
@@ -2577,7 +2268,7 @@ static int serial8250_startup(struct uart_port *port)
 	 * The above check will only give an accurate result the first time
 	 * the port is opened so this value needs to be preserved.
 	 */
-#ifndef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifndef CONFIG_SERIAL_8250_LPC31xx_DMA
 	if (up->bugs & UART_BUG_THRE) {
 		up->timer.function = serial8250_backup_timeout;
 		up->timer.data = (unsigned long)up;
@@ -2600,7 +2291,7 @@ static int serial8250_startup(struct uart_port *port)
 			return retval;
 	}
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	init_timer(&up->dma_rx.timer);
 	up->dma_rx.timer.function = serial8250_dma_rx_timer_check;
 	up->dma_rx.timer.data = (unsigned long)up;
@@ -2678,7 +2369,7 @@ dont_test_tx_en:
 	 * are set via set_termios(), which will be occurring imminently
 	 * anyway, so we don't enable them here.
 	 */
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	up->ier = UART_IER_RLSI;
 
 #else
@@ -2778,7 +2469,7 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	unsigned long flags;
 	unsigned int baud, quot;
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	dma_stop_channel(up->dma_rx.dmach);
 	dma_stop_channel(up->dma_tx.dmach);
 	up->dma_tx.active = 0;
@@ -2826,10 +2517,11 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 		quot++;
 
 	if (up->capabilities & UART_CAP_FIFO && port->fifosize > 1) {
-		if (baud < 2400)
-			fcr = UART_FCR_ENABLE_FIFO | UART_FCR_TRIGGER_1;
-		else
-			fcr = uart_config[port->type].fcr;
+		fcr = uart_config[port->type].fcr;
+		if (baud < 2400) {
+			fcr &= ~UART_FCR_TRIGGER_MASK;
+			fcr |= UART_FCR_TRIGGER_1;
+		}
 	}
 
 	/*
@@ -2955,7 +2647,7 @@ serial8250_do_set_termios(struct uart_port *port, struct ktermios *termios,
 	}
 	serial8250_set_mctrl(port, port->mctrl);
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	dma_write_counter(up->dma_rx.dmach, 0);
 	lcp31xx_dma_rx_setup(up);
 #endif
@@ -2994,7 +2686,7 @@ void serial8250_do_pm(struct uart_port *port, unsigned int state,
 	struct uart_8250_port *p =
 		container_of(port, struct uart_8250_port, port);
 
-#ifdef CONFIG_LPC31XX_SERIAL_DMA_SUPPORT
+#ifdef CONFIG_SERIAL_8250_LPC31xx_DMA
 	if (state == 0) {
 		dma_write_counter(p->dma_rx.dmach, 0);
 		lcp31xx_dma_rx_setup(p);
@@ -3596,6 +3288,7 @@ static int __devinit serial8250_probe(struct platform_device *dev)
 		port.serial_in		= p->serial_in;
 		port.serial_out		= p->serial_out;
 		port.handle_irq		= p->handle_irq;
+		port.handle_break	= p->handle_break;
 		port.set_termios	= p->set_termios;
 		port.pm			= p->pm;
 		port.dev		= &dev->dev;
@@ -3712,6 +3405,84 @@ static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *
 }
 
 /**
+ *	serial8250_register_8250_port - register a serial port
+ *	@up: serial port template
+ *
+ *	Configure the serial port specified by the request. If the
+ *	port exists and is in use, it is hung up and unregistered
+ *	first.
+ *
+ *	The port is then probed and if necessary the IRQ is autodetected
+ *	If this fails an error is returned.
+ *
+ *	On success the port is ready to use and the line number is returned.
+ */
+int serial8250_register_8250_port(struct uart_8250_port *up)
+{
+	struct uart_8250_port *uart;
+	int ret = -ENOSPC;
+
+	if (up->port.uartclk == 0)
+		return -EINVAL;
+
+	mutex_lock(&serial_mutex);
+
+	uart = serial8250_find_match_or_unused(&up->port);
+	if (uart) {
+		uart_remove_one_port(&serial8250_reg, &uart->port);
+
+		uart->port.iobase       = up->port.iobase;
+		uart->port.membase      = up->port.membase;
+		uart->port.irq          = up->port.irq;
+		uart->port.irqflags     = up->port.irqflags;
+		uart->port.uartclk      = up->port.uartclk;
+		uart->port.fifosize     = up->port.fifosize;
+		uart->port.regshift     = up->port.regshift;
+		uart->port.iotype       = up->port.iotype;
+		uart->port.flags        = up->port.flags | UPF_BOOT_AUTOCONF;
+		uart->port.mapbase      = up->port.mapbase;
+		uart->port.private_data = up->port.private_data;
+		if (up->port.dev)
+			uart->port.dev = up->port.dev;
+
+		if (up->port.flags & UPF_FIXED_TYPE)
+			serial8250_init_fixed_type_port(uart, up->port.type);
+
+		set_io_from_upio(&uart->port);
+		/* Possibly override default I/O functions.  */
+		if (up->port.serial_in)
+			uart->port.serial_in = up->port.serial_in;
+		if (up->port.serial_out)
+			uart->port.serial_out = up->port.serial_out;
+		if (up->port.handle_irq)
+			uart->port.handle_irq = up->port.handle_irq;
+		/*  Possibly override set_termios call */
+		if (up->port.set_termios)
+			uart->port.set_termios = up->port.set_termios;
+		if (up->port.pm)
+			uart->port.pm = up->port.pm;
+		if (up->port.handle_break)
+			uart->port.handle_break = up->port.handle_break;
+		if (up->dl_read)
+			uart->dl_read = up->dl_read;
+		if (up->dl_write)
+			uart->dl_write = up->dl_write;
+
+		if (serial8250_isa_config != NULL)
+			serial8250_isa_config(0, &uart->port,
+					&uart->capabilities);
+
+		ret = uart_add_one_port(&serial8250_reg, &uart->port);
+		if (ret == 0)
+			ret = uart->port.line;
+	}
+	mutex_unlock(&serial_mutex);
+
+	return ret;
+}
+EXPORT_SYMBOL(serial8250_register_8250_port);
+
+/**
  *	serial8250_register_port - register a serial port
  *	@port: serial port template
  *
@@ -3726,60 +3497,11 @@ static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *
  */
 int serial8250_register_port(struct uart_port *port)
 {
-	struct uart_8250_port *uart;
-	int ret = -ENOSPC;
+	struct uart_8250_port up;
 
-	if (port->uartclk == 0)
-		return -EINVAL;
-
-	mutex_lock(&serial_mutex);
-
-	uart = serial8250_find_match_or_unused(port);
-	if (uart) {
-		uart_remove_one_port(&serial8250_reg, &uart->port);
-
-		uart->port.iobase       = port->iobase;
-		uart->port.membase      = port->membase;
-		uart->port.irq          = port->irq;
-		uart->port.irqflags     = port->irqflags;
-		uart->port.uartclk      = port->uartclk;
-		uart->port.fifosize     = port->fifosize;
-		uart->port.regshift     = port->regshift;
-		uart->port.iotype       = port->iotype;
-		uart->port.flags        = port->flags | UPF_BOOT_AUTOCONF;
-		uart->port.mapbase      = port->mapbase;
-		uart->port.private_data = port->private_data;
-		if (port->dev)
-			uart->port.dev = port->dev;
-
-		if (port->flags & UPF_FIXED_TYPE)
-			serial8250_init_fixed_type_port(uart, port->type);
-
-		set_io_from_upio(&uart->port);
-		/* Possibly override default I/O functions.  */
-		if (port->serial_in)
-			uart->port.serial_in = port->serial_in;
-		if (port->serial_out)
-			uart->port.serial_out = port->serial_out;
-		if (port->handle_irq)
-			uart->port.handle_irq = port->handle_irq;
-		/*  Possibly override set_termios call */
-		if (port->set_termios)
-			uart->port.set_termios = port->set_termios;
-		if (port->pm)
-			uart->port.pm = port->pm;
-
-		if (serial8250_isa_config != NULL)
-			serial8250_isa_config(0, &uart->port,
-					&uart->capabilities);
-
-		ret = uart_add_one_port(&serial8250_reg, &uart->port);
-		if (ret == 0)
-			ret = uart->port.line;
-	}
-	mutex_unlock(&serial_mutex);
-
-	return ret;
+	memset(&up, 0, sizeof(up));
+	memcpy(&up.port, port, sizeof(*port));
+	return serial8250_register_8250_port(&up);
 }
 EXPORT_SYMBOL(serial8250_register_port);
 

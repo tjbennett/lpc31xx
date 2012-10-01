@@ -587,26 +587,27 @@ static struct i2c_algorithm pnx_algorithm = {
 };
 
 #ifdef CONFIG_PM
-static int i2c_pnx_controller_suspend(struct platform_device *pdev,
-				      pm_message_t state)
+static int i2c_pnx_controller_suspend(struct device *dev)
 {
-	struct i2c_pnx_algo_data *alg_data = platform_get_drvdata(pdev);
+	struct i2c_pnx_algo_data *alg_data = dev_get_drvdata(dev);
 
-	/* FIXME: shouldn't this be clk_disable? */
-	clk_enable(alg_data->clk);
+	clk_disable(alg_data->clk);
 
 	return 0;
 }
 
-static int i2c_pnx_controller_resume(struct platform_device *pdev)
+static int i2c_pnx_controller_resume(struct device *dev)
 {
-	struct i2c_pnx_algo_data *alg_data = platform_get_drvdata(pdev);
+	struct i2c_pnx_algo_data *alg_data = dev_get_drvdata(dev);
 
 	return clk_enable(alg_data->clk);
 }
+
+static SIMPLE_DEV_PM_OPS(i2c_pnx_pm,
+			 i2c_pnx_controller_suspend, i2c_pnx_controller_resume);
+#define PNX_I2C_PM	(&i2c_pnx_pm)
 #else
-#define i2c_pnx_controller_suspend	NULL
-#define i2c_pnx_controller_resume	NULL
+#define PNX_I2C_PM	NULL
 #endif
 
 static int __devinit i2c_pnx_probe(struct platform_device *pdev)
@@ -617,7 +618,6 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 	unsigned long freq;
 	struct resource *res;
 	u32 speed = I2C_PNX_SPEED_KHZ_DEFAULT * 1000;
-	u32 slave_addr = ~0;
 
 	alg_data = kzalloc(sizeof(*alg_data), GFP_KERNEL);
 	if (!alg_data) {
@@ -631,16 +631,21 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 	alg_data->adapter.algo = &pnx_algorithm;
 	alg_data->adapter.algo_data = alg_data;
 	alg_data->adapter.nr = pdev->id;
+
 	alg_data->timeout = I2C_PNX_TIMEOUT_DEFAULT;
 #ifdef CONFIG_OF
 	alg_data->adapter.dev.of_node = of_node_get(pdev->dev.of_node);
 	if (pdev->dev.of_node) {
-		of_property_read_u32(pdev->dev.of_node, "pnx,timeout",
-				     &alg_data->timeout);
 		of_property_read_u32(pdev->dev.of_node, "clock-frequency",
 				     &speed);
-		of_property_read_u32(pdev->dev.of_node, "slave-addr",
-				     &slave_addr);
+		/*
+		 * At this point, it is planned to add an OF timeout property.
+		 * As soon as there is a consensus about how to call and handle
+		 * this, sth. like the following can be put here:
+		 *
+		 * of_property_read_u32(pdev->dev.of_node, "timeout",
+		 *                      &alg_data->timeout);
+		 */
 	}
 #endif
 	alg_data->clk = clk_get(&pdev->dev, NULL);
@@ -683,9 +688,6 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 	ret = clk_enable(alg_data->clk);
 	if (ret)
 		goto out_unmap;
-
-	if (slave_addr != ~0)
-		iowrite32(slave_addr, I2C_REG_ADR(alg_data));
 
 	freq = clk_get_rate(alg_data->clk);
 
@@ -733,7 +735,7 @@ static int __devinit i2c_pnx_probe(struct platform_device *pdev)
 	of_i2c_register_devices(&alg_data->adapter);
 
 	dev_dbg(&pdev->dev, "%s: Master at %#8x, irq %d.\n",
-	       alg_data->adapter.name, res->start, alg_data->irq);
+		alg_data->adapter.name, res->start, alg_data->irq);
 
 	return 0;
 
@@ -782,14 +784,11 @@ static struct platform_driver i2c_pnx_driver = {
 	.driver = {
 		.name = "pnx-i2c",
 		.owner = THIS_MODULE,
-#ifdef CONFIG_OF
-		.of_match_table = i2c_pnx_of_match,
-#endif
+		.of_match_table = of_match_ptr(i2c_pnx_of_match),
+		.pm = PNX_I2C_PM,
 	},
 	.probe = i2c_pnx_probe,
 	.remove = __devexit_p(i2c_pnx_remove),
-	.suspend = i2c_pnx_controller_suspend,
-	.resume = i2c_pnx_controller_resume,
 };
 
 static int __init i2c_adap_pnx_init(void)

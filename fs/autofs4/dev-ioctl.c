@@ -257,8 +257,8 @@ static int autofs_dev_ioctl_open_mountpoint(const char *name, dev_t devid)
 		 * corresponding to the autofs fs we want to open.
 		 */
 
-		filp = dentry_open(path.dentry, path.mnt, O_RDONLY,
-				   current_cred());
+		filp = dentry_open(&path, O_RDONLY, current_cred());
+		path_put(&path);
 		if (IS_ERR(filp)) {
 			err = PTR_ERR(filp);
 			goto out;
@@ -376,7 +376,7 @@ static int autofs_dev_ioctl_setpipefd(struct file *fp,
 			err = -EBADF;
 			goto out;
 		}
-		if (!pipe->f_op || !pipe->f_op->write) {
+		if (autofs_prepare_pipe(pipe) < 0) {
 			err = -EPIPE;
 			fput(pipe);
 			goto out;
@@ -385,7 +385,6 @@ static int autofs_dev_ioctl_setpipefd(struct file *fp,
 		sbi->pipefd = pipefd;
 		sbi->pipe = pipe;
 		sbi->catatonic = 0;
-		sbi->compat_daemon = is_compat_task();
 	}
 out:
 	mutex_unlock(&sbi->wq_mutex);
