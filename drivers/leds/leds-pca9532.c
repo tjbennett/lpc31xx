@@ -86,9 +86,19 @@ static const struct pca9532_chip_info pca9532_chip_info_tbl[] = {
 	},
 };
 
+static const struct of_device_id pca9532_of_match[] = {
+	{
+		.compatible = "nxp,pca9532",
+	},
+	{},
+};
+MODULE_DEVICE_TABLE(of, pca9532_of_match);
+
 static struct i2c_driver pca9532_driver = {
 	.driver = {
 		.name = "leds-pca953x",
+		.owner = THIS_MODULE,
+		.of_match_table = pca9532_of_match,
 	},
 	.probe = pca9532_probe,
 	.remove = pca9532_remove,
@@ -478,6 +488,7 @@ static int pca9532_probe(struct i2c_client *client,
 	struct pca9532_data *data = i2c_get_clientdata(client);
 	struct pca9532_platform_data *pca9532_pdata = client->dev.platform_data;
 
+	printk("JDS - pca9532_probe\n");
 #ifdef CONFIG_OF
 	pca9532_pdata = &of_gpios;
 #else
