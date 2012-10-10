@@ -46,6 +46,7 @@
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+#define DEBUG
 
 #include <linux/dma-mapping.h>
 #include <linux/init.h>
