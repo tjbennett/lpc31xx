@@ -1,7 +1,7 @@
-Bottom: 6ac01c6a86c1eef05c28395552a64010aac1aa8c
-Top:    3f5c29b37eab626742bee821ab2cc48d95911ccd
+Bottom: d949b55f5992a0d3dff88fe8e1de11523dce2acb
+Top:    e87258be5932bc827ec5acb8ef719e9779334ee6
 Author: Jon Smirl (none) <jonsmirl@terra>
-Date:   2012-09-10 12:41:09 -0400
+Date:   2012-10-10 13:31:40 -0400
 
 From 7206f3ac2aea47f9216728701a9d0851dd3604d9 Mon Sep 17 00:00:00 2001
 
@@ -72,7 +72,7 @@ index 2f88d8d..c84ca1d 100644
  	help
  	  If you say Y here, the red LED will be used to give a good real
 diff --git a/arch/arm/Makefile b/arch/arm/Makefile
-index 30eae87..babd5c1 100644
+index a051dfb..00ff697 100644
 --- a/arch/arm/Makefile
 +++ b/arch/arm/Makefile
 @@ -198,6 +198,7 @@ machine-$(CONFIG_MACH_SPEAR310)		:= spear3xx
@@ -8929,10 +8929,10 @@ index 2997e56..a9068a7 100644
 +ea3152			MACH_EA3152		EA3152			9996
 +
 diff --git a/drivers/i2c/busses/Kconfig b/drivers/i2c/busses/Kconfig
-index b4aaa1b..ea846fa 100644
+index 970a161..e1c059c 100644
 --- a/drivers/i2c/busses/Kconfig
 +++ b/drivers/i2c/busses/Kconfig
-@@ -545,7 +545,7 @@ config I2C_PMCMSP
+@@ -551,7 +551,7 @@ config I2C_PMCMSP
  
  config I2C_PNX
  	tristate "I2C bus support for Philips PNX and NXP LPC targets"
