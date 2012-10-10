@@ -11,19 +11,29 @@
  * or implied.
  */
 
+#include <linux/of_gpio.h>
 #include <linux/platform_device.h>
 #include <linux/fsl_devices.h>
 #include <linux/usb/otg.h>
 #include <mach/board.h>
 #include <mach/hardware.h>
 
+void lpc31xx_vbus_power(int enable)
+{
+	printk (KERN_INFO "FIXME = enabling USB host vbus_power %d\n", enable);
+	//gpio_set_value(power, enable);
+}
+
 static struct platform_driver ehci_lpc_driver;
 
 static int lpc_ehci_init(struct usb_hcd *hcd)
 {
+	struct device_node *np;
+	int power;
 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
 	int retval = 0;
 
+printk("JDS -lpc_ehci_init\n");
 	ehci->caps = hcd->regs + 0x100;
 	ehci->regs = hcd->regs + 0x100
 		+ HC_LENGTH(ehci, ehci_readl(ehci, &ehci->caps->hc_capbase));
@@ -47,6 +57,10 @@ static int lpc_ehci_init(struct usb_hcd *hcd)
 	ehci_port_power(ehci, 0);
 	/* board vbus power */
 	//lpc31xx_vbus_power(0);
+	np = of_find_compatible_node(NULL, NULL, "nxp,lpc31xx-usb");
+	power = of_get_named_gpio(np, "vbus-power", 0);
+printk("JDS - power %d\n", power);
+	gpio_set_value_cansleep(power, 1);
 
 	return retval;
 }
@@ -90,13 +104,22 @@ struct fsl_usb2_platform_data lpc31xx_fsl_config = {
 
 static int lpc_ehci_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	struct fsl_usb2_platform_data *pdata;
 	struct usb_hcd *hcd;
 	const struct hc_driver *driver = &lpc_ehci_hc_driver;
 	struct resource *res;
-	int irq;
+	int irq, power;
 	int retval;
 
+
+	power = of_get_named_gpio(np, "vbus-power", 0);
+	printk("JDS power %d\n", power);
+	if (!gpio_is_valid(power)) {
+		printk("JDS deferred\n");
+		return -EPROBE_DEFER;
+	}
+printk("JDS -lpc_ehci_probe\n");
 	if (usb_disabled())
 		return -ENODEV;
 
@@ -145,14 +168,14 @@ static int lpc_ehci_probe(struct platform_device *pdev)
 	}
 	hcd->rsrc_start = res->start;
 	hcd->rsrc_len = res->end - res->start + 1;
-/*	
+	
 	if (!request_mem_region(hcd->rsrc_start, hcd->rsrc_len,
 				driver->description)) {
 		dev_dbg(&pdev->dev, "controller already in use\n");
 		retval = -EBUSY;
 		goto fail_request_resource;
 	}
-*/
+
 	hcd->regs = ioremap_nocache(hcd->rsrc_start, hcd->rsrc_len);
 	if (hcd->regs == NULL) {
 		dev_dbg(&pdev->dev, "error mapping memory\n");
@@ -333,6 +356,7 @@ static int lpc31xx_ehci_suspend(struct platform_device *pdev, pm_message_t state
 /* Macros to compute the bank based on EVENT_T */
 #define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
 #define EVT_usb_atx_pll_lock	0x79
+#define EVRT_RSR(bank)       __REG (EVTR_PHYS + 0xD20 + ((bank) << 2))
 
 static int lpc31xx_ehci_resume(struct platform_device * pdev)
 {

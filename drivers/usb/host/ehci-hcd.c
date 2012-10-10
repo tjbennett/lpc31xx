@@ -700,6 +700,7 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 	u32			status, masked_status, pcd_status = 0, cmd;
 	int			bh;
 
+printk("JDS - ehci_irq\n");
 	spin_lock (&ehci->lock);
 
 	status = ehci_readl(ehci, &ehci->regs->status);
@@ -710,6 +711,7 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 		goto dead;
 	}
 
+printk("JDS - ehci_irq 1\n");
 	/*
 	 * We don't use STS_FLR, but some controllers don't like it to
 	 * remain on, so mask it out along with the other status bits.
@@ -721,6 +723,7 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 		spin_unlock(&ehci->lock);
 		return IRQ_NONE;
 	}
+printk("JDS - ehci_irq 2\n");
 
 	/* clear (just) interrupts */
 	ehci_writel(ehci, masked_status, &ehci->regs->status);
@@ -734,6 +737,7 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 
 	/* INT, ERR, and IAA interrupt rates can be throttled */
 
+printk("JDS - ehci_irq 3\n");
 	/* normal [4.15.1.2] or error [4.15.1.1] completion */
 	if (likely ((status & (STS_INT|STS_ERR)) != 0)) {
 		if (likely ((status & STS_ERR) == 0))
@@ -743,6 +747,7 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 		bh = 1;
 	}
 
+printk("JDS - ehci_irq 4\n");
 	/* complete the unlinking of some qh [4.15.2.3] */
 	if (status & STS_IAA) {
 
@@ -769,6 +774,7 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 			ehci_dbg(ehci, "IAA with nothing unlinked?\n");
 	}
 
+printk("JDS - ehci_irq 5\n");
 	/* remote wakeup [4.3.1] */
 	if (status & STS_PCD) {
 		unsigned	i = HCS_N_PORTS (ehci->hcs_params);
@@ -815,6 +821,7 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
 		}
 	}
 
+printk("JDS - ehci_irq 6\n");
 	/* PCI errors [4.15.2.4] */
 	if (unlikely ((status & STS_FATAL) != 0)) {
 		ehci_err(ehci, "fatal error\n");
@@ -835,6 +842,7 @@ dead:
 		bh = 0;
 	}
 
+printk("JDS - ehci_irq 7\n");
 	if (bh)
 		ehci_work (ehci);
 	spin_unlock (&ehci->lock);
@@ -1316,7 +1324,7 @@ MODULE_LICENSE ("GPL");
 
 #ifdef CONFIG_USB_EHCI_LPC
 #include "ehci-lpc.c"
-#define	PLATFORM_DRIVER		ehci_lpc_driver
+#define	OF_PLATFORM_DRIVER	ehci_lpc_driver
 #endif
 
 #ifdef CONFIG_CPU_XLR
@@ -1353,6 +1361,7 @@ MODULE_LICENSE ("GPL");
 static int __init ehci_hcd_init(void)
 {
 	int retval = 0;
+printk("JDS = ehci_hcd_init\n");
 
 	if (usb_disabled())
 		return -ENODEV;
