@@ -88,7 +88,7 @@ static struct usb_driver hset_driver;
 /* Test routines */
 static inline void test_se0_nak(struct usb_hset *hset)
 {
-	u32 temp = USB_DEV_PORTSC1;
+	uint32_t temp = USB_DEV_PORTSC1;
 	printk(KERN_INFO "%s\n", __FUNCTION__);
 	
 	temp &= ~(0xF << 16);
@@ -98,7 +98,7 @@ static inline void test_se0_nak(struct usb_hset *hset)
 
 static inline void test_j(struct usb_hset *hset)
 {
-	u32 temp = USB_DEV_PORTSC1;
+	uint32_t temp = USB_DEV_PORTSC1;
 	printk(KERN_INFO "%s\n", __FUNCTION__);
 	
 	temp &= ~(0xF << 16);
@@ -108,7 +108,7 @@ static inline void test_j(struct usb_hset *hset)
 
 static inline void test_k(struct usb_hset *hset)
 {
-	u32 temp = USB_DEV_PORTSC1;
+	uint32_t temp = USB_DEV_PORTSC1;
 	printk(KERN_INFO "%s\n", __FUNCTION__);
 	
 	temp &= ~(0xF << 16);
@@ -118,7 +118,7 @@ static inline void test_k(struct usb_hset *hset)
 
 static inline void test_packet(struct usb_hset *hset)
 {
-	u32 temp = USB_DEV_PORTSC1;
+	uint32_t temp = USB_DEV_PORTSC1;
 	printk(KERN_INFO "%s\n", __FUNCTION__);
 	
 	temp &= ~(0xF << 16);
@@ -128,7 +128,7 @@ static inline void test_packet(struct usb_hset *hset)
 
 static inline void test_force_enable(struct usb_hset *hset)
 {
-	u32 temp = USB_DEV_PORTSC1;
+	uint32_t temp = USB_DEV_PORTSC1;
 	printk(KERN_INFO "%s\n", __FUNCTION__);
 	
 	temp &= ~(0xF << 16);
