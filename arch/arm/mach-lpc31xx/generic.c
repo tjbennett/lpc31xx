@@ -31,6 +31,8 @@
 #include <linux/of_irq.h>
 
 #include <asm/errno.h>
+#include <asm/pgtable.h>
+
 #include <mach/hardware.h>
 
 #include <mach/gpio.h>
@@ -92,6 +94,48 @@ static void lpc31xx_uart_pm(struct uart_port * port, unsigned int state,
 	}
 
 }
+
+static const struct of_device_id wdt_of_match[] __initconst = {
+	{ .compatible = "nxp,lpc31xx-wdt", },
+	{},
+};
+
+#define wdt_read(reg) \
+	__raw_readl(wdt_regs + reg)
+#define wdt_write(reg, value) \
+	__raw_writel(value, wdt_regs + reg);
+
+void lpc31xx_arch_reset(char mode, const char *cmd)
+{
+	struct device_node *node;
+	static void __iomem *wdt_regs;
+
+	printk("arch_reset: attempting watchdog reset\n");
+
+	/* Remap the necessary zones */
+	node = of_find_matching_node(NULL, wdt_of_match);
+	wdt_regs = of_iomap(node, 0);
+
+	/* enable WDT clock */
+	cgu_clk_en_dis(CGU_SB_WDOG_PCLK_ID, 1);
+
+	/* Disable watchdog */
+	wdt_write(WDT_TCR, 0);
+	wdt_write(WDT_MCR, WDT_MCR_STOP_MR1 | WDT_MCR_INT_MR1);
+
+	/*  If TC and MR1 are equal a reset is generated. */
+	wdt_write(WDT_PR, 0x00000002);
+	wdt_write(WDT_TC, 0x00000FF0);
+	wdt_write(WDT_MR0, 0x0000F000);
+	wdt_write(WDT_MR1, 0x00001000);
+	wdt_write(WDT_EMR, WDT_EMR_CTRL1(0x3));
+	/* Enable watchdog timer; assert reset at timer timeout */
+	wdt_write(WDT_TCR, WDT_TCR_CNT_EN);
+	cpu_reset (0);/* loop forever and wait for reset to happen */
+
+	/*NOTREACHED*/
+}
+
 
 static struct plat_serial8250_port platform_serial_ports[] = {
 	{
@@ -268,7 +312,7 @@ void __init lpc31xx_init(void)
 #endif
 	lpc31xx_uart_init();
 
-	return platform_add_devices(devices, ARRAY_SIZE(devices));
+	platform_add_devices(devices, ARRAY_SIZE(devices));
 }
 
 
@@ -278,7 +322,6 @@ static int __init lpc31xx_init_console(void)
 	static __initdata char serr[] =
 		KERN_ERR "Serial port #%u setup failed\n";
 	struct uart_port up;
-	int mul, div;
 
 	/* Switch on the UART clocks */
 	cgu_clk_en_dis(CGU_SB_UART_APB_CLK_ID, 1);
