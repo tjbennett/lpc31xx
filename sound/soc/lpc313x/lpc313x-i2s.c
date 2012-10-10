@@ -27,6 +27,7 @@
 #include <linux/delay.h>
 #include <linux/clk.h>
 #include <linux/io.h>
+#include <linux/slab.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -120,6 +121,20 @@ static struct lpc313x_i2s_info i2s_info =
 	},
 };
 
+static inline void
+lpc31xx_i2s_write(const struct lpc31xx_i2s_info *info, uint32_t reg, uint32_t value)
+{
+	__raw_writel(value, info->regs + reg);
+}
+
+static inline uint32_t
+lpc31xx_i2s_read(const struct lpc31xx_i2s_info *info, uint32_t reg)
+{
+	uint32_t value;
+	value = __raw_readl(info->regs + reg);
+	return value;
+}
+
 static inline int lpc313x_get_ch_dir(struct snd_pcm_substream *substream)
 {
 	int dir = CH_REC;
@@ -170,18 +185,19 @@ static void lpc313x_i2s_shutdown(struct snd_pcm_substream *substream,
 static int lpc313x_i2s_startup(struct snd_pcm_substream *substream,
 								struct snd_soc_dai *dai)
 {
+	struct lpc31xx_i2s_info *info = snd_soc_dai_get_drvdata(dai);
 	int dir = lpc313x_get_ch_dir(substream);
 
 	/* Select master/slave mode for RX channel */
 	if (dir == CH_REC) {
 #if defined (CONFIG_SND_I2S_RX0_SLAVE) | defined (CONFIG_SND_I2S_RX1_SLAVE)
-		I2S_CFG_MUX_SETTINGS = 0;
+		lpc31xx_i2s_write(info, I2S_CFG_MUX_SETTINGS, 0);
 #endif
 #if defined (CONFIG_SND_I2S_RX0_MASTER)
-		I2S_CFG_MUX_SETTINGS = I2S_RXO_SELECT_MASTER;
+		lpc31xx_i2s_write(info, I2S_CFG_MUX_SETTINGS, I2S_RXO_SELECT_MASTER);
 #endif
 #if defined (CONFIG_SND_I2S_RX1_MASTER)
-		I2S_CFG_MUX_SETTINGS = I2S_RX1_SELECT_MASTER;
+		lpc31xx_i2s_write(info, I2S_CFG_MUX_SETTINGS, I2S_RX1_SELECT_MASTER);
 #endif
 	}
 
@@ -205,7 +221,7 @@ static int lpc313x_i2s_startup(struct snd_pcm_substream *substream,
 	lpc313x_chan_clk_enable(i2s_info.ch_info[dir].chclk, 0, 0);
 
 	/* Mask all interrupts for the I2S channel */
-	I2S_CH_INT_MASK(i2s_info.ch_info[dir].i2s_ch) = I2S_FIFO_ALL_MASK;
+	lpc31xx_i2s_write(info, I2S_CH_INT_MASK(i2s_info.ch_info[dir].i2s_ch), I2S_FIFO_ALL_MASK);
 
 	return 0;
 }
@@ -246,6 +262,7 @@ static int lpc313x_i2s_hw_params(struct snd_pcm_substream *substream,
 			         struct snd_pcm_hw_params *params,
 					 struct snd_soc_dai *dai)
 {
+	struct lpc31xx_i2s_info *info = snd_soc_dai_get_drvdata(dai);
 	int dir = lpc313x_get_ch_dir(substream);
 	u32 tmp;
 
@@ -254,11 +271,11 @@ static int lpc313x_i2s_hw_params(struct snd_pcm_substream *substream,
 	switch (i2s_info.ch_info[dir].daifmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 		case SND_SOC_DAIFMT_I2S:
 			spin_lock_irq(&i2s_info.lock);
-			tmp = I2S_FORMAT_SETTINGS &
+			tmp = lpc31xx_i2s_read(info, I2S_FORMAT_SETTINGS) &
 				~I2S_SET_FORMAT(i2s_info.ch_info[dir].i2s_ch,
 				I2S_FORMAT_MASK);
-			I2S_FORMAT_SETTINGS = tmp | I2S_SET_FORMAT(i2s_info.ch_info[dir].i2s_ch,
-				I2S_FORMAT_I2S);
+			lpc31xx_i2s_write(info, I2S_FORMAT_SETTINGS, tmp | I2S_SET_FORMAT(i2s_info.ch_info[dir].i2s_ch,
+				I2S_FORMAT_I2S));
 			spin_unlock_irq(&i2s_info.lock);
 			break;
 
@@ -398,7 +415,51 @@ EXPORT_SYMBOL_GPL(lpc313x_i2s_dai);
 
 static __devinit int lpc313x_i2s_dev_probe(struct platform_device *pdev)
 {
-	return snd_soc_register_dai(&pdev->dev, &lpc313x_i2s_dai);
+	struct lpc31xx_i2s_info *info;
+	struct resource *res;
+	int err;
+
+	info = kzalloc(sizeof(struct lpc31xx_i2s_info), GFP_KERNEL);
+	if (!info) {
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	dev_set_drvdata(&pdev->dev, info);
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		err = -ENODEV;
+		goto fail_free_info;
+	}
+
+	info->mem = request_mem_region(res->start, resource_size(res),
+				       pdev->name);
+	if (!info->mem) {
+		err = -EBUSY;
+		goto fail_free_info;
+	}
+
+	info->regs = ioremap(info->mem->start, resource_size(info->mem));
+	if (!info->regs) {
+		err = -ENXIO;
+		goto fail_release_mem;
+	}
+
+	err = snd_soc_register_dai(&pdev->dev, &lpc313x_i2s_dai);
+	if (err)
+		goto fail_unmap_mem;
+
+	return 0;
+
+fail_unmap_mem:
+	iounmap(info->regs);
+fail_release_mem:
+	release_mem_region(info->mem->start, resource_size(info->mem));
+fail_free_info:
+	kfree(info);
+fail:
+	return err;
 }
 
 static __devexit int lpc313x_i2s_dev_remove(struct platform_device *pdev)
