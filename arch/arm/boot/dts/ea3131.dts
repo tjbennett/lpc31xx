@@ -91,6 +91,7 @@
 	};
 	usb@19000000 {
 		vbus-over =  <&gpio_i2srx_0 2 0>;
+		vbus-power = <&pca9532 6 1>;
 	};
 	sram@20000000 {
 		mpmc-config = <0x81 0 0 31 0 3 0>;
