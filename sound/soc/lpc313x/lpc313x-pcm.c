@@ -31,6 +31,7 @@
 #include <sound/soc.h>
 
 #include <mach/dma.h>
+#include <mach/hardware.h>
 #include "lpc313x-pcm.h"
 
 #define SND_NAME "lpc31xx-pcm-audio"
