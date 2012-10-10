@@ -496,11 +496,23 @@ out:
 	return ret;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id ssd1289_of_match[] = {
+	{ .compatible = "ssd,ssd1289" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ssd1289_of_match);
+#endif
+
 static struct platform_driver ssd1289_driver = {
 	.probe = ssd1289_probe,
-	.driver = {
-		   .name = "ssd1289",
-		   },
+	.driver		= {
+		.name	= "ssd1289",
+		.owner	= THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table = ssd1289_of_match,
+#endif
+	},
 };
 
 static int __init ssd1289_init(void)

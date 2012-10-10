@@ -37,6 +37,10 @@
 #include <linux/delay.h>
 #include <linux/irq.h>
 #include <linux/slab.h>
+#include <linux/of.h>
+#include <linux/of_device.h>
+#include <linux/of_gpio.h>
+#include <linux/gpio.h>
 
 #include "lpc31xx_mmc.h"
 #include <mach/irqs.h>
@@ -72,6 +76,7 @@ enum lpc313x_mci_state {
 	STATE_SENDING_STOP,
 	STATE_DATA_ERROR,
 };
+
 /*forward declaration */
 struct lpc313x_mci_slot;
 
@@ -105,7 +110,7 @@ struct lpc313x_mci {
 	u32			bus_hz;
 	u32			current_speed;
 	struct platform_device	*pdev;
-	struct lpc313x_mci_board *pdata;
+	int slot_count;
 	struct lpc313x_mci_slot	*slot[MAX_MCI_SLOTS];
 };
 
@@ -125,6 +130,11 @@ struct lpc313x_mci_slot {
 #define LPC313x_MMC_SHUTDOWN		2
 	int			id;
 	int			irq;
+
+	int			gpio_cd;
+	int			gpio_wp;
+	int			gpio_power;
+	int			gpio_select;
 
 	struct timer_list	detect_timer;
 };
@@ -418,7 +428,7 @@ static int lpc313x_mci_submit_data_dma(struct lpc313x_mci *host, struct mmc_data
 		return -EINVAL;
 
 	for_each_sg(data->sg, sg, data->sg_len, i) {
-		if (sg->offset & 3 || sg->length & 3)
+		if ((sg->offset & 3) || (sg->length & 3))
 			return -EINVAL;
 	}
 
@@ -578,6 +588,27 @@ void lpc313x_mci_setup_bus(struct lpc313x_mci_slot *slot)
 	mci_writel(CTYPE, slot->ctype);
 }
 
+static void lpc313x_mci_select_slot(struct lpc313x_mci_slot *slot, int enable)
+{
+	if (slot->gpio_select >= 0) {
+		printk("lpc313x_mci_select_slot %d\n", slot->gpio_select);
+		gpio_set_value(slot->gpio_select, enable);
+	}
+}
+
+static void lpc313x_mci_set_power(struct lpc313x_mci_slot *slot, int enable)
+{
+	/* on current version of EA board the card detect
+	 * pull-up in on switched power side. So can't do
+	 * power management so use the always enable power
+	 * jumper.
+	 */
+	if (slot->gpio_power >= 0) {
+		printk("lpc313x_mci_set_power %d\n", slot->gpio_power);
+		gpio_set_value(slot->gpio_power, enable);
+	}
+}
+
 static void lpc313x_mci_start_request(struct lpc313x_mci *host,
 		struct lpc313x_mci_slot *slot)
 {
@@ -588,8 +619,11 @@ static void lpc313x_mci_start_request(struct lpc313x_mci *host,
 
 	mrq = slot->mrq;
 	/* now select the proper slot */
-	if (host->pdata->select_slot)
-		host->pdata->select_slot(slot->id);
+	if (host->cur_slot != slot) {
+		if (host->cur_slot)
+			lpc313x_mci_select_slot(host->cur_slot, 0);
+		lpc313x_mci_select_slot(slot, 1);
+	}
 
 	/* Slot specific timing and width adjustment */
 	lpc313x_mci_setup_bus(slot);
@@ -701,31 +735,28 @@ static void lpc313x_mci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 
 
-static int lpc313x_mci_get_ro(struct mmc_host *mmc)
+static int lpc313x_mci_get_wp(struct mmc_host *mmc)
 {
 	int			read_only = -ENOSYS;
 	struct lpc313x_mci_slot	*slot = mmc_priv(mmc);
-	struct lpc313x_mci_board *brd = slot->host->pdata;
 
-	if (brd->get_ro != NULL) {
-		read_only = brd->get_ro(slot->id);
+	if (slot->gpio_wp >= 0) {
+		read_only =  gpio_get_value(slot->gpio_wp);
 		dev_dbg(&mmc->class_dev, "card is %s\n",
 				read_only ? "read-only" : "read-write");
 	}
-
 	return read_only;
 }
 
 
-static int lpc313x_mci_get_cd(struct mmc_host *mmc)
+static int lpc313x_mci_get_cd(struct lpc313x_mci_slot *slot)
 {
 	int			present = -ENOSYS;
-	struct lpc313x_mci_slot	*slot = mmc_priv(mmc);
-	struct lpc313x_mci_board *brd = slot->host->pdata;
 
-	present = !brd->get_cd(slot->id);
-	dev_vdbg(&mmc->class_dev, "card is %spresent\n", present ? "" : "not ");
-
+	if (slot->gpio_cd >= 0) {
+		present = !gpio_get_value(slot->gpio_cd);
+		dev_vdbg(&slot->mmc->class_dev, "card is %spresent\n", present ? "" : "not ");
+	}
 	return present;
 }
 
@@ -746,8 +777,7 @@ static void lpc313x_mci_enable_sdio_irq(struct mmc_host *host, int enable)
 static const struct mmc_host_ops lpc313x_mci_ops = {
 	.request	= lpc313x_mci_request,
 	.set_ios	= lpc313x_mci_set_ios,
-	.get_ro		= lpc313x_mci_get_ro,
-	.get_cd		= lpc313x_mci_get_cd,
+	.get_ro		= lpc313x_mci_get_wp,
 	.enable_sdio_irq= lpc313x_mci_enable_sdio_irq,
 };
 
@@ -1226,7 +1256,7 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 		return;
 
 	enable_irq(slot->irq);
-	present = !host->pdata->get_cd(slot->id);
+	present = !gpio_get_value(slot->gpio_cd);
 	present_old = test_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
 	dev_vdbg(&slot->mmc->class_dev, "detect change: %d (was %d)\n",
 			present, present_old);
@@ -1239,17 +1269,8 @@ static void lpc313x_mci_detect_change(unsigned long slot_data)
 		spin_lock(&host->lock);
 
 		/* Power up slot */
-		if (present != 0) {
-			if (host->pdata->setpower)
-				host->pdata->setpower(slot->id, slot->mmc->ocr_avail);
-
-			set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
-		} else {
-			if (host->pdata->setpower)
-				host->pdata->setpower(slot->id, 0);
-
-			clear_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
-		}
+		lpc313x_mci_set_power(slot, present);
+		set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
 
 
 		/* Clean up queue if present */
@@ -1313,6 +1334,10 @@ static irqreturn_t lpc313x_mci_detect_interrupt(int irq, void *dev_id)
 {
 	struct lpc313x_mci_slot	*slot = dev_id;
 
+	/* select the opposite level senstivity */
+	int level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_LOW : IRQ_TYPE_LEVEL_HIGH;
+	irq_set_irq_type(slot->irq, level);
+
 	/*
 	 * Disable interrupts until the pin has stabilized and check
 	 * the state then. Use mod_timer() since we may be in the
@@ -1325,10 +1350,13 @@ static irqreturn_t lpc313x_mci_detect_interrupt(int irq, void *dev_id)
 }
 
 static int __init
-lpc313x_mci_init_slot(struct lpc313x_mci *host, unsigned int id)
+lpc313x_mci_init_slot(struct lpc313x_mci *host, struct device_node *np)
 {
 	struct mmc_host			*mmc;
 	struct lpc313x_mci_slot		*slot;
+	const u32 *voltage_ranges;
+	const int *width;
+	int i, ret, num_ranges, level;
 
 	mmc = mmc_alloc_host(sizeof(struct lpc313x_mci_slot), &host->pdev->dev);
 
@@ -1336,43 +1364,88 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, unsigned int id)
 		return -ENOMEM;
 
 	slot = mmc_priv(mmc);
-	slot->id = id;
+	slot->id = host->slot_count++;
+
 	slot->mmc = mmc;
 	slot->host = host;
+	slot->gpio_cd = of_get_named_gpio(np, "gpio-cd", 0);
+	if (slot->gpio_cd >= 0) {
+		gpio_request(slot->gpio_cd, "mmc cd");
+		gpio_direction_input(slot->gpio_cd);
+	}
+	slot->gpio_wp = of_get_named_gpio(np, "gpio-wp", 0);
+	if (slot->gpio_wp >= 0)
+		gpio_request(slot->gpio_cd, "mmc wp");
+	slot->gpio_power = of_get_named_gpio(np, "gpio-power", 0);
+	if (slot->gpio_power >= 0)
+		gpio_request(slot->gpio_cd, "mmc power");
+	slot->gpio_select = of_get_named_gpio(np, "gpio-select", 0);
+	if (slot->gpio_select >= 0)
+		gpio_request(slot->gpio_select, "mmc select");
 
 	mmc->ops = &lpc313x_mci_ops;
 	mmc->f_min = DIV_ROUND_UP(host->bus_hz, 510);
 	mmc->f_max = host->bus_hz/2; //max f is clock to mmc_clk/2
-	if (host->pdata->get_ocr)
-		mmc->ocr_avail = host->pdata->get_ocr(id);
-	else
-		mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
+
+	voltage_ranges = of_get_property(np, "voltage-ranges", &num_ranges);
+	num_ranges = num_ranges / sizeof(*voltage_ranges) / 2;
+	if (!voltage_ranges || !num_ranges) {
+		dev_err(&host->pdev->dev, "OF: voltage-ranges unspecified\n");
+		ret = -EINVAL;
+		goto err_ocr;
+	}
+
+	for (i = 0; i < num_ranges; i++) {
+		const int j = i * 2;
+		u32 mask;
+
+		mask = mmc_vddrange_to_ocrmask(be32_to_cpu(voltage_ranges[j]),
+					       be32_to_cpu(voltage_ranges[j + 1]));
+		if (!mask) {
+			ret = -EINVAL;
+			dev_err(&host->pdev->dev, "OF: voltage-range #%d is invalid\n", i);
+			goto err_ocr;
+		}
+		mmc->ocr_avail |= mask;
+	}
 
 	/* Start with slot power disabled, will be enabled when card is detected */
-	if (host->pdata->setpower)
-		host->pdata->setpower(id, 0);
+	lpc313x_mci_set_power(slot, 0);
 
 	mmc->caps = MMC_CAP_SDIO_IRQ;
-	if (host->pdata->get_bus_wd)
-		if (host->pdata->get_bus_wd(slot->id) >= 4)
-			mmc->caps |= MMC_CAP_4_BIT_DATA;
+	width = of_get_property(np, "width", NULL);
+	if (*width == 4)
+		mmc->caps |= MMC_CAP_4_BIT_DATA;
+	else if (*width == 8)
+		mmc->caps |= MMC_CAP_8_BIT_DATA;
 
 	mmc->max_blk_size = 65536; /* BLKSIZ is 16 bits*/
 	mmc->max_blk_count = 512;
 	mmc->max_req_size = mmc->max_blk_size * mmc->max_blk_count;
 	mmc->max_seg_size = mmc->max_req_size;
 
-	/* call board init */
-	slot->irq = host->pdata->init(id, lpc313x_mci_detect_interrupt, slot);
+	slot->irq = of_get_property(np, "interrupts", NULL);
+	/* select the opposite level sensitivity */
+	level =  lpc313x_mci_get_cd(slot) ? IRQ_TYPE_LEVEL_LOW : IRQ_TYPE_LEVEL_HIGH;
+
+	/* set card detect irq info */
+	irq_set_irq_type(slot->irq, level);
+	ret = request_irq(slot->irq,
+			lpc313x_mci_detect_interrupt,
+			level,
+			"mmc-cd",
+			slot);
+	/****temporary for PM testing */
+	enable_irq_wake(slot->irq);
+
 	/* Assume card is present initially */
-	if(!host->pdata->get_cd(id))
+	if(!gpio_get_value(slot->gpio_cd))
 		set_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
 	else
 		clear_bit(LPC313x_MMC_CARD_PRESENT, &slot->flags);
 
-	host->slot[id] = slot;
+	host->slot[host->slot_count++] = slot;
 	mmc_add_host(mmc);
-
 
 #if defined (CONFIG_DEBUG_FS)
 	lpc313x_mci_init_debugfs(slot);
@@ -1383,14 +1456,16 @@ lpc313x_mci_init_slot(struct lpc313x_mci *host, unsigned int id)
 			(unsigned long)slot);
 
 	return 0;
+err_ocr:
+	return ret;
 }
 
 static void lpc313x_mci_cleanup_slot(struct lpc313x_mci_slot *slot,
 		unsigned int id)
 {
 	/* Shutdown detect IRQ and kill detect thread */
-	if (slot->host->pdata->exit)
-		slot->host->pdata->exit(id);
+	free_irq(slot->irq, slot);
+
 	del_timer_sync(&slot->detect_timer);
 
 	/* Debugfs stuff is cleaned up by mmc core */
@@ -1401,21 +1476,25 @@ static void lpc313x_mci_cleanup_slot(struct lpc313x_mci_slot *slot,
 	mmc_free_host(slot->mmc);
 }
 
+static const struct of_device_id lpc313x_mci_of_match[] = {
+	{ .compatible = "nxp,lpc31xx-sdmmc" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, lpc313x_mci_of_match);
 
 static int lpc313x_mci_probe(struct platform_device *pdev)
 {
-	struct lpc313x_mci		*host;
-	struct resource			*regs;
-	struct lpc313x_mci_board	*pdata;
+	struct device_node *node;
+	struct device_node *np = pdev->dev.of_node;
+	struct lpc313x_mci *host;
+	struct resource *regs;
 	struct clk *clk;
-	int				irq;
-	int				ret = 0;
-	int i;
+	int irq;
+	int ret = 0;
 
 	regs = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!regs)
 		return -ENXIO;
-
 
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
@@ -1424,21 +1503,7 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 	host = kzalloc(sizeof(struct lpc313x_mci), GFP_KERNEL);
 	if (!host)
 		return -ENOMEM;
-
 	host->pdev = pdev;
-	host->pdata = pdata = pdev->dev.platform_data;
-	if (!pdata) {
-		dev_err(&pdev->dev, "Platform data missing\n");
-		ret = -ENODEV;
-		goto err_freehost;
-	}
-
-	if (((pdata->num_slots > 1) && !(pdata->select_slot)) ||
-	     !(pdata->get_ro) || !(pdata->get_cd) || !(pdata->init)) {
-		dev_err(&pdev->dev, "Platform data wrong\n");
-		ret = -ENODEV;
-		goto err_freehost;
-	}
 
 	spin_lock_init(&host->lock);
 	INIT_LIST_HEAD(&host->queue);
@@ -1483,6 +1548,7 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 		goto err_freemap;
 	}
 #endif
+
 	clk = clk_get(NULL, "mmc_cclk_in");
 	host->bus_hz = clk_get_rate(clk); //40000000;
 	clk_put(clk);
@@ -1527,12 +1593,11 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, host);
 
-	/* We need at least one slot to succeed ####pd####*/
-	for (i = 0; i < host->pdata->num_slots; i++) {
-		ret = lpc313x_mci_init_slot(host, i);
+	for_each_child_of_node(np, node) {
+		ret = lpc313x_mci_init_slot(host, node);
 		if (ret) {
-		    ret = -ENODEV;
-		    goto err_init_slot;
+			ret = -ENODEV;
+			goto err_init_slot;
 		}
 	}
 
@@ -1548,10 +1613,10 @@ static int lpc313x_mci_probe(struct platform_device *pdev)
 
 err_init_slot:
 	/* De-init any initialized slots */
-	while (i > 0) {
-		if (host->slot[i])
-			lpc313x_mci_cleanup_slot(host->slot[i], i);
-		i--;
+	while (host->slot_count > 0) {
+		if (host->slot[host->slot_count])
+			lpc313x_mci_cleanup_slot(host->slot[host->slot_count], host->slot_count);
+		host->slot_count--;
 	}
 	free_irq(irq, host);
 err_dmaunmap:
@@ -1579,7 +1644,7 @@ static int __exit lpc313x_mci_remove(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, NULL);
 
-	for (i = 0; i < host->pdata->num_slots; i++) {
+	for (i = 0; i < host->slot_count; i++) {
 		dev_dbg(&pdev->dev, "remove slot %d\n", i);
 		if (host->slot[i])
 			lpc313x_mci_cleanup_slot(host->slot[i], i);
@@ -1652,7 +1717,11 @@ static struct platform_driver lpc313x_mci_driver = {
 	.resume     = lpc313x_mci_resume,
 	.remove		= __exit_p(lpc313x_mci_remove),
 	.driver		= {
-		.name		= "lpc313x_mmc",
+		.name	= "lpc313x_mmc",
+		.owner	= THIS_MODULE,
+#ifdef CONFIG_OF
+		.of_match_table = lpc313x_mci_of_match,
+#endif
 	},
 };
 

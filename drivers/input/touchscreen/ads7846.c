@@ -32,6 +32,8 @@
 #include <linux/spi/ads7846.h>
 #include <linux/regulator/consumer.h>
 #include <linux/module.h>
+#include <linux/of_device.h>
+#include <linux/of_gpio.h>
 #include <asm/irq.h>
 
 /*
@@ -965,11 +967,12 @@ static int __devinit ads7846_setup_pendown(struct spi_device *spi, struct ads784
 	 * reason the touchscreen isn't hooked up, we don't need to access
 	 * the pendown state.
 	 */
-
+printk("JDS pd 1a\n");
 	if (pdata->get_pendown_state) {
 		ts->get_pendown_state = pdata->get_pendown_state;
 	} else if (gpio_is_valid(pdata->gpio_pendown)) {
 
+		printk("JDS pd 1b\n");
 		err = gpio_request_one(pdata->gpio_pendown, GPIOF_IN,
 				       "ads7846_pendown");
 		if (err) {
@@ -978,6 +981,7 @@ static int __devinit ads7846_setup_pendown(struct spi_device *spi, struct ads784
 				pdata->gpio_pendown, err);
 			return err;
 		}
+		printk("JDS pd 1c\n");
 
 		ts->gpio_pendown = pdata->gpio_pendown;
 
@@ -985,6 +989,7 @@ static int __devinit ads7846_setup_pendown(struct spi_device *spi, struct ads784
 		dev_err(&spi->dev, "no get_pendown_state nor gpio_pendown?\n");
 		return -EINVAL;
 	}
+	printk("JDS pd 1d\n");
 
 	return 0;
 }
@@ -1192,19 +1197,63 @@ static void __devinit ads7846_setup_spi_msg(struct ads7846 *ts,
 	spi_message_add_tail(x, m);
 }
 
+#if defined(CONFIG_OF)
+static struct ads7846_platform_data ads7846_pdata[] = {
+		{
+				.model = 7843
+		},{
+				.model = 7845
+		},{
+				.model = 7846
+		},{
+				.model = 7873
+		},
+};
+static const struct of_device_id ads7846_of_match[] = {
+	{ .compatible = "ti,tsc2046", .data = &ads7846_pdata[2], },
+	{ .compatible = "ti,ads7843", .data = &ads7846_pdata[0], },
+	{ .compatible = "ti,ads7845", .data = &ads7846_pdata[1], },
+	{ .compatible = "ti,ads7846", .data = &ads7846_pdata[2], },
+	{ .compatible = "ad,ad7873", .data = &ads7846_pdata[3], },
+	{ .compatible = "ad,ad7843", .data = &ads7846_pdata[0], },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ads7846_of_match);
+#endif
+
 static int __devinit ads7846_probe(struct spi_device *spi)
 {
 	struct ads7846 *ts;
 	struct ads7846_packet *packet;
 	struct input_dev *input_dev;
 	struct ads7846_platform_data *pdata = spi->dev.platform_data;
+	const struct of_device_id *of_id = of_match_device(ads7846_of_match, &spi->dev);
 	unsigned long irq_flags;
-	int err;
+	struct device_node *nc;
+	const __be32 *prop;
+	int len, err;
 
 	if (!spi->irq) {
 		dev_dbg(&spi->dev, "no IRQ?\n");
 		return -ENODEV;
 	}
+
+#ifdef CONFIG_OF
+	nc = spi->dev.of_node;
+	spi->dev.platform_data = pdata = of_id ? of_id->data : NULL;
+
+	prop = of_get_property(nc, "vref_delay_usecs", &len);
+	if (prop && len >= sizeof(*prop))
+		pdata->vref_delay_usecs = be32_to_cpup(prop);
+	prop = of_get_property(nc, "x_plate_ohms", &len);
+	if (prop && len >= sizeof(*prop))
+		pdata->x_plate_ohms = be32_to_cpup(prop);
+	prop = of_get_property(nc, "y_plate_ohms", &len);
+	if (prop && len >= sizeof(*prop))
+		pdata->y_plate_ohms = be32_to_cpup(prop);
+	pdata->gpio_pendown = of_get_named_gpio(nc, "gpio_pendown", 0);
+printk("JDS - pendown %x\n", pdata->gpio_pendown);
+#endif
 
 	if (!pdata) {
 		dev_dbg(&spi->dev, "no platform data?\n");
@@ -1271,14 +1320,17 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 	} else {
 		ts->filter = ads7846_no_filter;
 	}
+	printk("JDS 10\n");
 
 	err = ads7846_setup_pendown(spi, ts);
 	if (err)
 		goto err_cleanup_filter;
+	printk("JDS 11\n");
 
 	if (pdata->penirq_recheck_delay_usecs)
 		ts->penirq_recheck_delay_usecs =
 				pdata->penirq_recheck_delay_usecs;
+	printk("JDS 12\n");
 
 	ts->wait_for_sync = pdata->wait_for_sync ? : null_wait_for_sync;
 
@@ -1301,6 +1353,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 			0, 0);
 	input_set_abs_params(input_dev, ABS_PRESSURE,
 			pdata->pressure_min, pdata->pressure_max, 0, 0);
+	printk("JDS 13\n");
 
 	ads7846_setup_spi_msg(ts, pdata);
 
@@ -1310,6 +1363,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 		dev_err(&spi->dev, "unable to get regulator: %d\n", err);
 		goto err_free_gpio;
 	}
+	printk("JDS 14\n");
 
 	err = regulator_enable(ts->reg);
 	if (err) {
@@ -1319,6 +1373,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 
 	irq_flags = pdata->irq_flags ? : IRQF_TRIGGER_FALLING;
 	irq_flags |= IRQF_ONESHOT;
+	printk("JDS 15\n");
 
 	err = request_threaded_irq(spi->irq, ads7846_hard_irq, ads7846_irq,
 				   irq_flags, spi->dev.driver->name, ts);
@@ -1330,6 +1385,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 				  ads7846_hard_irq, ads7846_irq,
 				  irq_flags, spi->dev.driver->name, ts);
 	}
+	printk("JDS 16\n");
 
 	if (err) {
 		dev_dbg(&spi->dev, "irq %d busy?\n", spi->irq);
@@ -1341,6 +1397,7 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 		goto err_free_irq;
 
 	dev_info(&spi->dev, "touchscreen, irq %d\n", spi->irq);
+	printk("JDS 17\n");
 
 	/*
 	 * Take a first sample, leaving nPENIRQ active and vREF off; avoid
@@ -1358,9 +1415,11 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 	err = input_register_device(input_dev);
 	if (err)
 		goto err_remove_attr_group;
+	printk("JDS 18\n");
 
 	device_init_wakeup(&spi->dev, pdata->wakeup);
 
+	printk("JDS 19\n");
 	return 0;
 
  err_remove_attr_group:
@@ -1428,6 +1487,9 @@ static struct spi_driver ads7846_driver = {
 		.name	= "ads7846",
 		.owner	= THIS_MODULE,
 		.pm	= &ads7846_pm,
+#ifdef CONFIG_OF
+		.of_match_table = ads7846_of_match,
+#endif
 	},
 	.probe		= ads7846_probe,
 	.remove		= __devexit_p(ads7846_remove),
