@@ -24,7 +24,30 @@
 #ifndef __ASM_ARCH_DMA_H
 #define __ASM_ARCH_DMA_H
 
+#ifdef CONFIG_DMA_ENGINE
+
+
 #include <linux/dmaengine.h>
+
+
+/**
+ * struct lpc31xx_dma_data - configuration data for the LPC31xx dmaengine
+ * @port: peripheral which is requesting the channel
+ * @direction: TX/RX channel
+ * @name: optional name for the channel, this is displayed in /proc/interrupts
+ *
+ * This information is passed as private channel parameter in a filter
+ * function. Note that this is only needed for slave/cyclic channels.  For
+ * memcpy channels %NULL data should be passed.
+ */
+struct lpc31xx_dma_data {
+	int port;
+	enum dma_transfer_direction	direction;
+	const char *name;
+};
+
+#else
+
 #include <mach/constants.h>
 
 /***********************************************************************
@@ -67,7 +90,7 @@
 
 /* DMA hardware constants */
 #define DMA_MAX_CHANNELS   12
-#define DMA_MAX_TRANSFERS  2047
+#define DMA_MAX_TRANSFERS  0x1FFFFF 
 
 /*bit defines for configuration register */
 #define DMA_COMPANION_ENABLE _BIT()
@@ -391,22 +414,6 @@ int dma_release_sg_channel (unsigned int);
 int dma_channel_enabled(unsigned int);
 
 
-/**
- * struct lpc31xx_dma_data - configuration data for the LPC31xx dmaengine
- * @port: peripheral which is requesting the channel
- * @direction: TX/RX channel
- * @name: optional name for the channel, this is displayed in /proc/interrupts
- *
- * This information is passed as private channel parameter in a filter
- * function. Note that this is only needed for slave/cyclic channels.  For
- * memcpy channels %NULL data should be passed.
- */
-struct lpc31xx_dma_data {
-	int port;
-	enum dma_transfer_direction	direction;
-	const char *name;
-};
-
-
+#endif
 
 #endif				/* _ASM_ARCH_DMA_H */
