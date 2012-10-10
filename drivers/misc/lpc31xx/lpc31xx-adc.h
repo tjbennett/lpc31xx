@@ -7,7 +7,7 @@
  *              Michael Schwarz, (c) 2011                             - the adc code itself
  *              some module parts are by LKMPG                        - taken from version "2007-05-18 ver 2.6.4"
  * 	
- * ADC driver for LPC313x (gnublin)
+ * ADC driver for LPC31xx (gnublin)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,10 +37,10 @@
 
 #define SUCCESS		0
 
-#define DEVICE_NAME	"lpc313x_adc"	/* Dev name as it appears in /proc/devices   */
+#define DEVICE_NAME	"lpc31xx_adc"	/* Dev name as it appears in /proc/devices   */
 #define BUF_LEN 	8		/* length of the receive/send buffer, max 192 byte = 191 chars + trailing zero */
 #define DRIVER_AUTHOR	"2011 Nils Stec \"krumeltee\" <info@fi-no.de>, 2011 Michael Schwarz"
-#define DRIVER_DESC	"lpc313x adc driver for gnublin"
+#define DRIVER_DESC	"lpc31xx adc driver for gnublin"
 
 /* if you haven't applied the adc-registers patch, you will need these defines. */
 /*
@@ -89,10 +89,10 @@ static ssize_t device_read(struct file *, char *, size_t, loff_t *);
 static ssize_t device_write(struct file *, const char *, size_t, loff_t *);
 #endif // __ADC_DRV_C__
 
-static u16 lpc313x_adc_read(int channel, int resolution);
-static int lpc313x_init_adc(void);
-static int lpc313x_deinit_adc(void);
-//static int lpc313x_adc_powersave_on(void);
-//static int lpc313x_adc_powersave_off(void);
+static u16 lpc31xx_adc_read(int channel, int resolution);
+static int lpc31xx_init_adc(void);
+static int lpc31xx_deinit_adc(void);
+//static int lpc31xx_adc_powersave_on(void);
+//static int lpc31xx_adc_powersave_off(void);
 
 #endif // __GNUBLIN_IO_H__

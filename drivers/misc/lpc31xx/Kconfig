@@ -1,18 +1,18 @@
-menuconfig NEW_LPC313x_IO
-	bool "NxP lpc313x IO drivers (ADC, PWM, ...)"
+menuconfig NEW_LPC31xx_IO
+	bool "NxP lpc31xx IO drivers (ADC, PWM, ...)"
 	help
-	  Say Y to enable support for lpc313x series MCU's on-chip peripherials like AD-converter and Pulse Width Modulator..
+	  Say Y to enable support for lpc31xx series MCU's on-chip peripherials like AD-converter and Pulse Width Modulator..
 
-if NEW_LPC313x_IO
+if NEW_LPC31xx_IO
 
-config LPC313x_ADC
-	tristate "lpc313x ADC support"
+config LPC31xx_ADC
+	tristate "lpc31xx ADC support"
 	help
-	  Say Y to enable the ADC driver, when built as a module, the module will be called "lpc313x_adc".
+	  Say Y to enable the ADC driver, when built as a module, the module will be called "lpc31xx_adc".
 	  
-config LPC313x_PWM
-	tristate "lpc313x PWM support"
+config LPC31xx_PWM
+	tristate "lpc31xx PWM support"
 	help
-	   Say Y to enable the PWM driver, when built as a moule, the module will be called "lpc313x_pwm".
+	   Say Y to enable the PWM driver, when built as a moule, the module will be called "lpc31xx_pwm".
 
 endif

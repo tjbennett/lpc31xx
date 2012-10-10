@@ -1,4 +1,4 @@
-/* linux/arch/arm/mach-lpc313x/usb.c -- platform level USB initialization
+/* linux/arch/arm/mach-lpc31xx/usb.c -- platform level USB initialization
  *
  *  Author:	Durgesh Pattamatta
  *  Copyright (C) 2009 NXP semiconductors

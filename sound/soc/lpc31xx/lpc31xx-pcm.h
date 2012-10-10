@@ -1,5 +1,5 @@
 /*
- * sound/soc/lpc313x/lpc313x-pcm.h
+ * sound/soc/lpc31xx/lpc31xx-pcm.h
  *
  * Author: Kevin Wells <kevin.wells@nxp.com>
  *
@@ -20,10 +20,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifndef __SOUND_SOC_LPC313X_PCM_H
-#define __SOUND_SOC_LPC313X_PCM_H
+#ifndef __SOUND_SOC_LPC31XX_PCM_H
+#define __SOUND_SOC_LPC31XX_PCM_H
 
-extern struct snd_soc_platform_driver lpc313x_asoc_platform;
+extern struct snd_soc_platform_driver lpc31xx_asoc_platform;
 
 #endif
 
