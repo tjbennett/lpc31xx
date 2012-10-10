@@ -83,11 +83,11 @@
 			gpios = <
 				&gpio_ebi_mci 7 0 /* card detect */
 				0 /* write protect, no hardware */
-				&gpio_ebi_i2stx_0 5 0 /* power, broken hardware design */
+				&gpio_ebi_i2stx_0 5 0 /* power */
 				0 /* slot select, no hardware */
 			>;
 			interrupt-parent = <&evtr>;
-			interrupt = <6 8>;
+			interrupts = <5 8>;
 		};
 	};
 	usb@19000000 {
