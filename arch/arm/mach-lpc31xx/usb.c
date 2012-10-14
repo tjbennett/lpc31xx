@@ -44,6 +44,20 @@
 #include <mach/board.h>
 #include <mach/gpio.h>
 
+#define IRQ_USB 27
+#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
+#define EVT_usb_atx_pll_lock	0x79
+#define EVRT_RSR(bank)       __REG (EVTR_PHYS + 0xD20 + ((bank) << 2))
+#define IRQ_VBUS_OVRC  32  /* Detect VBUS over current - Host mode */
+#define IRQ_EA_VBUS_OVRC 32
+
+static void lpc313x_vbus_power(int enable)
+{
+	printk (KERN_INFO "enabling USB host vbus_power %d\n", enable);
+	//gpio_set_value(VBUS_PWR_EN, enable);
+}
+
+
 /****************************************************************************
 * USBOTG register definition
 ****************************************************************************/
@@ -94,6 +108,20 @@
 #define OTGSC_INT_EN(n)   _BIT(24 + (n))
 #define OTGSC_INT_STAT_MASK (0x007F0000)
 
+/*-------------------------------------------------------------------------*/
+static struct resource lpc313x_usb_resource[] = {
+	[0] = {
+		.start = (u32) (USBOTG_PHYS),
+		.end   = (u32) (USBOTG_PHYS + SZ_4K),
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_USB,
+		.end   = IRQ_USB,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
 struct lpc313x_usb_board_t {
 	/* timer for VBUS enable */
 	struct timer_list	vbus_timer;
@@ -102,6 +130,9 @@ struct lpc313x_usb_board_t {
 };
 
 static struct lpc313x_usb_board_t lpc313x_usb_brd;
+
+static u64 usb_dmamask = 0xffffffffUL;;
+static void	lpc313x_usb_release(struct device *dev);
 
 struct fsl_usb2_platform_data lpc313x_fsl_config = {
 #if defined(CONFIG_USB_OTG) || (defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_GADGET_FSL_USB2))
@@ -114,13 +145,41 @@ struct fsl_usb2_platform_data lpc313x_fsl_config = {
 	.phy_mode = FSL_USB2_PHY_UTMI,
 };
 
-#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
-#define EVT_usb_atx_pll_lock	0x79
-#define EVRT_RSR(bank)       __REG (EVTR_PHYS + 0xD20 + ((bank) << 2))
+#if defined(CONFIG_USB_GADGET_FSL_USB2) || defined(CONFIG_USB_OTG)
 
-void lpc313x_vbus_power(int enable)
+static struct platform_device lpc313x_udc_device = {
+	.name = "fsl-usb2-udc",
+	.dev = {
+		.dma_mask          = &usb_dmamask,
+		.coherent_dma_mask = 0xffffffff,
+		.release           = lpc313x_usb_release,
+		.platform_data     = &lpc313x_fsl_config,
+	},
+	.num_resources = ARRAY_SIZE(lpc313x_usb_resource),
+	.resource      = lpc313x_usb_resource,
+};
+#endif
+
+#if defined(CONFIG_USB_EHCI_HCD) || defined(CONFIG_USB_OTG)
+
+static struct platform_device lpc313x_ehci_device = {
+	.name		= "lpc-ehci",
+	.dev = {
+		.dma_mask          = &usb_dmamask,
+		.coherent_dma_mask = 0xffffffff,
+		.release           = lpc313x_usb_release,
+		.platform_data     = &lpc313x_fsl_config,
+	},
+	.num_resources = ARRAY_SIZE(lpc313x_usb_resource),
+	.resource      = lpc313x_usb_resource,
+};
+#endif
+
+
+/*-------------------------------------------------------------------------*/
+static void	lpc313x_usb_release(struct device *dev)
 {
-	//fixme
+	// do nothing
 }
 
 static irqreturn_t lpc313x_vbus_ovrc_irq(int irq, void *data)
@@ -198,24 +257,24 @@ int __init usbotg_init(void)
 #if defined(CONFIG_USB_EHCI_HCD)
 		/* register host */
 		printk(KERN_INFO "Registering USB host 0x%08x 0x%08x (%d)\n", USB_DEV_OTGSC, EVRT_RSR(bank), bank);
-#ifdef JDS
 		retval = platform_device_register(&lpc313x_ehci_device);
 		if ( 0 != retval )
 			printk(KERN_INFO "Can't register lpc313x_ehci_device device\n");
-#endif
+
 		/* Create VBUS enable timer */
 		setup_timer(&lpc313x_usb_brd.vbus_timer, lpc313x_vbusen_timer,
 				(unsigned long)&lpc313x_usb_brd);
+printk("JDS - fix the rest of OTG support\n");
+return 0;
 
 #if defined(CONFIG_MACH_EA313X) || defined(CONFIG_MACH_EA3152)
-#ifdef JDS
 		/* set thw I2SRX_WS0 pin as GPIO_IN for vbus overcurrent flag */
 		retval = gpio_request(GPIO_I2SRX_WS0, "vbus overcurrent");
 		if ( 0 != retval )
 			printk(KERN_INFO "Can't acquire GPIO_I2SRX_WS0\n");
 		gpio_direction_input(GPIO_I2SRX_WS0);
 		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_EA_VBUS_OVRC;
-#endif
+
 #else
 		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_VBUS_OVRC;
 #endif
@@ -227,7 +286,7 @@ int __init usbotg_init(void)
 
 		if ( 0 != retval )
 			printk(KERN_INFO "Unable to register IRQ_VBUS_OVRC handler\n");
-		
+
 #else
 		printk(KERN_ERR "Unable to register USB host. Check USB_ID jumper!!!!!\n");
 #endif
