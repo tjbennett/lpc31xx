@@ -160,22 +160,6 @@ static struct platform_device lpc313x_udc_device = {
 };
 #endif
 
-#if defined(CONFIG_USB_EHCI_HCD) || defined(CONFIG_USB_OTG)
-
-static struct platform_device lpc313x_ehci_device = {
-	.name		= "lpc-ehci",
-	.dev = {
-		.dma_mask          = &usb_dmamask,
-		.coherent_dma_mask = 0xffffffff,
-		.release           = lpc313x_usb_release,
-		.platform_data     = &lpc313x_fsl_config,
-	},
-	.num_resources = ARRAY_SIZE(lpc313x_usb_resource),
-	.resource      = lpc313x_usb_resource,
-};
-#endif
-
-
 /*-------------------------------------------------------------------------*/
 static void	lpc313x_usb_release(struct device *dev)
 {
@@ -255,12 +239,6 @@ int __init usbotg_init(void)
 #endif
 	} else {
 #if defined(CONFIG_USB_EHCI_HCD)
-		/* register host */
-		printk(KERN_INFO "Registering USB host 0x%08x 0x%08x (%d)\n", USB_DEV_OTGSC, EVRT_RSR(bank), bank);
-		retval = platform_device_register(&lpc313x_ehci_device);
-		if ( 0 != retval )
-			printk(KERN_INFO "Can't register lpc313x_ehci_device device\n");
-
 		/* Create VBUS enable timer */
 		setup_timer(&lpc313x_usb_brd.vbus_timer, lpc313x_vbusen_timer,
 				(unsigned long)&lpc313x_usb_brd);

@@ -90,6 +90,19 @@ static const struct hc_driver lpc_ehci_hc_driver = {
 	.clear_tt_buffer_complete = ehci_clear_tt_buffer_complete,
 };
 
+static struct fsl_usb2_platform_data lpc313x_fsl_config = {
+#if defined(CONFIG_USB_OTG) || (defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_GADGET_FSL_USB2))
+	.operating_mode = FSL_USB2_DR_OTG,
+#elif defined(CONFIG_USB_GADGET_FSL_USB2) && !defined(CONFIG_USB_EHCI_HCD)
+	.operating_mode = FSL_USB2_DR_DEVICE,
+#elif !defined(CONFIG_USB_GADGET_FSL_USB2) && defined(CONFIG_USB_EHCI_HCD)
+	.operating_mode = FSL_USB2_DR_HOST,
+#endif
+	.phy_mode = FSL_USB2_PHY_UTMI,
+};
+
+static u64 usb_dmamask = 0xffffffffUL;;
+
 static int lpc_ehci_probe(struct platform_device *pdev)
 {
 	struct fsl_usb2_platform_data *pdata;
@@ -102,8 +115,13 @@ static int lpc_ehci_probe(struct platform_device *pdev)
 	if (usb_disabled())
 		return -ENODEV;
 
+	pdev->dev.dma_mask          = &usb_dmamask,
+	pdev->dev.coherent_dma_mask = 0xffffffff,
+
+
 	/* Need platform data for setup */
 	pdata = (struct fsl_usb2_platform_data *)pdev->dev.platform_data;
+	pdata = &lpc313x_fsl_config;
 	if (!pdata) {
 		dev_err(&pdev->dev,
 			"No platform data for %s.\n", dev_name(&pdev->dev));
@@ -130,6 +148,7 @@ static int lpc_ehci_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 	irq = res->start;
+printk("JDS usb IRQ %d\n", irq);
 
 	hcd = usb_create_hcd(driver, &pdev->dev, dev_name(&pdev->dev));
 	if (!hcd) {
@@ -147,14 +166,16 @@ static int lpc_ehci_probe(struct platform_device *pdev)
 	}
 	hcd->rsrc_start = res->start;
 	hcd->rsrc_len = res->end - res->start + 1;
-/*	
+printk("JDS usb res->start %x\n", res->start);
+printk("JDS usb res->end %x\n", res->end);
+
 	if (!request_mem_region(hcd->rsrc_start, hcd->rsrc_len,
 				driver->description)) {
 		dev_dbg(&pdev->dev, "controller already in use\n");
 		retval = -EBUSY;
 		goto fail_request_resource;
 	}
-*/
+
 	hcd->regs = ioremap_nocache(hcd->rsrc_start, hcd->rsrc_len);
 	if (hcd->regs == NULL) {
 		dev_dbg(&pdev->dev, "error mapping memory\n");
@@ -356,6 +377,14 @@ static int lpc313x_ehci_resume(struct platform_device * pdev)
 	return 0;
 }
 
+#if defined(CONFIG_OF)
+static const struct of_device_id ehci_lpc_of_match[] = {
+	{ .compatible = "nxp,lpc31xx-usb" },
+	{},
+};
+MODULE_DEVICE_TABLE(of, ehci_lpc_of_match);
+#endif
+
 static struct platform_driver ehci_lpc_driver = {
 	.probe = lpc_ehci_probe,
 	.remove = lpc_ehci_remove,
@@ -366,6 +395,9 @@ static struct platform_driver ehci_lpc_driver = {
 #ifdef CONFIG_USB_OTG
 		.suspend = lpc_ehci_suspend,
 		.resume  = lpc_ehci_resume,
+#endif
+#ifdef CONFIG_OF
+		.of_match_table = ehci_lpc_of_match,
 #endif
 	},
 };
