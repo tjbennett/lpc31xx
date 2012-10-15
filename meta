@@ -1,5 +1,5 @@
 Version: 1
-Previous: ef69de64fbb8b8cac5983d4b4d79bce615b8cdd2
+Previous: 15fe4f0b2d912f190c6dee6e41619323e24842c4
 Head: e92f4363f7935dc3b0e81fe73fd8409f314da1d9
 Applied:
   0001-base-patches-minus-8250.patch: 50f442426e2916d3bc2be27a95125912b8f48494
@@ -40,6 +40,6 @@ Applied:
   0036-uart.patch: bd2c87de9bf6edc3cd4e6d845f1ab1a452b91fd1
   0037-spi-temp.patch: d3ac242ee09abd97ff6564ba6c511ab7c0b1bba9
   0038-spi-rewrite.patch: 97d54961cb47fb9f4076875545ff25aa49f9df0c
-  temp-holding-for-usb-work: e92f4363f7935dc3b0e81fe73fd8409f314da1d9
+  0039-usb-rework.patch: e92f4363f7935dc3b0e81fe73fd8409f314da1d9
 Unapplied:
 Hidden:
