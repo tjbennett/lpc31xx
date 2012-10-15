@@ -1,25 +1,49 @@
-Bottom: 09967ef628d25fa7f7be41d1ca3dcd5133b09c99
+Bottom: fedb347fc9ef5e31f0b5ef18602c7b2917adfd89
 Top:    07bc6fe92f07a19caf9f3f65b4a6a0ebfe932f01
 Author: Jon Smirl <jonsmirl@gmail.com>
-Date:   2012-10-14 15:50:51 -0400
+Date:   2012-10-15 19:30:32 -0400
 
-usb -temp2
-
+temp holding for USB work
 
 ---
 
+diff --git a/arch/arm/boot/dts/ea3131.dts b/arch/arm/boot/dts/ea3131.dts
+index 31346cf..a1957f1 100644
+--- a/arch/arm/boot/dts/ea3131.dts
++++ b/arch/arm/boot/dts/ea3131.dts
+@@ -91,6 +91,7 @@
+ 	};
+ 	usb@19000000 {
+ 		vbus-over =  <&gpio_i2srx_0 2 0>;
++		vbus-power = <&pca9532 6 1>;
+ 	};
+ 	sram@20000000 {
+ 		mpmc-config = <0x81 0 0 31 0 3 0>;
 diff --git a/arch/arm/mach-lpc31xx/usb.c b/arch/arm/mach-lpc31xx/usb.c
-index dd18592..c23e768 100644
+index 45ad7e6..c23e768 100644
 --- a/arch/arm/mach-lpc31xx/usb.c
 +++ b/arch/arm/mach-lpc31xx/usb.c
-@@ -44,6 +44,20 @@
+@@ -1,4 +1,4 @@
+-/* linux/arch/arm/mach-lpc31xx/usb.c -- platform level USB initialization
++/* linux/arch/arm/mach-lpc313x/usb.c -- platform level USB initialization
+  *
+  *  Author:	Durgesh Pattamatta
+  *  Copyright (C) 2009 NXP semiconductors
+@@ -38,14 +38,24 @@
+ #include <linux/io.h>
+ #include <linux/interrupt.h>
+ #include <linux/irq.h>
+-#include <linux/of_gpio.h>
+ 
+ #include <asm/irq.h>
+ #include <asm/system.h>
  #include <mach/board.h>
  #include <mach/gpio.h>
  
 +#define IRQ_USB 27
 +#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
 +#define EVT_usb_atx_pll_lock	0x79
-+#define EVRT_RSR(bank)       __REG (EVTR_PHYS + 0xD20 + ((bank) << 2))
+ #define EVRT_RSR(bank)       __REG (EVTR_PHYS + 0xD20 + ((bank) << 2))
 +#define IRQ_VBUS_OVRC  32  /* Detect VBUS over current - Host mode */
 +#define IRQ_EA_VBUS_OVRC 32
 +
@@ -28,107 +52,199 @@ index dd18592..c23e768 100644
 +	printk (KERN_INFO "enabling USB host vbus_power %d\n", enable);
 +	//gpio_set_value(VBUS_PWR_EN, enable);
 +}
-+
-+
+ 
+ 
  /****************************************************************************
- * USBOTG register definition
- ****************************************************************************/
-@@ -94,6 +108,20 @@
- #define OTGSC_INT_EN(n)   _BIT(24 + (n))
+@@ -99,11 +109,10 @@
  #define OTGSC_INT_STAT_MASK (0x007F0000)
  
-+/*-------------------------------------------------------------------------*/
+ /*-------------------------------------------------------------------------*/
+-#if defined(CONFIG_USB_GADGET_FSL_USB2) || defined(CONFIG_USB_OTG)
+-static struct resource lpc31xx_usb_resource[] = {
 +static struct resource lpc313x_usb_resource[] = {
-+	[0] = {
+ 	[0] = {
+-		.start = (uint32_t) (USBOTG_PHYS),
+-		.end   = (uint32_t) (USBOTG_PHYS + SZ_4K),
 +		.start = (u32) (USBOTG_PHYS),
 +		.end   = (u32) (USBOTG_PHYS + SZ_4K),
-+		.flags = IORESOURCE_MEM,
-+	},
-+	[1] = {
-+		.start = IRQ_USB,
-+		.end   = IRQ_USB,
-+		.flags = IORESOURCE_IRQ,
-+	}
-+};
-+
- struct lpc313x_usb_board_t {
+ 		.flags = IORESOURCE_MEM,
+ 	},
+ 	[1] = {
+@@ -112,53 +121,56 @@ static struct resource lpc31xx_usb_resource[] = {
+ 		.flags = IORESOURCE_IRQ,
+ 	}
+ };
+-#endif
+ 
+-struct lpc31xx_usb_board_t {
++struct lpc313x_usb_board_t {
  	/* timer for VBUS enable */
  	struct timer_list	vbus_timer;
-@@ -103,6 +131,9 @@ struct lpc313x_usb_board_t {
- 
- static struct lpc313x_usb_board_t lpc313x_usb_brd;
- 
-+static u64 usb_dmamask = 0xffffffffUL;;
-+static void	lpc313x_usb_release(struct device *dev);
-+
- struct fsl_usb2_platform_data lpc313x_fsl_config = {
- #if defined(CONFIG_USB_OTG) || (defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_GADGET_FSL_USB2))
- 	.operating_mode = FSL_USB2_DR_OTG,
-@@ -114,13 +145,25 @@ struct fsl_usb2_platform_data lpc313x_fsl_config = {
- 	.phy_mode = FSL_USB2_PHY_UTMI,
+ 	/* board specific over current monitor */
+ 	int	vbus_ovrc_irq;
  };
  
--#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
--#define EVT_usb_atx_pll_lock	0x79
--#define EVRT_RSR(bank)       __REG (EVTR_PHYS + 0xD20 + ((bank) << 2))
+-static struct lpc31xx_usb_board_t lpc31xx_usb_brd;
++static struct lpc313x_usb_board_t lpc313x_usb_brd;
+ 
+-#if defined(CONFIG_USB_GADGET_FSL_USB2) || defined(CONFIG_USB_OTG)
++static u64 usb_dmamask = 0xffffffffUL;;
++static void	lpc313x_usb_release(struct device *dev);
+ 
+-static struct platform_device lpc31xx_udc_device = {
+-	.name = "fsl-usb2-udc",
+-	.dev = {
+-		.dma_mask          = &usb_dmamask,
+-		.coherent_dma_mask = 0xffffffff,
+-		.release           = lpc31xx_usb_release,
+-	},
+-	.num_resources = ARRAY_SIZE(lpc31xx_usb_resource),
+-	.resource      = lpc31xx_usb_resource,
+-};
++struct fsl_usb2_platform_data lpc313x_fsl_config = {
++#if defined(CONFIG_USB_OTG) || (defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_GADGET_FSL_USB2))
++	.operating_mode = FSL_USB2_DR_OTG,
++#elif defined(CONFIG_USB_GADGET_FSL_USB2) && !defined(CONFIG_USB_EHCI_HCD)
++	.operating_mode = FSL_USB2_DR_DEVICE,
++#elif !defined(CONFIG_USB_GADGET_FSL_USB2) && defined(CONFIG_USB_EHCI_HCD)
++	.operating_mode = FSL_USB2_DR_HOST,
+ #endif
++	.phy_mode = FSL_USB2_PHY_UTMI,
++};
+ 
+-#if defined(CONFIG_USB_EHCI_HCD) || defined(CONFIG_USB_OTG)
 +#if defined(CONFIG_USB_GADGET_FSL_USB2) || defined(CONFIG_USB_OTG)
-+
+ 
+-#ifndef CONFIG_OF
+-static struct platform_device lpc31xx_ehci_device = {
+-	.name		= "lpc-ehci",
 +static struct platform_device lpc313x_udc_device = {
 +	.name = "fsl-usb2-udc",
-+	.dev = {
-+		.dma_mask          = &usb_dmamask,
-+		.coherent_dma_mask = 0xffffffff,
+ 	.dev = {
+ 		.dma_mask          = &usb_dmamask,
+ 		.coherent_dma_mask = 0xffffffff,
+-		.release           = lpc31xx_usb_release,
 +		.release           = lpc313x_usb_release,
 +		.platform_data     = &lpc313x_fsl_config,
-+	},
+ 	},
+-	.num_resources = ARRAY_SIZE(lpc31xx_usb_resource),
+-	.resource      = lpc31xx_usb_resource,
 +	.num_resources = ARRAY_SIZE(lpc313x_usb_resource),
 +	.resource      = lpc313x_usb_resource,
-+};
-+#endif
+ };
+ #endif
+-#endif
  
--void lpc313x_vbus_power(int enable)
 +/*-------------------------------------------------------------------------*/
 +static void	lpc313x_usb_release(struct device *dev)
- {
--	//fixme
++{
 +	// do nothing
++}
+ 
+-static irqreturn_t lpc31xx_vbus_ovrc_irq(int irq, void *data)
++static irqreturn_t lpc313x_vbus_ovrc_irq(int irq, void *data)
+ {
+-	struct lpc31xx_usb_board_t* brd = data;
++	struct lpc313x_usb_board_t* brd = data;
+ 	/* disable VBUS power */
+-	lpc31xx_vbus_power(0);
++	lpc313x_vbus_power(0);
+ 	/* Disable over current IRQ */
+ 	disable_irq_nosync(irq);
+ 	printk(KERN_INFO "Disabling VBUS as device is drawing too much current!!\n");
+@@ -170,26 +182,22 @@ static irqreturn_t lpc31xx_vbus_ovrc_irq(int irq, void *data)
+ 	return IRQ_HANDLED;
  }
  
- static irqreturn_t lpc313x_vbus_ovrc_irq(int irq, void *data)
-@@ -196,26 +239,20 @@ int __init usbotg_init(void)
+-static void lpc31xx_vbusen_timer(unsigned long data)
++static void lpc313x_vbusen_timer(unsigned long data)
+ {
+-	struct lpc31xx_usb_board_t* brd = (struct lpc31xx_usb_board_t*)data;
++	struct lpc313x_usb_board_t* brd = (struct lpc313x_usb_board_t*)data;
+ 	/* enable VBUS power */
+-	lpc31xx_vbus_power(1);
++	lpc313x_vbus_power(1);
+ 	msleep(2);
+ 	/* enable the VBUS overcurrent monitoring IRQ */
+ 	enable_irq(brd->vbus_ovrc_irq);
+ }
+ 
+-/* Macros to compute the bank based on EVENT_T */
+-#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
+-#define EVT_usb_atx_pll_lock	0x79
+ 
+ /*-------------------------------------------------------------------------*/
+ int __init usbotg_init(void)
+ {
+-	int over;
+-	uint32_t bank = EVT_GET_BANK(EVT_usb_atx_pll_lock);
+-	uint32_t bit_pos = EVT_usb_atx_pll_lock & 0x1F;
++	u32 bank = EVT_GET_BANK(EVT_usb_atx_pll_lock);
++	u32 bit_pos = EVT_usb_atx_pll_lock & 0x1F;
+ 	int retval = 0;
+ 
+ 	/* enable USB to AHB clock */
+@@ -223,50 +231,40 @@ int __init usbotg_init(void)
+ #if defined(CONFIG_USB_GADGET_FSL_USB2)
+ 		/* register gadget */
+ 		printk(KERN_INFO "Registering USB gadget 0x%08x 0x%08x (%d)\n", USB_DEV_OTGSC, EVRT_RSR(bank), bank);
+-		retval = platform_device_register(&lpc31xx_udc_device);
++		retval = platform_device_register(&lpc313x_udc_device);
+ 		if ( 0 != retval )
+-			printk(KERN_INFO "Can't register lpc31xx_udc_device device\n");
++			printk(KERN_INFO "Can't register lpc313x_udc_device device\n");
+ #else
+ 		printk(KERN_ERR "Unable to register USB gadget. Check USB_ID jumper!!!!!\n");
  #endif
  	} else {
  #if defined(CONFIG_USB_EHCI_HCD)
 -		/* register host */
+-#ifndef CONFIG_OF
 -		printk(KERN_INFO "Registering USB host 0x%08x 0x%08x (%d)\n", USB_DEV_OTGSC, EVRT_RSR(bank), bank);
--#ifdef JDS
--		retval = platform_device_register(&lpc313x_ehci_device);
+-		retval = platform_device_register(&lpc31xx_ehci_device);
 -		if ( 0 != retval )
--			printk(KERN_INFO "Can't register lpc313x_ehci_device device\n");
+-			printk(KERN_INFO "Can't register lpc31xx_ehci_device device\n");
 -#endif
  		/* Create VBUS enable timer */
- 		setup_timer(&lpc313x_usb_brd.vbus_timer, lpc313x_vbusen_timer,
- 				(unsigned long)&lpc313x_usb_brd);
+-		setup_timer(&lpc31xx_usb_brd.vbus_timer, lpc31xx_vbusen_timer,
+-				(unsigned long)&lpc31xx_usb_brd);
++		setup_timer(&lpc313x_usb_brd.vbus_timer, lpc313x_vbusen_timer,
++				(unsigned long)&lpc313x_usb_brd);
 +printk("JDS - fix the rest of OTG support\n");
 +return 0;
  
  #if defined(CONFIG_MACH_EA313X) || defined(CONFIG_MACH_EA3152)
--#ifdef JDS
  		/* set thw I2SRX_WS0 pin as GPIO_IN for vbus overcurrent flag */
- 		retval = gpio_request(GPIO_I2SRX_WS0, "vbus overcurrent");
+-#if 0
+-		over = of_get_named_gpio(np, "vbus-over", 0);
+-		retval = gpio_request(over, "vbus overcurrent");
++		retval = gpio_request(GPIO_I2SRX_WS0, "vbus overcurrent");
  		if ( 0 != retval )
- 			printk(KERN_INFO "Can't acquire GPIO_I2SRX_WS0\n");
- 		gpio_direction_input(GPIO_I2SRX_WS0);
- 		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_EA_VBUS_OVRC;
+-			printk(KERN_INFO "Can't acquire vbus-over GPIO\n");
+-		gpio_direction_input(over);
 -#endif
-+
- #else
- 		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_VBUS_OVRC;
- #endif
-@@ -227,7 +264,7 @@ int __init usbotg_init(void)
+-#define IRQ_EA_VBUS_OVRC  37  /* Detect VBUS over current - Host mode */
+-		lpc31xx_usb_brd.vbus_ovrc_irq = IRQ_EA_VBUS_OVRC;
++			printk(KERN_INFO "Can't acquire GPIO_I2SRX_WS0\n");
++		gpio_direction_input(GPIO_I2SRX_WS0);
++		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_EA_VBUS_OVRC;
  
+ #else
+-		lpc31xx_usb_brd.vbus_ovrc_irq = IRQ_VBUS_OVRC;
++		lpc313x_usb_brd.vbus_ovrc_irq = IRQ_VBUS_OVRC;
+ #endif
+ 
+-#if 0
+ 		/* request IRQ to handle VBUS power event */
+-		retval = request_irq( lpc31xx_usb_brd.vbus_ovrc_irq, lpc31xx_vbus_ovrc_irq,
++		retval = request_irq( lpc313x_usb_brd.vbus_ovrc_irq, lpc313x_vbus_ovrc_irq, 
+ 			IRQF_DISABLED, "VBUSOVR", 
+-			&lpc31xx_usb_brd);
++			&lpc313x_usb_brd);
++
  		if ( 0 != retval )
  			printk(KERN_INFO "Unable to register IRQ_VBUS_OVRC handler\n");
+-#endif
 -		
 +
  #else
@@ -146,118 +262,38 @@ index 654e248..c6fd9e9 100644
  	{ USB_DEVICE(0x0489, 0xe042) },
  	{ USB_DEVICE(0x413c, 0x8197) },
  
-diff --git a/drivers/usb/core/hub.c b/drivers/usb/core/hub.c
-index 052af39..6c3bba6 100644
---- a/drivers/usb/core/hub.c
-+++ b/drivers/usb/core/hub.c
-@@ -3697,7 +3697,6 @@ hub_port_init (struct usb_hub *hub, struct usb_device *udev, int port1,
- 	const char		*speed;
- 	int			devnum = udev->devnum;
+diff --git a/drivers/leds/leds-pca9532.c b/drivers/leds/leds-pca9532.c
+index 9a5ed95..1c65399 100644
+--- a/drivers/leds/leds-pca9532.c
++++ b/drivers/leds/leds-pca9532.c
+@@ -86,9 +86,19 @@ static const struct pca9532_chip_info pca9532_chip_info_tbl[] = {
+ 	},
+ };
  
--printk("JDS hub 1\n");
- 	/* root hub ports have a slightly longer reset period
- 	 * (from USB 2.0 spec, section 7.1.7.5)
- 	 */
-@@ -3723,7 +3722,6 @@ printk("JDS hub 1\n");
++static const struct of_device_id pca9532_of_match[] = {
++	{
++		.compatible = "nxp,pca9532",
++	},
++	{},
++};
++MODULE_DEVICE_TABLE(of, pca9532_of_match);
++
+ static struct i2c_driver pca9532_driver = {
+ 	.driver = {
+ 		.name = "leds-pca953x",
++		.owner = THIS_MODULE,
++		.of_match_table = pca9532_of_match,
+ 	},
+ 	.probe = pca9532_probe,
+ 	.remove = pca9532_remove,
+@@ -478,6 +488,7 @@ static int pca9532_probe(struct i2c_client *client,
+ 	struct pca9532_data *data = i2c_get_clientdata(client);
+ 	struct pca9532_platform_data *pca9532_pdata = client->dev.platform_data;
  
- 	retval = -ENODEV;
- 
--printk("JDS hub 2\n");
- 	if (oldspeed != USB_SPEED_UNKNOWN && oldspeed != udev->speed) {
- 		dev_dbg(&udev->dev, "device reset changed speed!\n");
- 		goto fail;
-@@ -3757,7 +3755,6 @@ printk("JDS hub 2\n");
- 		goto fail;
- 	}
- 
--printk("JDS hub 3\n");
- 	if (udev->speed == USB_SPEED_WIRELESS)
- 		speed = "variable speed Wireless";
- 	else
-@@ -3796,7 +3793,6 @@ printk("JDS hub 3\n");
- 	 * first 8 bytes of the device descriptor to get the ep0 maxpacket
- 	 * value.
- 	 */
--printk("JDS hub 3a\n");
- 	for (i = 0; i < GET_DESCRIPTOR_TRIES; (++i, msleep(100))) {
- 		if (USE_NEW_SCHEME(retry_counter) && !(hcd->driver->flags & HCD_USB3)) {
- 			struct usb_device_descriptor *buf;
-@@ -3820,7 +3816,6 @@ printk("JDS hub 3a\n");
- 					USB_DT_DEVICE << 8, 0,
- 					buf, GET_DESCRIPTOR_BUFSIZE,
- 					initial_descriptor_timeout);
--printk("JDS hub 3b\n");
- 				switch (buf->bMaxPacketSize0) {
- 				case 8: case 16: case 32: case 64: case 255:
- 					if (buf->bDescriptorType ==
-@@ -3840,7 +3835,6 @@ printk("JDS hub 3b\n");
- 			udev->descriptor.bMaxPacketSize0 =
- 					buf->bMaxPacketSize0;
- 			kfree(buf);
--printk("JDS hub 3c\n");
- 
- 			retval = hub_port_reset(hub, port1, udev, delay, false);
- 			if (retval < 0)		/* error or disconnect */
-@@ -3866,7 +3860,6 @@ printk("JDS hub 3c\n");
-  		 * unauthorized address in the Connect Ack sequence;
-  		 * authorization will assign the final address.
-  		 */
--printk("JDS hub 4\n");
- 		if (udev->wusb == 0) {
- 			for (j = 0; j < SET_ADDRESS_TRIES; ++j) {
- 				retval = hub_set_address(udev, devnum);
-@@ -3909,7 +3902,6 @@ printk("JDS hub 4\n");
- 			break;
- 		}
- 	}
--printk("JDS hub 5\n");
- 	if (retval)
- 		goto fail;
- 
-@@ -3949,7 +3941,6 @@ printk("JDS hub 5\n");
- 		usb_ep0_reinit(udev);
- 	}
-   
--printk("JDS hub 6\n");
- 	retval = usb_get_device_descriptor(udev, USB_DT_DEVICE_SIZE);
- 	if (retval < (signed)sizeof(udev->descriptor)) {
- 		dev_err(&udev->dev, "device descriptor read/all, error %d\n",
-@@ -3971,14 +3962,12 @@ printk("JDS hub 6\n");
- 	/* notify HCD that we have a device connected and addressed */
- 	if (hcd->driver->update_device)
- 		hcd->driver->update_device(hcd, udev);
--printk("JDS hub 7\n");
- fail:
- 	if (retval) {
- 		hub_port_disable(hub, port1, 0);
- 		update_devnum(udev, devnum);	/* for disconnect processing */
- 	}
- 	mutex_unlock(&usb_address0_mutex);
--printk("JDS hub 8\n");
- 	return retval;
- }
- 
-diff --git a/drivers/usb/core/message.c b/drivers/usb/core/message.c
-index c05ee4c..0ab7da2 100644
---- a/drivers/usb/core/message.c
-+++ b/drivers/usb/core/message.c
-@@ -2,7 +2,6 @@
-  * message.c - synchronous message handling
-  */
- 
--#define DEBUG
- #include <linux/pci.h>	/* for scatterlist macros */
- #include <linux/usb.h>
- #include <linux/module.h>
-@@ -48,8 +47,6 @@ static int usb_start_wait_urb(struct urb *urb, int timeout, int *actual_length)
- 	unsigned long expire;
- 	int retval;
- 
--
--	printk("JDS= usb_start_wait_urb\n");
- 	init_completion(&ctx.done);
- 	urb->context = &ctx;
- 	urb->actual_length = 0;
++	printk("JDS - pca9532_probe\n");
+ #ifdef CONFIG_OF
+ 	pca9532_pdata = &of_gpios;
+ #else
 diff --git a/drivers/usb/gadget/Kconfig b/drivers/usb/gadget/Kconfig
 index 63d17db..9525f7d 100644
 --- a/drivers/usb/gadget/Kconfig
@@ -318,93 +354,8 @@ index 71f59b6..80dcbba 100644
  
  	return -ENOENT;
  }
-diff --git a/drivers/usb/host/ehci-hcd.c b/drivers/usb/host/ehci-hcd.c
-index 3eb33c3..79b5a35 100644
---- a/drivers/usb/host/ehci-hcd.c
-+++ b/drivers/usb/host/ehci-hcd.c
-@@ -700,7 +700,6 @@ static irqreturn_t ehci_irq (struct usb_hcd *hcd)
- 	u32			status, masked_status, pcd_status = 0, cmd;
- 	int			bh;
- 
--printk("JDS - ehci_irq\n");
- 	spin_lock (&ehci->lock);
- 
- 	status = ehci_readl(ehci, &ehci->regs->status);
-@@ -711,7 +710,6 @@ printk("JDS - ehci_irq\n");
- 		goto dead;
- 	}
- 
--printk("JDS - ehci_irq 1\n");
- 	/*
- 	 * We don't use STS_FLR, but some controllers don't like it to
- 	 * remain on, so mask it out along with the other status bits.
-@@ -723,7 +721,6 @@ printk("JDS - ehci_irq 1\n");
- 		spin_unlock(&ehci->lock);
- 		return IRQ_NONE;
- 	}
--printk("JDS - ehci_irq 2\n");
- 
- 	/* clear (just) interrupts */
- 	ehci_writel(ehci, masked_status, &ehci->regs->status);
-@@ -737,7 +734,6 @@ printk("JDS - ehci_irq 2\n");
- 
- 	/* INT, ERR, and IAA interrupt rates can be throttled */
- 
--printk("JDS - ehci_irq 3\n");
- 	/* normal [4.15.1.2] or error [4.15.1.1] completion */
- 	if (likely ((status & (STS_INT|STS_ERR)) != 0)) {
- 		if (likely ((status & STS_ERR) == 0))
-@@ -747,7 +743,6 @@ printk("JDS - ehci_irq 3\n");
- 		bh = 1;
- 	}
- 
--printk("JDS - ehci_irq 4\n");
- 	/* complete the unlinking of some qh [4.15.2.3] */
- 	if (status & STS_IAA) {
- 
-@@ -774,7 +769,6 @@ printk("JDS - ehci_irq 4\n");
- 			ehci_dbg(ehci, "IAA with nothing unlinked?\n");
- 	}
- 
--printk("JDS - ehci_irq 5\n");
- 	/* remote wakeup [4.3.1] */
- 	if (status & STS_PCD) {
- 		unsigned	i = HCS_N_PORTS (ehci->hcs_params);
-@@ -821,7 +815,6 @@ printk("JDS - ehci_irq 5\n");
- 		}
- 	}
- 
--printk("JDS - ehci_irq 6\n");
- 	/* PCI errors [4.15.2.4] */
- 	if (unlikely ((status & STS_FATAL) != 0)) {
- 		ehci_err(ehci, "fatal error\n");
-@@ -842,7 +835,6 @@ dead:
- 		bh = 0;
- 	}
- 
--printk("JDS - ehci_irq 7\n");
- 	if (bh)
- 		ehci_work (ehci);
- 	spin_unlock (&ehci->lock);
-@@ -1324,7 +1316,7 @@ MODULE_LICENSE ("GPL");
- 
- #ifdef CONFIG_USB_EHCI_LPC
- #include "ehci-lpc.c"
--#define	OF_PLATFORM_DRIVER	ehci_lpc_driver
-+#define	PLATFORM_DRIVER		ehci_lpc_driver
- #endif
- 
- #ifdef CONFIG_CPU_XLR
-@@ -1361,7 +1353,6 @@ MODULE_LICENSE ("GPL");
- static int __init ehci_hcd_init(void)
- {
- 	int retval = 0;
--printk("JDS = ehci_hcd_init\n");
- 
- 	if (usb_disabled())
- 		return -ENODEV;
 diff --git a/drivers/usb/host/ehci-lpc.c b/drivers/usb/host/ehci-lpc.c
-index ab6351d..ca31dc6 100644
+index 18b908f..ca31dc6 100644
 --- a/drivers/usb/host/ehci-lpc.c
 +++ b/drivers/usb/host/ehci-lpc.c
 @@ -1,5 +1,5 @@
@@ -414,18 +365,10 @@ index ab6351d..ca31dc6 100644
   *
   * Author: Durgesh Pattamatta <durgesh.pattamatta@nxp.com>
   *
-@@ -11,29 +11,32 @@
-  * or implied.
-  */
- 
--#include <linux/of_gpio.h>
- #include <linux/platform_device.h>
- #include <linux/fsl_devices.h>
- #include <linux/usb/otg.h>
+@@ -17,6 +17,19 @@
  #include <mach/board.h>
  #include <mach/hardware.h>
  
--void lpc31xx_vbus_power(int enable)
 +/* Macros to compute the bank based on EVENT_T */
 +#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
 +#define EVT_usb_atx_pll_lock	0x79
@@ -433,41 +376,25 @@ index ab6351d..ca31dc6 100644
 +#define IRQ_VBUS_OVRC  32  /* Detect VBUS over current - Host mode */
 +
 +static void lpc313x_vbus_power(int enable)
- {
--	printk (KERN_INFO "FIXME = enabling USB host vbus_power %d\n", enable);
--	//gpio_set_value(power, enable);
++{
 +	printk (KERN_INFO "enabling USB host vbus_power %d\n", enable);
 +	//gpio_set_value(VBUS_PWR_EN, enable);
- }
- 
++}
++
 +
  static struct platform_driver ehci_lpc_driver;
  
  static int lpc_ehci_init(struct usb_hcd *hcd)
- {
--	struct device_node *np;
--	int power;
- 	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
- 	int retval = 0;
- 
--printk("JDS -lpc_ehci_init\n");
- 	ehci->caps = hcd->regs + 0x100;
- 	ehci->regs = hcd->regs + 0x100
- 		+ HC_LENGTH(ehci, ehci_readl(ehci, &ehci->caps->hc_capbase));
-@@ -56,11 +59,7 @@ printk("JDS -lpc_ehci_init\n");
+@@ -46,7 +59,7 @@ static int lpc_ehci_init(struct usb_hcd *hcd)
  
  	ehci_port_power(ehci, 0);
  	/* board vbus power */
 -	//lpc31xx_vbus_power(0);
--	np = of_find_compatible_node(NULL, NULL, "nxp,lpc31xx-usb");
--	power = of_get_named_gpio(np, "vbus-power", 0);
--printk("JDS - power %d\n", power);
--	gpio_set_value_cansleep(power, 1);
 +	//lpc313x_vbus_power(0);
  
  	return retval;
  }
-@@ -91,7 +90,7 @@ static const struct hc_driver lpc_ehci_hc_driver = {
+@@ -77,7 +90,7 @@ static const struct hc_driver lpc_ehci_hc_driver = {
  	.clear_tt_buffer_complete = ehci_clear_tt_buffer_complete,
  };
  
@@ -476,7 +403,7 @@ index ab6351d..ca31dc6 100644
  #if defined(CONFIG_USB_OTG) || (defined(CONFIG_USB_EHCI_HCD) && defined(CONFIG_USB_GADGET_FSL_USB2))
  	.operating_mode = FSL_USB2_DR_OTG,
  #elif defined(CONFIG_USB_GADGET_FSL_USB2) && !defined(CONFIG_USB_EHCI_HCD)
-@@ -102,29 +101,27 @@ struct fsl_usb2_platform_data lpc31xx_fsl_config = {
+@@ -88,6 +101,8 @@ struct fsl_usb2_platform_data lpc31xx_fsl_config = {
  	.phy_mode = FSL_USB2_PHY_UTMI,
  };
  
@@ -484,23 +411,8 @@ index ab6351d..ca31dc6 100644
 +
  static int lpc_ehci_probe(struct platform_device *pdev)
  {
--	struct device_node *np = pdev->dev.of_node;
  	struct fsl_usb2_platform_data *pdata;
- 	struct usb_hcd *hcd;
- 	const struct hc_driver *driver = &lpc_ehci_hc_driver;
- 	struct resource *res;
--	int irq, power;
-+	int irq;
- 	int retval;
- 
--
--	power = of_get_named_gpio(np, "vbus-power", 0);
--	printk("JDS power %d\n", power);
--	if (!gpio_is_valid(power)) {
--		printk("JDS deferred\n");
--		return -EPROBE_DEFER;
--	}
--printk("JDS -lpc_ehci_probe\n");
+@@ -100,8 +115,13 @@ static int lpc_ehci_probe(struct platform_device *pdev)
  	if (usb_disabled())
  		return -ENODEV;
  
@@ -515,7 +427,7 @@ index ab6351d..ca31dc6 100644
  	if (!pdata) {
  		dev_err(&pdev->dev,
  			"No platform data for %s.\n", dev_name(&pdev->dev));
-@@ -151,6 +148,7 @@ printk("JDS -lpc_ehci_probe\n");
+@@ -128,6 +148,7 @@ static int lpc_ehci_probe(struct platform_device *pdev)
  		return -ENODEV;
  	}
  	irq = res->start;
@@ -523,18 +435,26 @@ index ab6351d..ca31dc6 100644
  
  	hcd = usb_create_hcd(driver, &pdev->dev, dev_name(&pdev->dev));
  	if (!hcd) {
-@@ -168,7 +166,9 @@ printk("JDS -lpc_ehci_probe\n");
+@@ -145,14 +166,16 @@ static int lpc_ehci_probe(struct platform_device *pdev)
  	}
  	hcd->rsrc_start = res->start;
  	hcd->rsrc_len = res->end - res->start + 1;
--	
+-/*	
 +printk("JDS usb res->start %x\n", res->start);
 +printk("JDS usb res->end %x\n", res->end);
 +
  	if (!request_mem_region(hcd->rsrc_start, hcd->rsrc_len,
  				driver->description)) {
  		dev_dbg(&pdev->dev, "controller already in use\n");
-@@ -266,7 +266,7 @@ static int lpc_ehci_suspend(struct device *dev, pm_message_t state)
+ 		retval = -EBUSY;
+ 		goto fail_request_resource;
+ 	}
+-*/
++
+ 	hcd->regs = ioremap_nocache(hcd->rsrc_start, hcd->rsrc_len);
+ 	if (hcd->regs == NULL) {
+ 		dev_dbg(&pdev->dev, "error mapping memory\n");
+@@ -243,7 +266,7 @@ static int lpc_ehci_suspend(struct device *dev, pm_message_t state)
  	struct platform_device *pdev = to_platform_device(dev);
  	struct usb_hcd *hcd = platform_get_drvdata(pdev);
  	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
@@ -543,7 +463,7 @@ index ab6351d..ca31dc6 100644
  
  	dev_dbg(dev, "%s pdev=0x%p  ehci=0x%p  hcd=0x%p\n",
  		 __FUNCTION__, pdev, ehci, hcd);
-@@ -290,7 +290,7 @@ static int lpc_ehci_suspend(struct device *dev, pm_message_t state)
+@@ -267,7 +290,7 @@ static int lpc_ehci_suspend(struct device *dev, pm_message_t state)
  	/* put the device in idele mode */
  	writel(0, (hcd->regs + 0x1a8));
  	/* board vbus power */
@@ -552,7 +472,7 @@ index ab6351d..ca31dc6 100644
  
  	return 0;
  }
-@@ -300,7 +300,7 @@ static int lpc_ehci_resume(struct device *dev)
+@@ -277,7 +300,7 @@ static int lpc_ehci_resume(struct device *dev)
  	struct platform_device *pdev = to_platform_device(dev);
  	struct usb_hcd *hcd = platform_get_drvdata(pdev);
  	struct ehci_hcd *ehci = hcd_to_ehci(hcd);
@@ -561,7 +481,7 @@ index ab6351d..ca31dc6 100644
  
  	dbg("%s pdev=0x%p  pdata=0x%p  ehci=0x%p  hcd=0x%p\n",
  	    __FUNCTION__, pdev, pdata, ehci, hcd);
-@@ -322,7 +322,7 @@ static int lpc_ehci_resume(struct device *dev)
+@@ -299,7 +322,7 @@ static int lpc_ehci_resume(struct device *dev)
  	ehci_writel(ehci, tmp, &ehci->regs->command);
  
  	/* board vbus power */
@@ -570,7 +490,7 @@ index ab6351d..ca31dc6 100644
  
  
  	usb_hcd_resume_root_hub(hcd);
-@@ -332,17 +332,16 @@ static int lpc_ehci_resume(struct device *dev)
+@@ -309,17 +332,16 @@ static int lpc_ehci_resume(struct device *dev)
  #endif				/* CONFIG_USB_OTG */
  /**
   * FIXME: This should get into a common header
@@ -591,14 +511,13 @@ index ab6351d..ca31dc6 100644
  	/* Bring PHY to low power state */
  	USB_DEV_PORTSC1 |= USBPRTS_PLPSCD;
  	/* Bring PLL to low power state */
-@@ -353,16 +352,11 @@ static int lpc31xx_ehci_suspend(struct platform_device *pdev, pm_message_t state
+@@ -330,15 +352,11 @@ static int lpc31xx_ehci_suspend(struct platform_device *pdev, pm_message_t state
  	return 0;
  }
  
 -/* Macros to compute the bank based on EVENT_T */
 -#define EVT_GET_BANK(evt)	(((evt) >> 5) & 0x3)
 -#define EVT_usb_atx_pll_lock	0x79
--#define EVRT_RSR(bank)       __REG (EVTR_PHYS + 0xD20 + ((bank) << 2))
 -
 -static int lpc31xx_ehci_resume(struct platform_device * pdev)
 +static int lpc313x_ehci_resume(struct platform_device * pdev)
@@ -611,7 +530,7 @@ index ab6351d..ca31dc6 100644
  	int tout = 100;
  
  	/* Turn on IP Clock */
-@@ -377,7 +371,7 @@ static int lpc31xx_ehci_resume(struct platform_device * pdev)
+@@ -353,7 +371,7 @@ static int lpc31xx_ehci_resume(struct platform_device * pdev)
  	}
  	/* Bring PHY to active state */
  	USB_DEV_PORTSC1 &= ~USBPRTS_PLPSCD;
@@ -620,7 +539,7 @@ index ab6351d..ca31dc6 100644
  	enable_irq(IRQ_VBUS_OVRC);
  #endif
  	return 0;
-@@ -394,8 +388,8 @@ MODULE_DEVICE_TABLE(of, ehci_lpc_of_match);
+@@ -370,8 +388,8 @@ MODULE_DEVICE_TABLE(of, ehci_lpc_of_match);
  static struct platform_driver ehci_lpc_driver = {
  	.probe = lpc_ehci_probe,
  	.remove = lpc_ehci_remove,
