@@ -16,6 +16,7 @@ config SND_LPC315X_SOC
 
 config SND_LPC31XX_SOC_I2S
         bool
+        select SND_SOC_DMAENGINE_PCM
 
 config SND_EA3131_SOC_I2S_UDA1380
         bool "EA3131 SoC Audio for the UDA1380 CODEC using I2S/I2C"
@@ -45,8 +46,6 @@ config SND_USE_EA3131
         depends on SND_LPC31XX_SOC
 	select SND_EA3131_SOC_I2S_UDA1380
 	select SND_I2C1_CHANNEL_UDA1380
-	select SND_I2S_RX1_MASTER
-	select SND_I2S_TX1_MASTER
 	select SND_CODEC_FS256
         help
           Say Y to configuration audio for the EA3131 board. The EA3131
@@ -58,8 +57,6 @@ config SND_USE_EA3152
 	depends on SND_LPC315X_SOC
 	select SND_LPC315X_SOC_I2S_LPC315X_CODEC
 	select SND_I2C1_CHANNEL_LPC315X_CODEC
-	select SND_I2S_RX1_MASTER
-	select SND_I2S_TX1_MASTER
 	select SND_CODEC_FS128
 	help
 		Say Y to configuration audio for the EA3152 board. The EA3152
@@ -79,58 +76,6 @@ config SND_I2C1_CHANNEL_LPC315X_CODEC
 	help
 	  Say Y here to use the I2C1 channel to communicate with the
 	  Analog Die Audio CODEC. Not selecting this option will use I2C0.
-
-choice
-	prompt "I2S RX channel configuration"
-	depends on SND_LPC31XX_SOC_I2S
-	help
-	  This menu selects the I2S RX (record) channel configurations
-
-	config SND_I2S_RX0_MASTER
-	bool "I2S RX0 master mode"
-	help
-	  Select this option to only used the I2S RX0 channel for
-	  audio record in master mode.
-
-	config SND_I2S_RX1_MASTER
-	bool "I2S RX1 master mode"
-	help
-	  Select this option to only used the I2S RX1 channel for
-	  audio record in master mode.
-
-	config SND_I2S_RX0_SLAVE
-	bool "I2S RX0 slave mode"
-	help
-	  Select this option to only used the I2S RX0 channel for
-	  audio record in slave mode.
-
-	config SND_I2S_RX1_SLAVE
-	bool "I2S RX1 slave mode"
-	help
-	  Select this option to only used the I2S RX1 channel for
-	  audio record in slave mode.
-
-endchoice
-
-choice
-	prompt "I2S TX channel configuration"
-	depends on SND_LPC31XX_SOC_I2S
-	help
-	  This menu selects the I2S TX (playback) channel configurations
-
-	config SND_I2S_TX0_MASTER
-	bool "I2S TX0 master mode"
-	help
-	  Select this option to only used the I2S TX0 channel for
-	  audio playback in master mode.
-
-	config SND_I2S_TX1_MASTER
-	bool "I2S TX1 master mode"
-	help
-	  Select this option to only used the I2S TX1 channel for
-	  audio record in playback mode.
-
-endchoice
 
 choice
 	prompt "WS clock divider"

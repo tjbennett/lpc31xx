@@ -274,6 +274,7 @@ static inline void snd_soc_dai_set_dma_data(struct snd_soc_dai *dai,
 					    const struct snd_pcm_substream *ss,
 					    void *data)
 {
+printk("JDS setting dma_data %p\n", data);
 	if (ss->stream == SNDRV_PCM_STREAM_PLAYBACK)
 		dai->playback_dma_data = data;
 	else

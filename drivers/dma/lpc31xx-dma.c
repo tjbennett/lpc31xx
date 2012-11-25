@@ -28,6 +28,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
+#include <linux/io.h>
 
 #include <mach/dma.h>
 #include <mach/clock.h>
@@ -38,17 +39,17 @@ struct lpc31xx_dma_engine;
 /***********************************************************************
  * DMA register definitions
  **********************************************************************/
-#define DMACH_SRC_ADDR(ch)    __REG (DMA_PHYS + ((ch) << 5) + 0x00)
-#define DMACH_DST_ADDR(ch)    __REG (DMA_PHYS + ((ch) << 5) + 0x04)
-#define DMACH_LEN(ch)         __REG (DMA_PHYS + ((ch) << 5) + 0x08)
-#define DMACH_CFG(ch)         __REG (DMA_PHYS + ((ch) << 5) + 0x0C)
-#define DMACH_EN(ch)          __REG (DMA_PHYS + ((ch) << 5) + 0x10)
-#define DMACH_TCNT(ch)        __REG (DMA_PHYS + ((ch) << 5) + 0x1C)
-#define DMACH_ALT_EN          __REG (DMA_PHYS + 0x400)
-#define DMACH_IRQ_STATUS      __REG (DMA_PHYS + 0x404)
-#define DMACH_IRQ_MASK        __REG (DMA_PHYS + 0x408)
-#define DMACH_ALT_PHYS(ch)    (DMA_PHYS + 0x200 + ((ch) << 4))
-#define DMACH_SOFT_INT_PHYS   (DMA_PHYS + 0x40C )
+#define DMACH_SRC_ADDR(edmac)		(edmac->edma->regs + (edmac->number << 5) + 0x00)
+#define DMACH_DST_ADDR(edmac)		(edmac->edma->regs + (edmac->number << 5) + 0x04)
+#define DMACH_LEN(edmac)		(edmac->edma->regs + (edmac->number << 5) + 0x08)
+#define DMACH_CFG(edmac)		(edmac->edma->regs + (edmac->number << 5) + 0x0C)
+#define DMACH_EN(edmac)			(edmac->edma->regs + (edmac->number << 5) + 0x10)
+#define DMACH_TCNT(edmac)		(edmac->edma->regs + (edmac->number << 5) + 0x1C)
+#define DMACH_ALT_EN(edma)		(edma->regs + 0x400)
+#define DMACH_IRQ_STATUS(edma)		(edma->regs + 0x404)
+#define DMACH_IRQ_MASK(edma)		(edma->regs + 0x408)
+#define DMACH_ALT_PHYS(edmac)		(edmac->edma->regs + 0x200 + (edmac->number << 4))
+#define DMACH_SOFT_INT_PHYS(edma)	(edma->regs + 0x40C )
 
 /***********************************************************************
 * Channel CONFIGURATION register defines
@@ -119,6 +120,7 @@ struct lpc31xx_dma_engine;
 struct lpc31xx_dma_desc {
 	uint32_t src_addr;
 	uint32_t dst_addr;
+	uint32_t cfg;
 	size_t size;
 	bool complete;
 	struct dma_async_tx_descriptor txd;
@@ -162,7 +164,6 @@ struct lpc31xx_dma_chan {
 	struct dma_chan chan;
 	int number;
 	const struct lpc31xx_dma_engine	*edma;
-	void __iomem *regs;
 	struct tasklet_struct tasklet;
 	unsigned long flags;
 /* Channel is configured for cyclic transfers */
@@ -190,6 +191,8 @@ struct lpc31xx_dma_engine {
 
 	struct lpc31xx_dma_chan	channels[DMA_MAX_CHANNELS];
 	int irq;
+	void __iomem *regs;
+	struct resource *mem;
 };
 
 static inline struct device *chan2dev(struct lpc31xx_dma_chan *edmac)
@@ -311,66 +314,52 @@ static bool lpc31xx_dma_advance_active(struct lpc31xx_dma_chan *edmac)
  * M2P DMA implementation
  */
 
-static void m2p_set_control(struct lpc31xx_dma_chan *edmac, uint32_t control)
-{
-	printk("jds - m2p_set_control\n");
-#if 0
-	writel(control, edmac->regs + M2P_CONTROL);
-	/*
-	 * LPC31xx User's Guide states that we must perform a dummy read after
-	 * write to the control register.
-	 */
-	readl(edmac->regs + M2P_CONTROL);
-#endif
-}
-
 static int m2p_hw_setup(struct lpc31xx_dma_chan *edmac)
 {
 	struct lpc31xx_dma_data *data = edmac->chan.private;
 	uint32_t control;
 
 	printk("jds - m2p_hw_setup\n");
-#if 0
-	writel(data->port & 0xf, edmac->regs + M2P_PPALLOC);
 
-	control = M2P_CONTROL_CH_ERROR_INT | M2P_CONTROL_ICE
-		| M2P_CONTROL_ENABLE;
-	m2p_set_control(edmac, control);
-#endif
+	//writel(data->port & 0xf, edmac->regs + M2P_PPALLOC);
+
+	//control = M2P_CONTROL_CH_ERROR_INT | M2P_CONTROL_ICE
+	//	| M2P_CONTROL_ENABLE;
+	//m2p_set_control(edmac, control);
+
 	return 0;
 }
 
 static inline uint32_t m2p_channel_state(struct lpc31xx_dma_chan *edmac)
 {
 	printk("jds - m2p_channel_state\n");
-#if 0
-	return (readl(edmac->regs + M2P_STATUS) >> 4) & 0x3;
-#endif
+
+	//return (readl(edmac->regs + M2P_STATUS) >> 4) & 0x3;
+	return 0;
 }
 
 static void m2p_hw_shutdown(struct lpc31xx_dma_chan *edmac)
 {
 	uint32_t control;
-	printk("jds - m2p_channel_state\n");
-#if 0
-	control = readl(edmac->regs + M2P_CONTROL);
-	control &= ~(M2P_CONTROL_STALLINT | M2P_CONTROL_NFBINT);
-	m2p_set_control(edmac, control);
+	printk("jds - m2p_channel_stutdown\n");
 
-	while (m2p_channel_state(edmac) >= M2P_STATE_ON)
-		cpu_relax();
+	//control = readl(edmac->regs + M2P_CONTROL);
+	//control &= ~(M2P_CONTROL_STALLINT | M2P_CONTROL_NFBINT);
+	//m2p_set_control(edmac, control);
 
-	m2p_set_control(edmac, 0);
+	//while (m2p_channel_state(edmac) >= M2P_STATE_ON)
+	//	cpu_relax();
 
-	while (m2p_channel_state(edmac) == M2P_STATE_STALL)
-		cpu_relax();
-#endif
+	//m2p_set_control(edmac, 0);
+
+	//while (m2p_channel_state(edmac) == M2P_STATE_STALL)
+	//	cpu_relax();
+
 }
 
 static void m2p_fill_desc(struct lpc31xx_dma_chan *edmac)
 {
 	struct lpc31xx_dma_desc *desc;
-	uint32_t bus_addr;
 
 	printk("jds - m2p_fill_desc\n");
 	desc = lpc31xx_dma_get_active(edmac);
@@ -378,47 +367,24 @@ static void m2p_fill_desc(struct lpc31xx_dma_chan *edmac)
 		dev_warn(chan2dev(edmac), "M2P: empty descriptor list\n");
 		return;
 	}
-#if 0
-	if (lpc31xx_dma_chan_direction(&edmac->chan) == DMA_MEM_TO_DEV)
-		bus_addr = desc->src_addr;
-	else
-		bus_addr = desc->dst_addr;
-
-	if (edmac->buffer == 0) {
-		writel(desc->size, edmac->regs + M2P_MAXCNT0);
-		writel(bus_addr, edmac->regs + M2P_BASE0);
-	} else {
-		writel(desc->size, edmac->regs + M2P_MAXCNT1);
-		writel(bus_addr, edmac->regs + M2P_BASE1);
-	}
-#endif
-	edmac->buffer ^= 1;
+	__raw_writel(desc->src_addr, DMACH_SRC_ADDR(edmac));
+	__raw_writel(desc->dst_addr, DMACH_DST_ADDR(edmac));
+	__raw_writel(desc->size, DMACH_LEN(edmac));
+	__raw_writel(desc->cfg, DMACH_CFG(edmac));
 }
 
 static void m2p_hw_submit(struct lpc31xx_dma_chan *edmac)
 {
 	printk("jds - m2p_hw_submit\n");
-#if 0
-	uint32_t control = readl(edmac->regs + M2P_CONTROL);
 
 	m2p_fill_desc(edmac);
-	control |= M2P_CONTROL_STALLINT;
-
-	if (lpc31xx_dma_advance_active(edmac)) {
-		m2p_fill_desc(edmac);
-		control |= M2P_CONTROL_NFBINT;
-	}
-
-	m2p_set_control(edmac, control);
-#endif
 }
 
 static int m2p_hw_interrupt(struct lpc31xx_dma_chan *edmac)
 {
 	printk("jds - m2p_hw_interrupt\n");
-#if 0
+#ifdef JDS
 	uint32_t irq_status = readl(edmac->regs + M2P_INTERRUPT);
-	uint32_t control;
 
 	if (irq_status & M2P_INTERRUPT_ERROR) {
 		struct lpc31xx_dma_desc *desc = lpc31xx_dma_get_active(edmac);
@@ -1142,6 +1108,7 @@ static void lpc31xx_dma_issue_pending(struct dma_chan *chan)
 
 static int __init lpc31xx_dma_probe(struct platform_device *pdev)
 {
+	struct resource *res;
 	struct lpc31xx_dma_engine *edma;
 	int ret, i;
 
@@ -1187,27 +1154,48 @@ static int __init lpc31xx_dma_probe(struct platform_device *pdev)
 	edma->dma_dev.device_control = lpc31xx_dma_control;
 	edma->dma_dev.device_issue_pending = lpc31xx_dma_issue_pending;
 
-	platform_set_drvdata(pdev, edma);
-
-	ret = dma_async_device_register(&edma->dma_dev);
-	if (ret) {
-		dev_err(&pdev->dev, "unable to register\n");
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		ret = -ENODEV;
 		goto err_init;
+	}
+
+	edma->mem = request_mem_region(res->start, resource_size(res), pdev->name);
+	edma->regs = ioremap(res->start, resource_size(res));
+	if (!edma->regs) {
+		ret = -ENXIO;
+		goto fail_release_mem;
 	}
 
 	edma->irq = platform_get_irq(pdev, 0);
 	if (edma->irq < 0) {
 		dev_err(&pdev->dev, "failed to get irq resources\n");
-		goto err_init;
+		goto fail_release_unmap;
 	}
 	dma_irq_mask = 0xFFFFFFFF;
-	DMACH_IRQ_MASK = dma_irq_mask;
+	__raw_writel(dma_irq_mask, DMACH_IRQ_MASK(edma));
 	ret = request_irq (edma->irq, lpc31xx_dma_irq_handler, 0, "DMAC", edma);
-	if (ret)
-		printk (KERN_ERR "request_irq() returned error %d\n", ret);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to get irq resources\n");
+		goto fail_release_unmap;
+	}
+
+	platform_set_drvdata(pdev, edma);
+
+	ret = dma_async_device_register(&edma->dma_dev);
+	if (ret) {
+		dev_err(&pdev->dev, "unable to register\n");
+		goto fail_release_irq;
+	}
 
 	return 0;
 
+fail_release_irq:
+	free_irq(edma->irq, edma);
+fail_release_unmap:
+	iounmap(edma->regs);
+fail_release_mem:
+	release_mem_region(res->start, resource_size(res));
 err_init:
 	kfree(edma);
 	printk("JDS - lpc31xx_dma_probe err %d\n", ret);

@@ -23,7 +23,5 @@
 #ifndef __SOUND_SOC_LPC31XX_PCM_H
 #define __SOUND_SOC_LPC31XX_PCM_H
 
-extern struct snd_soc_platform_driver lpc31xx_asoc_platform;
-
 #endif
 

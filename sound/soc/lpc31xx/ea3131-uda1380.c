@@ -30,6 +30,7 @@
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 #include <linux/i2c.h>
+#include <linux/slab.h>
 
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -147,8 +148,9 @@ static struct snd_soc_dai_link ea3131_uda1380_dai[] = {
 	},
 };
 
-static struct snd_soc_card snd_soc_machine_ea3131 = {
+static struct snd_soc_card card_ea3131_template = {
 	.name = "lpc31xx-i2s-uda1380",
+	.owner = THIS_MODULE,
 	.dai_link = &ea3131_uda1380_dai[0],
 	.num_links = ARRAY_SIZE(ea3131_uda1380_dai),
 };
@@ -163,7 +165,7 @@ static struct platform_device *ea3131_snd_device;
 
 static int __devinit ea3131_asoc_probe(struct platform_device *pdev)
 {
-	struct platform_device *snd_dev;
+	struct snd_soc_card* card;
 	int ret = 0;
 	struct i2c_adapter *adapter;
 
@@ -171,12 +173,6 @@ static int __devinit ea3131_asoc_probe(struct platform_device *pdev)
 	 * Enable CODEC clock first or I2C will fail to the CODEC
 	 */
 	lpc31xx_main_clk_rate(48000);
-
-	snd_dev = platform_device_alloc("soc-audio", -1);
-	if (!snd_dev) {
-		dev_err(&pdev->dev, "failed to alloc soc-audio device\n");
-		return -ENOMEM;
-	}
 
 	ea3131_uda1380_dai[0].codec_of_node = of_parse_phandle(
 			pdev->dev.of_node, "audio-codec", 0);
@@ -187,16 +183,27 @@ static int __devinit ea3131_asoc_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	ea3131_uda1380_dai[0].cpu_dai_of_node = of_parse_phandle(
+	ea3131_uda1380_dai[0].cpu_of_node = of_parse_phandle(
 			pdev->dev.of_node, "i2s-controller", 0);
-	if (!ea3131_uda1380_dai[0].cpu_dai_of_node) {
+	if (!ea3131_uda1380_dai[0].cpu_of_node) {
 		dev_err(&pdev->dev,
 			"Property 'i2s-controller' missing or invalid\n");
 		ret = -EINVAL;
 		goto err;
 	}
 
-	platform_set_drvdata(snd_dev, &snd_soc_machine_ea3131);
+	card = kzalloc(sizeof(card_ea3131_template), GFP_KERNEL);
+	*card = card_ea3131_template;
+
+	card->dev = &pdev->dev;
+	ret = snd_soc_register_card(card);
+	if (ret) {
+		dev_err(&pdev->dev, "snd_soc_register_card failed %d\n", ret);
+		return ret;
+	}
+
+	platform_set_drvdata(pdev, card);
+#ifdef JDS
 
 	ret = platform_device_add(snd_dev);
 	if (ret) {
@@ -205,6 +212,7 @@ static int __devinit ea3131_asoc_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, snd_dev);
+#endif
 	return 0;
 
 err:
@@ -213,9 +221,12 @@ err:
 
 static int __devexit ea3131_asoc_remove(struct platform_device *pdev)
 {
-	platform_device_unregister(ea3131_snd_device);
+	struct snd_soc_card* card;
+
+	card = platform_get_drvdata(pdev);
+	snd_soc_unregister_card(card);
+
 	lpc31xx_main_clk_rate(0);
-	ea3131_snd_device = NULL;
 	return 0;
 }
 
