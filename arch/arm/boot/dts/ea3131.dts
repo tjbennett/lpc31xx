@@ -42,6 +42,9 @@
 		uda1380: codec@1a {
 			compatible = "nxp,uda1380";
 			reg = <0x1a>;
+			/* power-gpio = <&gpio 0x59 0>; */
+			/* reset-gpio = <&gpio 0x51 0>; */
+			/* dac-clk = "sysclk"; */
 		};
 	};
 	spi@15002000 {
@@ -64,11 +67,15 @@
 			gpio-pendown = <&gpio_gpio 4 0>;
 		};
 	};
-	sound {
+	i2s@16000000 {
+		i2s@1 {
+			receive-slave;
+		};
+	};
+	sound@1 {
 		compatible = "ea,ea3131-uda1380";
 		audio-codec = <&uda1380>;
-		i2s-controller = <&i2s>;
-		i2s-channel = <1>;
+		i2s-controller = <&i2s1>;
 	};
 	nand@17000800 {
 		bank-width = <2>;

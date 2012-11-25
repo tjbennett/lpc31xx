@@ -196,10 +196,22 @@
 		#address-cells = <1>;
 		#size-cells = <0>;				
 	};
-	i2s: i2s@16000000 {
+	i2s@16000000 {
+		#address-cells = <2>;
+		#size-cells = <0>;
 		compatible = "nxp,lpc31xx-i2s";
 		reg = <0x16000000 0x1000>;
-		interrupts = <13 14 15 16>;
+		
+		i2s0:i2s@0 {
+			reg = <0x80 0x180>;
+			interrupts = <13 15>;
+			/*receive-slave;*/ /* default is master */
+		};
+		i2s1:i2s@1 {
+			reg = <0x100 0x200>;
+			interrupts = <14 16>;
+			/*receive-slave;*/ /* default is master */
+		};
 	};
 	dma@17000000 {
 		compatible = "nxp,lpc31xx-dma";

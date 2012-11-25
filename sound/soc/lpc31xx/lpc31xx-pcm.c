@@ -29,10 +29,266 @@
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
+#include <sound/dmaengine_pcm.h>
 
 #include <mach/dma.h>
 #include <mach/hardware.h>
 #include "lpc31xx-pcm.h"
+
+#define SND_NAME "lpc31xx-pcm-audio"
+static u64 lpc31xx_pcm_dmamask = DMA_BIT_MASK(32);
+
+#if defined (CONFIG_SND_USE_DMA_LINKLIST)
+/* The DMA controller in the LPC31XX has limited interrupt support
+   for DMA. A timer is used instead to update the current buffer
+   position */
+#define MIN_PERIODS 8
+#define MAX_PERIODS 32
+#define DMA_LIST_SIZE (MAX_PERIODS * sizeof(dma_sg_ll_t))
+#define MIN_BYTES_PERIOD 2048
+#define MAX_BYTES_PERIOD 4096
+#define MINTICKINC ((MIN_BYTES_PERIOD * HZ * (MIN_PERIODS / 4)) / (48000 * 2 * 2))
+
+#else
+#define MIN_PERIODS 2
+#define MAX_PERIODS 2
+#define MIN_BYTES_PERIOD (32 * 1024)
+#define MAX_BYTES_PERIOD (32 * 1024)
+#endif
+
+
+/*
+ * ASoC platform driver
+ */
+static struct snd_pcm_hardware snd_lpc31xx_hardware = {
+	.info = (SNDRV_PCM_INFO_MMAP |
+		 SNDRV_PCM_INFO_MMAP_VALID |
+		 SNDRV_PCM_INFO_INTERLEAVED |
+		 SNDRV_PCM_INFO_RESUME |
+		 SNDRV_PCM_INFO_BLOCK_TRANSFER),
+	.formats = (SND_SOC_DAIFMT_I2S),
+	.period_bytes_min = MIN_BYTES_PERIOD,
+	.period_bytes_max = MAX_BYTES_PERIOD,
+	.periods_min = MIN_PERIODS,
+	.periods_max = MAX_PERIODS,
+	.buffer_bytes_max = (MAX_PERIODS * MAX_BYTES_PERIOD)
+};
+
+
+static int lpc31xx_pcm_allocate_dma_buffer(struct snd_pcm *pcm, int stream)
+{
+	struct snd_pcm_substream *substream = pcm->streams[stream].substream;
+	struct snd_dma_buffer *dmabuf = &substream->dma_buffer;
+	size_t size = snd_lpc31xx_hardware.buffer_bytes_max;
+
+	dmabuf->dev.type = SNDRV_DMA_TYPE_DEV;
+	dmabuf->dev.dev = pcm->card->dev;
+	dmabuf->private_data = NULL;
+	dmabuf->area = dma_alloc_coherent(pcm->card->dev, size,
+					  &dmabuf->addr, GFP_KERNEL);
+
+	pr_debug("lpc31xx-pcm:"
+		"preallocate_dma_buffer: area=%p, addr=%p, size=%d\n",
+		(void *) dmabuf->area,
+		(void *) dmabuf->addr,
+		size);
+
+	if (!dmabuf->area)
+		return -ENOMEM;
+
+	dmabuf->bytes = size;
+
+	return 0;
+}
+
+static int lpc31xx_pcm_new(struct snd_soc_pcm_runtime *rtd)
+{
+	struct snd_card *card = rtd->card->snd_card;
+	struct snd_soc_dai *dai = rtd->cpu_dai;
+	struct snd_pcm *pcm = rtd->pcm;
+	int ret = 0;
+
+	if (!card->dev->dma_mask)
+		card->dev->dma_mask = &lpc31xx_pcm_dmamask;
+	if (!card->dev->coherent_dma_mask)
+		card->dev->coherent_dma_mask = 0xffffffff;
+
+	if (dai->driver->playback.channels_min) {
+		ret = lpc31xx_pcm_allocate_dma_buffer(
+			  pcm, SNDRV_PCM_STREAM_PLAYBACK);
+		if (ret)
+			goto out;
+	}
+
+	if (dai->driver->capture.channels_min) {
+		pr_debug("%s: Allocating PCM capture DMA buffer\n", SND_NAME);
+		ret = lpc31xx_pcm_allocate_dma_buffer(
+			  pcm, SNDRV_PCM_STREAM_CAPTURE);
+		if (ret)
+			goto out;
+	}
+
+out:
+	return ret;
+}
+
+static void lpc31xx_pcm_free(struct snd_pcm *pcm)
+{
+	struct snd_pcm_substream *substream;
+	struct snd_dma_buffer *buf;
+	int stream;
+
+	for (stream = 0; stream < 2; stream++) {
+		substream = pcm->streams[stream].substream;
+		if (substream == NULL)
+			continue;
+
+		buf = &substream->dma_buffer;
+		if (!buf->area)
+			continue;
+
+		dma_free_coherent(pcm->card->dev, buf->bytes,
+				  buf->area, buf->addr);
+
+		buf->area = NULL;
+	}
+}
+
+static int snd_lpc31xx_pcm_mmap(struct snd_pcm_substream *substream,
+			    struct vm_area_struct *vma)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+
+	return dma_mmap_writecombine(substream->pcm->card->dev, vma,
+				     runtime->dma_area,
+				     runtime->dma_addr,
+				     runtime->dma_bytes);
+}
+
+static bool filter(struct dma_chan *chan, void *param)
+{
+	chan->private = param;
+	return true;
+}
+
+static int snd_lpc31xx_pcm_hw_params(struct snd_pcm_substream *substream,
+				struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct dma_chan *chan = snd_dmaengine_pcm_get_chan(substream);
+	struct lpc31xx_pcm_dma_params *dma_params;
+	struct dma_slave_config slave_config;
+	int ret;
+
+	printk("JDS1 %p %p %p\n", substream, rtd, chan);
+	dma_params = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+
+	printk("JDS2 %p\n", dma_params);
+	ret = snd_hwparams_to_dma_slave_config(substream, params, &slave_config);
+	if (ret)
+		return ret;
+
+	printk("JDS3\n");
+	slave_config.device_fc = false;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		slave_config.dst_addr = dma_params->dma_addr;
+		slave_config.dst_maxburst = dma_params->burstsize;
+	} else {
+		slave_config.src_addr = dma_params->dma_addr;
+		slave_config.src_maxburst = dma_params->burstsize;
+	}
+
+	printk("JDS4\n");
+	ret = dmaengine_slave_config(chan, &slave_config);
+	if (ret)
+		return ret;
+
+	snd_pcm_set_runtime_buffer(substream, &substream->dma_buffer);
+
+	return 0;
+}
+
+static int snd_lpc31xx_open(struct snd_pcm_substream *substream)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct lpc31xx_pcm_dma_params *dma_params;
+	struct lpc31xx_dma_data *dma_data;
+	int ret;
+
+	snd_soc_set_runtime_hwparams(substream, &snd_lpc31xx_hardware);
+
+	dma_params = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
+
+	dma_data = kzalloc(sizeof(*dma_data), GFP_KERNEL);
+#ifdef FIXME
+	dma_data->priority = DMA_PRIO_HIGH;
+	dma_data->dma_request = dma_params->dma;
+#endif
+
+	ret = snd_dmaengine_pcm_open(substream, filter, dma_data);
+	if (ret) {
+		kfree(dma_data);
+		return 0;
+	}
+
+	printk("JDS pcm_set_data %p %p\n", substream, dma_data);
+	snd_dmaengine_pcm_set_data(substream, dma_data);
+
+	return 0;
+}
+
+static int snd_lpc31xx_close(struct snd_pcm_substream *substream)
+{
+	struct lpc31xx_dma_data *dma_data = snd_dmaengine_pcm_get_data(substream);
+
+	snd_dmaengine_pcm_close(substream);
+	kfree(dma_data);
+
+	return 0;
+}
+
+static struct snd_pcm_ops lpc31xx_pcm_ops = {
+	.open		= snd_lpc31xx_open,
+	.close		= snd_lpc31xx_close,
+	.ioctl		= snd_pcm_lib_ioctl,
+	.hw_params	= snd_lpc31xx_pcm_hw_params,
+	.trigger	= snd_dmaengine_pcm_trigger,
+	.pointer	= snd_dmaengine_pcm_pointer_no_residue,
+	.mmap		= snd_lpc31xx_pcm_mmap,
+};
+
+static struct snd_soc_platform_driver lpc31xx_soc_platform = {
+	.ops		= &lpc31xx_pcm_ops,
+	.pcm_new	= lpc31xx_pcm_new,
+	.pcm_free	= lpc31xx_pcm_free,
+};
+
+static int __devinit lpc31xx_soc_platform_probe(struct platform_device *pdev)
+{
+	return snd_soc_register_platform(&pdev->dev, &lpc31xx_soc_platform);
+}
+
+static int __devexit lpc31xx_soc_platform_remove(struct platform_device *pdev)
+{
+	snd_soc_unregister_platform(&pdev->dev);
+	return 0;
+}
+
+static struct platform_driver lpc31xx_pcm_driver = {
+	.driver = {
+			.name = "lpc31xx-pcm-audio",
+			.owner = THIS_MODULE,
+	},
+	.probe = lpc31xx_soc_platform_probe,
+	.remove = __devexit_p(lpc31xx_soc_platform_remove),
+};
+
+module_platform_driver(lpc31xx_pcm_driver);
+MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:lpc31xx-pcm-audio");
+
+#ifdef OLD_CODE
 
 #define SND_NAME "lpc31xx-pcm-audio"
 static u64 lpc31xx_pcm_dmamask = DMA_BIT_MASK(32);
@@ -570,3 +826,5 @@ MODULE_AUTHOR("Kevin Wells <kevin.wells@nxp.com>");
 MODULE_DESCRIPTION("NXP LPC31XX PCM module");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("platform:lpc323x-audio");
+
+#endif
