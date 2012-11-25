@@ -1,6 +1,6 @@
 Version: 1
-Previous: c89d0b3a77e18de1c1625e438cc0a2886b3990ce
-Head: eb73999a9bf6b9199c1a5ccfdbfac5447345ad64
+Previous: f5e77fab1b5408a4eae7443f3c6de9f4c690cc38
+Head: b10ef23aa503d9e3c4c6f68b3908756970e51897
 Applied:
   0001-base-patches-minus-8250.patch: 50f442426e2916d3bc2be27a95125912b8f48494
   0002-Default-configs-for-lpc31xx-dev-boards.patch: 13eccb55394694f2edd021fe944f23e2a4f2422a
@@ -41,7 +41,6 @@ Applied:
   0037-spi-temp.patch: d3ac242ee09abd97ff6564ba6c511ab7c0b1bba9
   0038-spi-rewrite.patch: 97d54961cb47fb9f4076875545ff25aa49f9df0c
   0039-usb-rework.patch: e92f4363f7935dc3b0e81fe73fd8409f314da1d9
-  0040-i2s.patch: a72682666d695fff2a8c40b6c493b4b200be30cf
-  refresh-temp: eb73999a9bf6b9199c1a5ccfdbfac5447345ad64
+  0040-i2s.patch: b10ef23aa503d9e3c4c6f68b3908756970e51897
 Unapplied:
 Hidden:
