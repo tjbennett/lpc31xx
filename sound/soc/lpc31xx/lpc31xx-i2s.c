@@ -39,140 +39,55 @@
 #include <mach/registers.h>
 #include <mach/hardware.h>
 
-#include "lpc31xx-i2s-clocking.h"
 #include "lpc31xx-pcm.h"
 #include "lpc31xx-i2s.h"
 
-#define I2S_NAME "lpc31xx-i2s"
-
-/* All major audio rates are support and 16-bit I2S data is supported */
-#define LPC31XX_I2S_RATES \
-    (SNDRV_PCM_RATE_8000  | SNDRV_PCM_RATE_11025 | SNDRV_PCM_RATE_16000 | \
-     SNDRV_PCM_RATE_22050 | SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_44100 | \
-     SNDRV_PCM_RATE_48000)
-#define LPC31XX_I2S_FORMATS (SNDRV_PCM_FMTBIT_S16)
-
-#define CH_PLAY 0
-#define CH_REC  1
-
-/* Structure that keeps I2S direction data */
-struct lpc31xx_i2s_ch_info {
-	char *name;                 /* Name of this channel */
-	unsigned short ch_on;       /* Flag used to indicate if clocks are on */
-	unsigned short daifmt;
-	uint32_t ws_freq;
-	int i2s_ch;
-	enum i2s_supp_clks chclk;
-};
-
-/* Common I2S structure data */
-struct lpc31xx_i2s_info {
-	spinlock_t lock;
-	unsigned short initialized;
-	struct lpc31xx_i2s_ch_info ch_info[2];
-	uint32_t freq;
-};
-
-/* Common I2S structure data */
-static struct lpc31xx_i2s_info i2s_info =
-{
-	.lock = __SPIN_LOCK_UNLOCKED(i2s_info.lock),
-	.initialized = 0,
-	.ch_info = 
-	{
-		[0] =
-		{
-#if defined (CONFIG_SND_I2S_TX0_MASTER)
-			.name  = "i2s0_play",
-			.chclk = CLK_TX_0,
-			.i2s_ch = I2S_CH_TX0,
-#else
-			.name  = "i2s1_play",
-			.chclk = CLK_TX_1,
-			.i2s_ch = I2S_CH_TX1,
-#endif
-			.ch_on = 0,
-		},
-		[1] =
-		{
-#if defined (CONFIG_SND_I2S_RX0_MASTER)
-			.name  = "i2s0_mrec",
-			.chclk = CLK_RX_0,
-			.i2s_ch = I2S_CH_RX0,
-#endif
-#if defined (CONFIG_SND_I2S_RX1_MASTER)
-			.name  = "i2s1_mrec",
-			.chclk = CLK_RX_1,
-			.i2s_ch = I2S_CH_RX1,
-#endif
-#if defined (SND_I2S_RX0_SLAVE)
-			.name  = "i2s0_srec",
-			/* Not supported yet, generate an error */
-			.i2s_ch = I2S_CH_RX0,
-#error
-#endif
-#if defined (SND_I2S_RX1_SLAVE)
-			.name  = "i2s1_srec",
-			/* Not supported yet, generate an error */
-			.i2s_ch = I2S_CH_RX1,
-#error
-#endif
-			.ch_on = 0,
-		},
-	},
-};
+static struct resource *lpc31xx_mem = 0;
+static void __iomem *lpc31xx_regs = 0;
 
 static inline void
-lpc31xx_i2s_write(const struct lpc31xx_i2s_res_info *info, uint32_t reg, uint32_t value)
+lpc31xx_i2s_write(void __iomem *regs, uint32_t reg, uint32_t value)
 {
-	__raw_writel(value, info->regs + reg);
+	__raw_writel(value, regs + reg);
 }
 
 static inline uint32_t
-lpc31xx_i2s_read(const struct lpc31xx_i2s_res_info *info, uint32_t reg)
+lpc31xx_i2s_read(void __iomem *regs, uint32_t reg)
 {
 	uint32_t value;
-	value = __raw_readl(info->regs + reg);
+	value = __raw_readl(regs + reg);
 	return value;
-}
-
-static inline int lpc31xx_get_ch_dir(struct snd_pcm_substream *substream)
-{
-	int dir = CH_REC;
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		dir = CH_PLAY;
-	}
-
-	return dir;
 }
 
 static void lpc31xx_i2s_shutdown(struct snd_pcm_substream *substream,
 									struct snd_soc_dai *dai)
 {
-	int dir = lpc31xx_get_ch_dir(substream);
+	struct lpc31xx_i2s_channel *channel = snd_soc_dai_get_drvdata(dai);
+	struct lpc31xx_i2s_sub *sub;
 
-	if (i2s_info.ch_info[dir].ch_on == 0) {
+	sub = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK ? &channel->tx : &channel->rx);
+
+	if (sub->ch_on == 0) {
 		/* This channel is not enabled! */
-		pr_warning("%s: I2S channel is not on!\n", i2s_info.ch_info[dir].name);
+		pr_warning("%s: I2S channel is not on!\n", "fixme");
 		return;
 	}
 
 	/* Channel specific shutdown */
-	lpc31xx_chan_clk_enable(i2s_info.ch_info[dir].chclk, 0, 0);
-	i2s_info.ch_info[dir].ch_on = 0;
+	lpc31xx_chan_clk_enable(sub->chclk, 0, 0);
+	sub->ch_on = 0;
 
 	/* Can we shutdown I2S interface to save some power? */
-	if (i2s_info.ch_info[1 - dir].ch_on != 0) {
+	if (sub->ch_on != 0) {
 		/* Other channel is busy, exit without shutting down main clock */
 		return;
 	}
 
 	/* Safe to shut down */
-	if (i2s_info.initialized == 0) {
+	if (channel->initialized == 0) {
 		/* Nothing is enabled! */
 		pr_warning("I2S shutdown (%s) when nothing is enabled!\n",
-			i2s_info.ch_info[dir].name);
+				"fixme");
 		return;
 	}
 
@@ -180,70 +95,63 @@ static void lpc31xx_i2s_shutdown(struct snd_pcm_substream *substream,
 	cgu_clk_en_dis(CGU_SB_I2S_CFG_PCLK_ID, 0);
 	cgu_clk_en_dis(CGU_SB_EDGE_DET_PCLK_ID, 0);
 
-	i2s_info.initialized = 0;
+	channel->initialized = 0;
 }
 
-static int lpc31xx_i2s_startup(struct snd_pcm_substream *substream,
-								struct snd_soc_dai *dai)
+static int lpc31xx_i2s_startup(struct snd_pcm_substream *substream, struct snd_soc_dai *dai)
 {
-	struct lpc31xx_i2s_res_info *info = snd_soc_dai_get_drvdata(dai);
-	int dir = lpc31xx_get_ch_dir(substream);
+	struct lpc31xx_i2s_channel *channel = snd_soc_dai_get_drvdata(dai);
+	struct lpc31xx_i2s_sub *sub;
 
-	/* Select master/slave mode for RX channel */
-	if (dir == CH_REC) {
-#if defined (CONFIG_SND_I2S_RX0_SLAVE) | defined (CONFIG_SND_I2S_RX1_SLAVE)
-		lpc31xx_i2s_write(info, I2S_CFG_MUX_SETTINGS, 0);
-#endif
-#if defined (CONFIG_SND_I2S_RX0_MASTER)
-		lpc31xx_i2s_write(info, I2S_CFG_MUX_SETTINGS, I2S_RXO_SELECT_MASTER);
-#endif
-#if defined (CONFIG_SND_I2S_RX1_MASTER)
-		lpc31xx_i2s_write(info, I2S_CFG_MUX_SETTINGS, I2S_RX1_SELECT_MASTER);
-#endif
-	}
-
-	if (i2s_info.ch_info[dir].ch_on != 0) {
+	sub = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK ? &channel->tx : &channel->rx);
+	if (sub->ch_on != 0) {
 		/* This channel already enabled! */
-		pr_warning("%s: I2S channel is busy!\n", i2s_info.ch_info[dir].name);
+		pr_warning("%s: I2S channel is busy!\n", "fixme");
 		return -EBUSY;
 	}
 
 	/* Initialize I2S interface */
-	if (i2s_info.initialized == 0) {
+	if (channel->initialized == 0) {
 		/* Enable I2S register access clock */
 		cgu_clk_en_dis(CGU_SB_I2S_CFG_PCLK_ID, 1);
 		cgu_clk_en_dis(CGU_SB_EDGE_DET_PCLK_ID, 1);
 
-		i2s_info.initialized = 1;
+		channel->initialized = 1;
 	}
 
 	/* Channel specific init, ok to leave the clocks off for now */
-	i2s_info.ch_info[dir].ch_on = 1;
-	lpc31xx_chan_clk_enable(i2s_info.ch_info[dir].chclk, 0, 0);
+	sub->ch_on = 1;
+	lpc31xx_chan_clk_enable(sub->chclk, 0, 0);
 
 	/* Mask all interrupts for the I2S channel */
-	lpc31xx_i2s_write(info, I2S_CH_INT_MASK(i2s_info.ch_info[dir].i2s_ch), I2S_FIFO_ALL_MASK);
+	//lpc31xx_i2s_write(info, I2S_CH_INT_MASK(channel->dir_info[dir].i2s_ch), I2S_FIFO_ALL_MASK);
 
+	/* Tx/Rx DMA config */
+	snd_soc_dai_set_dma_data(dai, substream, &sub->dma_params);
 	return 0;
 }
 
 static int lpc31xx_i2s_set_dai_sysclk(struct snd_soc_dai *cpu_dai,
 				      int clk_id, unsigned int freq, int dir)
 {
+	struct lpc31xx_i2s_channel *channel = snd_soc_dai_get_drvdata(cpu_dai);
+
 	/* Will use in HW params later */
-//	i2s_info.ch_info[cpu_dai->id].ws_freq = freq;
-	i2s_info.ch_info[CH_REC].ws_freq = freq;
-	i2s_info.ch_info[CH_PLAY].ws_freq = freq;
+//	channel->dir_info[cpu_dai->id].ws_freq = freq;
+	channel->tx.ws_freq = freq;
+	channel->rx.ws_freq = freq;
 	return 0;
 }
 
 static int lpc31xx_i2s_set_dai_fmt(struct snd_soc_dai *cpu_dai,
 				   unsigned int fmt)
 {
+	struct lpc31xx_i2s_channel *channel = snd_soc_dai_get_drvdata(cpu_dai);
+
 	/* Will use in HW params later */
-//	i2s_info.ch_info[cpu_dai->id].daifmt = fmt;
-	i2s_info.ch_info[CH_REC].daifmt = fmt;
-	i2s_info.ch_info[CH_PLAY].daifmt = fmt;
+//	channel->dir_info[cpu_dai->id].daifmt = fmt;
+	channel->tx.daifmt = fmt;
+	channel->rx.daifmt = fmt;
 
 	return 0;
 }
@@ -263,51 +171,52 @@ static int lpc31xx_i2s_hw_params(struct snd_pcm_substream *substream,
 			         struct snd_pcm_hw_params *params,
 					 struct snd_soc_dai *dai)
 {
-	struct lpc31xx_i2s_res_info *info = snd_soc_dai_get_drvdata(dai);
-	int dir = lpc31xx_get_ch_dir(substream);
+	struct lpc31xx_i2s_channel *channel = snd_soc_dai_get_drvdata(dai);
+	struct lpc31xx_i2s_sub *sub;
 	uint32_t tmp;
+
+	sub = (substream->stream == SNDRV_PCM_STREAM_PLAYBACK ? &channel->tx : &channel->rx);
 
 	/* Setup the I2S data format */
 	tmp = 0;
-	switch (i2s_info.ch_info[dir].daifmt & SND_SOC_DAIFMT_FORMAT_MASK) {
+	switch (sub->daifmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 		case SND_SOC_DAIFMT_I2S:
-			spin_lock_irq(&i2s_info.lock);
-			tmp = lpc31xx_i2s_read(info, I2S_FORMAT_SETTINGS) &
-				~I2S_SET_FORMAT(i2s_info.ch_info[dir].i2s_ch,
+			spin_lock_irq(&channel->lock);
+			tmp = lpc31xx_i2s_read(lpc31xx_regs, I2S_FORMAT_SETTINGS) &
+				~I2S_SET_FORMAT(sub->i2s_ch,
 				I2S_FORMAT_MASK);
-			lpc31xx_i2s_write(info, I2S_FORMAT_SETTINGS, tmp | I2S_SET_FORMAT(i2s_info.ch_info[dir].i2s_ch,
+			lpc31xx_i2s_write(lpc31xx_regs, I2S_FORMAT_SETTINGS, tmp | I2S_SET_FORMAT(sub->i2s_ch,
 				I2S_FORMAT_I2S));
-			spin_unlock_irq(&i2s_info.lock);
+			spin_unlock_irq(&channel->lock);
 			break;
 
 		default:
-			pr_warning("%s: Unsupported audio data format\n",
-				i2s_info.ch_info[dir].name);
+			pr_warning("%s: Unsupported audio data format\n", "fixme");
 			return -EINVAL;
 	}
 
 #if defined (CONFIG_SND_DEBUG_VERBOSE)
-	pr_info("Desired clock rate : %d\n", i2s_info.ch_info[dir].ws_freq);
+	pr_info("Desired clock rate : %d\n", sub->ws_freq);
 	pr_info("Channels           : %d\n", params_channels(params));
-	pr_info("Data format        : %d\n", i2s_info.ch_info[dir].daifmt);
+	pr_info("Data format        : %d\n", sub->daifmt);
 #endif
 
 	/* The playback and record rates are shared, so just set the CODEC clock
 	   to the selected rate (will actually generate 256 * rate) */
-	i2s_info.freq = i2s_info.ch_info[dir].ws_freq;
-	if (lpc31xx_main_clk_rate(i2s_info.freq) == 0)
+	channel->freq = sub->ws_freq;
+	if (lpc31xx_main_clk_rate(channel->freq) == 0)
 	{
 		pr_warning("Unsupported audio data rate (%d)\n",
-			i2s_info.freq);
+			channel->freq);
 		return -EINVAL;
 	}
 
 	/* Now setup the selected channel clocks (WS and BCK) */
-	if (lpc31xx_chan_clk_enable(i2s_info.ch_info[dir].chclk, i2s_info.freq,
-		(i2s_info.freq * 32)) == 0)
+	if (lpc31xx_chan_clk_enable(sub->chclk, channel->freq,
+		(channel->freq * 32)) == 0)
 	{
 		pr_warning("Unsupported channel data rates (ws=%d, bck=%d)\n",
-			i2s_info.freq, (i2s_info.freq * 32));
+			channel->freq, (channel->freq * 32));
 		return -EINVAL;
 	}
 
@@ -331,6 +240,7 @@ static int lpc31xx_i2s_trigger(struct snd_pcm_substream *substream, int cmd, str
 		pr_warning("lpc31xx_i2s_triggers: Unsupported cmd: %d\n",
 				cmd);
 		ret = -EINVAL;
+		break;
 	}
 
 	return ret;
@@ -339,12 +249,14 @@ static int lpc31xx_i2s_trigger(struct snd_pcm_substream *substream, int cmd, str
 #ifdef CONFIG_PM
 static int lpc31xx_i2s_suspend(struct snd_soc_dai *cpu_dai)
 {
+	struct lpc31xx_i2s_channel *channel = snd_soc_dai_get_drvdata(cpu_dai);
+
 	/* Shutdown active clocks */
-	if (i2s_info.ch_info[CH_PLAY].ch_on != 0) {
-		lpc31xx_chan_clk_enable(i2s_info.ch_info[CH_PLAY].chclk, 0, 0);
+	if (channel->tx.ch_on != 0) {
+		lpc31xx_chan_clk_enable(channel->tx.chclk, 0, 0);
 	}
-	if (i2s_info.ch_info[CH_REC].ch_on != 0) {
-		lpc31xx_chan_clk_enable(i2s_info.ch_info[CH_REC].chclk, 0, 0);
+	if (channel->rx.ch_on != 0) {
+		lpc31xx_chan_clk_enable(channel->rx.chclk, 0, 0);
 	}
 
 	/* Disable I2S register access clock */
@@ -358,20 +270,22 @@ static int lpc31xx_i2s_suspend(struct snd_soc_dai *cpu_dai)
 
 static int lpc31xx_i2s_resume(struct snd_soc_dai *cpu_dai)
 {
+	struct lpc31xx_i2s_channel *channel = snd_soc_dai_get_drvdata(cpu_dai);
+
 	/* resume main clocks */
-	lpc31xx_main_clk_rate(i2s_info.freq);
+	lpc31xx_main_clk_rate(channel->freq);
 	/* Enable I2S register access clock */
 	cgu_clk_en_dis(CGU_SB_I2S_CFG_PCLK_ID, 1);
 	cgu_clk_en_dis(CGU_SB_EDGE_DET_PCLK_ID, 1);
 
 	/* resume active clocks */
-	if (i2s_info.ch_info[CH_PLAY].ch_on != 0) {
-		lpc31xx_chan_clk_enable(i2s_info.ch_info[CH_PLAY].chclk,
-		i2s_info.ch_info[CH_PLAY].ws_freq, (i2s_info.freq * 32));
+	if (channel->tx.ch_on != 0) {
+		lpc31xx_chan_clk_enable(channel->tx.chclk,
+		channel->tx.ws_freq, (channel->freq * 32));
 	}
-	if (i2s_info.ch_info[CH_REC].ch_on != 0) {
-		lpc31xx_chan_clk_enable(i2s_info.ch_info[CH_REC].chclk,
-		i2s_info.ch_info[CH_REC].ws_freq, (i2s_info.freq * 32));
+	if (channel->rx.ch_on != 0) {
+		lpc31xx_chan_clk_enable(channel->rx.chclk,
+		channel->rx.ws_freq, (channel->freq * 32));
 	}
 
 	return 0;
@@ -383,109 +297,158 @@ static int lpc31xx_i2s_resume(struct snd_soc_dai *cpu_dai)
 #endif
 
 static struct snd_soc_dai_ops lpc31xx_i2s_dai_ops = {
-		.startup = lpc31xx_i2s_startup,
-		.shutdown = lpc31xx_i2s_shutdown,
-		.trigger = lpc31xx_i2s_trigger,
-		.hw_params = lpc31xx_i2s_hw_params,
-		.set_sysclk = lpc31xx_i2s_set_dai_sysclk,
-		.set_fmt = lpc31xx_i2s_set_dai_fmt,
-		.set_clkdiv = lpc31xx_i2s_set_dai_clkdiv,
+	.startup = lpc31xx_i2s_startup,
+	.shutdown = lpc31xx_i2s_shutdown,
+	.trigger = lpc31xx_i2s_trigger,
+	.hw_params = lpc31xx_i2s_hw_params,
+	.set_sysclk = lpc31xx_i2s_set_dai_sysclk,
+	.set_fmt = lpc31xx_i2s_set_dai_fmt,
+	.set_clkdiv = lpc31xx_i2s_set_dai_clkdiv,
 };
 
-struct snd_soc_dai_driver lpc31xx_i2s_dai = {
-	 .name = I2S_NAME,
-	 .id = 0,
-	 .suspend = lpc31xx_i2s_suspend,
-	 .resume = lpc31xx_i2s_resume,
-	 .playback = {
-		      .channels_min = 2,
-		      .channels_max = 2,
-		      .rates = LPC31XX_I2S_RATES,
-		      .formats = LPC31XX_I2S_FORMATS,
-		      },
-	 .capture = {
-		     .channels_min = 2,
-		     .channels_max = 2,
-		     .rates = LPC31XX_I2S_RATES,
-		     .formats = LPC31XX_I2S_FORMATS,
-		     },
-	 .ops = &lpc31xx_i2s_dai_ops,
+static struct snd_soc_dai_driver dai_driver = {
+	.name = "is2",
+	.id = 1,
+	.suspend = lpc31xx_i2s_suspend,
+	.resume = lpc31xx_i2s_resume,
+	.playback = {
+		.channels_min = 2,
+		.channels_max = 2,
+		.rates = LPC31XX_I2S_RATES,
+		.formats = LPC31XX_I2S_FORMATS,
+	},
+	.capture = {
+		.channels_min = 2,
+		.channels_max = 2,
+		.rates = LPC31XX_I2S_RATES,
+		.formats = LPC31XX_I2S_FORMATS,
+	},
+	.ops = &lpc31xx_i2s_dai_ops,
 	.symmetric_rates = 1,
 };
-EXPORT_SYMBOL_GPL(lpc31xx_i2s_dai);
+
+static struct device i2s[2];
 
 static __devinit int lpc31xx_i2s_dev_probe(struct platform_device *pdev)
 {
-	struct lpc31xx_i2s_res_info *info;
+	struct lpc31xx_i2s_channel *channel;
+	struct device_node *child;
+	const __be32 *prop;
 	struct resource *res;
-	int err;
+	int i, err, len, tx, rx, slave, val;
 
-	info = kzalloc(sizeof(struct lpc31xx_i2s_info), GFP_KERNEL);
-	if (!info) {
-		err = -ENOMEM;
-		goto fail;
-	}
-
-	dev_set_drvdata(&pdev->dev, info);
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		err = -ENODEV;
-		goto fail_free_info;
+		goto fail;
 	}
 
-	info->mem = request_mem_region(res->start, resource_size(res),
-				       pdev->name);
-	if (!info->mem) {
-		err = -EBUSY;
-		goto fail_free_info;
-	}
-
-	info->regs = ioremap(info->mem->start, resource_size(info->mem));
-	if (!info->regs) {
+	lpc31xx_mem = request_mem_region(res->start, resource_size(res), pdev->name);
+	lpc31xx_regs = ioremap(res->start, resource_size(res));
+	if (!lpc31xx_regs) {
 		err = -ENXIO;
 		goto fail_release_mem;
 	}
 
-	err = snd_soc_register_dai(&pdev->dev, &lpc31xx_i2s_dai);
-	if (err)
-		goto fail_unmap_mem;
+	/* Workaround for ASOC not supporting two independent DAIs
+	 * co-mingled onto a single device.
+	 */
+	i = 0;
+	for_each_child_of_node(pdev->dev.of_node, child) {
+		/* Device address */
+		prop = of_get_property(child, "reg", &len);
+		if (!prop || len < 2*sizeof(*prop)) {
+			dev_err(&pdev->dev, "%s has no 'reg' property\n",
+				child->full_name);
+			continue;
+		}
+		tx = be32_to_cpu(*prop);
+		rx = be32_to_cpu(*(prop+1));
+		if (!(((tx == 0x80) && (rx == 0x180)) || ((tx == 0x100) && (rx == 0x200)))) {
+			dev_err(&pdev->dev, "%s valid regs 0x80/0x180 or 0x100/0x200\n",
+				child->full_name);
+			continue;
+		}
+		prop = of_get_property(child, "receive-slave", NULL);
+		slave = lpc31xx_i2s_read(lpc31xx_regs, I2S_CFG_MUX_SETTINGS);
+		if (prop)
+			slave &= ~(tx == 0x80 ? I2S_RXO_SELECT_MASTER : I2S_RX1_SELECT_MASTER);
+		else
+			slave |= (tx == 0x80 ? I2S_RXO_SELECT_MASTER : I2S_RX1_SELECT_MASTER);
+		lpc31xx_i2s_write(lpc31xx_regs, I2S_CFG_MUX_SETTINGS, slave);
 
+		channel = kzalloc(sizeof(*channel), GFP_KERNEL);
+		if (channel == NULL) {
+			err = ENOMEM;
+			goto fail_unmap_mem;
+		}
+		spin_lock_init(&channel->lock);
+		i2s[i] = pdev->dev;
+		i2s[i].of_node = child;
+
+		if (tx == 0x80) {
+			channel->tx.cfg = res->start + 0x080;
+			channel->tx.fifo = res->start + 0x0E0;
+			channel->rx.cfg = res->start + 0x180;
+			channel->rx.fifo = res->start + 0x1E0;
+		} else {
+			channel->tx.cfg = res->start + 0x100;
+			channel->tx.fifo = res->start + 0x160;
+			channel->rx.cfg = res->start + 0x200;
+			channel->rx.fifo = res->start + 0x260;
+		}
+		dev_set_drvdata(&i2s[i], channel);
+
+		err = snd_soc_register_dai(&i2s[i], &dai_driver);
+		if (err)
+			goto fail_unmap_mem;
+		i++;
+	}
 	return 0;
 
 fail_unmap_mem:
-	iounmap(info->regs);
+	iounmap(lpc31xx_regs);
 fail_release_mem:
-	release_mem_region(info->mem->start, resource_size(info->mem));
-fail_free_info:
-	kfree(info);
+	if (lpc31xx_mem) {
+		release_mem_region(lpc31xx_mem->start, resource_size(lpc31xx_mem));
+		lpc31xx_mem = 0;
+	}
 fail:
 	return err;
 }
 
 static __devexit int lpc31xx_i2s_dev_remove(struct platform_device *pdev)
 {
-	snd_soc_unregister_dai(&pdev->dev);
+	struct lpc31xx_i2s_channel *channel;
+
+	snd_soc_unregister_dai(&i2s[0]);
+	channel = dev_get_drvdata(&i2s[0]);
+	kfree(channel);
+
+	snd_soc_unregister_dai(&i2s[1]);
+	channel = dev_get_drvdata(&i2s[1]);
+	kfree(channel);
+
+	iounmap(lpc31xx_regs);
+	if (lpc31xx_mem)
+		release_mem_region(lpc31xx_mem->start, resource_size(lpc31xx_mem));
 	return 0;
 }
 
-#if defined(CONFIG_OF)
 static const struct of_device_id lpc31xx_i2s_of_match[] = {
 	{ .compatible = "nxp,lpc31xx-i2s" },
 	{},
 };
 MODULE_DEVICE_TABLE(of, lpc31xx_i2s_of_match);
-#endif
 
 static struct platform_driver lpc31xx_i2s_driver = {
 	.probe  = lpc31xx_i2s_dev_probe,
 	.remove = lpc31xx_i2s_dev_remove,
 	.driver = {
-		.name = I2S_NAME,
+		.name = "lpc31xx-i2s",
 		.owner = THIS_MODULE,
-#ifdef CONFIG_OF
 		.of_match_table = lpc31xx_i2s_of_match,
-#endif
 	},
 };
 
@@ -505,5 +468,5 @@ module_exit(lpc31xx_i2s_exit);
 MODULE_AUTHOR("Kevin Wells <kevin.wells@nxp.com>");
 MODULE_DESCRIPTION("ASoC LPC31XX I2S interface");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("platform:" I2S_NAME);
+MODULE_ALIAS("platform:lpc31xx-i2s");
 
