@@ -23,11 +23,5 @@
 #ifndef __SOUND_SOC_LPC31XX_PCM_H
 #define __SOUND_SOC_LPC31XX_PCM_H
 
-struct lpc31xx_pcm_dma_params {
-	int dma;
-	unsigned long dma_addr;
-	int burstsize;
-};
-
 #endif
 

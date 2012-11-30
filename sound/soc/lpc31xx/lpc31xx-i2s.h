@@ -102,30 +102,32 @@
      SNDRV_PCM_RATE_22050 | SNDRV_PCM_RATE_32000 | \
      SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_176400| \
      SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_96000 | SNDRV_PCM_RATE_192000)
-#define LPC31XX_I2S_FORMATS (SNDRV_PCM_FMTBIT_S16 | SNDRV_PCM_FMTBIT_S24)
+//#define LPC31XX_I2S_FORMATS (SNDRV_PCM_FMTBIT_S16 | SNDRV_PCM_FMTBIT_S24)
+#define LPC31XX_I2S_FORMATS (SNDRV_PCM_FMTBIT_S16)
 
 #define CH_PLAY 0
 #define CH_REC  1
 
 /* Structure that keeps I2S direction data */
-struct lpc31xx_i2s_sub {
+struct lpc31xx_i2s_channel {
 	unsigned short ch_on;       /* Flag used to indicate if clocks are on */
 	unsigned short daifmt;
 	uint32_t ws_freq;
 	int i2s_ch, slave;
 	enum i2s_supp_clks chclk;
-	long fifo, cfg;
+	long cfg;
+	uint32_t dma_addr;
 	struct lpc31xx_dma_data dma_params;
 };
 
 
 /* Common I2S structure data */
-struct lpc31xx_i2s_channel {
+struct lpc31xx_i2s_pair {
 	spinlock_t lock;
 	unsigned short initialized;
 	uint32_t freq;
-	struct lpc31xx_i2s_sub tx;
-	struct lpc31xx_i2s_sub rx;
+	struct lpc31xx_i2s_channel tx;
+	struct lpc31xx_i2s_channel rx;
 };
 
 #endif

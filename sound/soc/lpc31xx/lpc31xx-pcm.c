@@ -180,26 +180,22 @@ static int snd_lpc31xx_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct dma_slave_config slave_config;
 	int ret;
 
-	printk("JDS1 %p %p %p\n", substream, rtd, chan);
 	dma_params = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 
-	printk("JDS2 %p\n", dma_params);
 	ret = snd_hwparams_to_dma_slave_config(substream, params, &slave_config);
 	if (ret)
 		return ret;
 
-	printk("JDS3\n");
 	slave_config.device_fc = false;
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		slave_config.dst_addr = dma_params->dma_addr;
-		slave_config.dst_maxburst = dma_params->burstsize;
+		//slave_config.dst_addr = dma_params->dma_addr;
+		//slave_config.dst_maxburst = dma_params->burstsize;
 	} else {
-		slave_config.src_addr = dma_params->dma_addr;
-		slave_config.src_maxburst = dma_params->burstsize;
+		//slave_config.src_addr = dma_params->dma_addr;
+		//slave_config.src_maxburst = dma_params->burstsize;
 	}
 
-	printk("JDS4\n");
 	ret = dmaengine_slave_config(chan, &slave_config);
 	if (ret)
 		return ret;
@@ -221,20 +217,16 @@ static int snd_lpc31xx_open(struct snd_pcm_substream *substream)
 	dma_params = snd_soc_dai_get_dma_data(rtd->cpu_dai, substream);
 
 	dma_data = kzalloc(sizeof(*dma_data), GFP_KERNEL);
-#ifdef FIXME
-	dma_data->priority = DMA_PRIO_HIGH;
-	dma_data->dma_request = dma_params->dma;
-#endif
+	dma_data->port = 0;
+	dma_data->direction = 0;
+	dma_data->name = 0;
 
 	ret = snd_dmaengine_pcm_open(substream, filter, dma_data);
 	if (ret) {
 		kfree(dma_data);
 		return 0;
 	}
-
-	printk("JDS pcm_set_data %p %p\n", substream, dma_data);
 	snd_dmaengine_pcm_set_data(substream, dma_data);
-
 	return 0;
 }
 
